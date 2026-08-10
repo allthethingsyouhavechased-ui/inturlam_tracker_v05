@@ -569,3 +569,62 @@ describe("social_posts UNIQUE migration'ı", () => {
     );
   });
 });
+
+describe("sosyal medya üretim planı tabloları (yeni tablolar, migration YOK)", () => {
+  it("eski (bu üç tablodan önceki) bir DB açılınca üçü de kurulur, mevcut veri korunur", () => {
+    // brand_content_targets/brand_asset_counts/brand_plan_entries CREATE
+    // TABLE bloklarını şemadan çıkarıp "bu üç tablo hiç yokmuş" gibi eski bir
+    // DB kuruyoruz — asıl senaryo: bunlar YENİ tablo olduğu için migration
+    // fonksiyonu yok, getDb()'nin normal `CREATE TABLE IF NOT EXISTS` geçişi
+    // onları kurmalı.
+    const legacySchema = SCHEMA_SQL
+      .replace(/CREATE TABLE IF NOT EXISTS brand_content_targets[\s\S]*?\);\r?\n\r?\n/, "")
+      .replace(/CREATE TABLE IF NOT EXISTS brand_asset_counts[\s\S]*?\);\r?\n\r?\n/, "")
+      .replace(/CREATE TABLE IF NOT EXISTS brand_plan_entries[\s\S]*?\);\r?\n\r?\n/, "")
+      .replace(
+        /CREATE INDEX IF NOT EXISTS idx_brand_plan_entries_date ON brand_plan_entries\(plan_date\);\r?\n/,
+        "",
+      );
+    assert.notEqual(legacySchema, SCHEMA_SQL, "test üç tablonun gerçekten çıkarıldığını üretmeli");
+    for (const table of ["brand_content_targets", "brand_asset_counts", "brand_plan_entries"]) {
+      assert.ok(!legacySchema.includes(table), `${table} legacy şemada hâlâ geçiyor`);
+    }
+
+    const legacy = new DatabaseSync(TMP_DB);
+    legacy.exec("PRAGMA foreign_keys = ON");
+    legacy.exec(legacySchema);
+    legacy.prepare("INSERT INTO brands (id, name, cluster) VALUES ('b1', 'Test Marka', 'tek')").run();
+    legacy.close();
+
+    const db = getDb();
+    const tableNames = (
+      db
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type='table'
+             AND name IN ('brand_content_targets','brand_asset_counts','brand_plan_entries')`,
+        )
+        .all() as { name: string }[]
+    ).map((row) => row.name);
+    assert.deepEqual(
+      tableNames.sort(),
+      ["brand_asset_counts", "brand_content_targets", "brand_plan_entries"],
+    );
+
+    // Mevcut markaya karşı üçüne de yazılabiliyor mu — asıl amaç bu.
+    db.prepare(
+      "INSERT INTO brand_content_targets (brand_id, kind, monthly_target) VALUES ('b1', 'Post', 15)",
+    ).run();
+    db.prepare(
+      "INSERT INTO brand_asset_counts (brand_id, kind, ready_count) VALUES ('b1', 'Post', 7)",
+    ).run();
+    db.prepare(
+      "INSERT INTO brand_plan_entries (brand_id, plan_date, combo) VALUES ('b1', '2026-08-10', 'Post')",
+    ).run();
+
+    assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+    assert.equal(
+      (db.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check,
+      "ok",
+    );
+  });
+});

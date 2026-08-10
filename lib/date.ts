@@ -107,6 +107,74 @@ export function calendarGridDays(monthDate: Date): CalendarGridDay[] {
   return days;
 }
 
+// Sosyal medya paylaşım takviminin haftalara böldüğü bir aylık dilim.
+// `calendarGridDays` (yukarıda) FARKLI bir soruyu cevaplıyor — 6 satırlık SABİT
+// bir ay ızgarası, önceki/sonraki aydan taşan dolgu günleriyle. Bu ise "bu ayın
+// haftaları hangileri" sorusunun cevabı: 4 veya 5 hafta, hiç dolgu yok. İkisini
+// birleştirme — ekibin Google Sheet'indeki "Ağustos 1..5" hafta sekmeleri bu
+// kuralı birebir izliyor.
+export interface MonthWeek {
+  index: number; // 1 tabanlı — ekrandaki "2. Hafta"
+  start: string; // Pazartesi, 'YYYY-MM-DD'
+  end: string; // Pazar, 'YYYY-MM-DD'
+  label: string; // "10 – 16 Ağustos", ay aşarsa "31 Ağustos – 6 Eylül"
+  days: CalendarGridDay[]; // her zaman 7 gün
+}
+
+function weekRangeLabel(start: Date, end: Date): string {
+  if (start.getFullYear() !== end.getFullYear()) {
+    return `${format(start, "d MMMM yyyy", { locale: tr })} – ${format(end, "d MMMM yyyy", { locale: tr })}`;
+  }
+  if (start.getMonth() !== end.getMonth()) {
+    return `${format(start, "d MMMM", { locale: tr })} – ${format(end, "d MMMM", { locale: tr })}`;
+  }
+  return `${format(start, "d", { locale: tr })} – ${format(end, "d MMMM", { locale: tr })}`;
+}
+
+// Kural: bir ayın haftaları = Pazartesi'si o ayın içine düşen haftalar. Bu,
+// takvimi boşluksuz ve çakışmasız böler — 1 gün bile iki ay sekmesine birden
+// düşmez ya da hiç düşmez (bkz. tests/socialPlanDate.test.ts'teki "bölüntü"
+// testi). Ayın ilk günü Pazartesi değilse o haftanın Pazartesi'si ÖNCEKİ aya
+// ait olur — o yüzden bu ay dışarıda bırakılır (örn. Ağustos 2026: 1-2 Ağustos
+// Cmt/Paz, o hafta Temmuz'un son haftası sayılır; Ağustos 3 Ağustos Pazartesi
+// ile başlar).
+export function monthWeeks(monthDate: Date): MonthWeek[] {
+  const monthStart = startOfMonth(monthDate);
+  const monthEnd = endOfMonth(monthDate);
+  const monthIndex = monthStart.getMonth();
+
+  let weekMonday = startOfWeek(monthStart, { weekStartsOn: 1 });
+  if (weekMonday < monthStart) weekMonday = addDays(weekMonday, 7);
+
+  const weeks: MonthWeek[] = [];
+  let index = 1;
+  while (weekMonday <= monthEnd) {
+    const weekSunday = addDays(weekMonday, 6);
+    const days: CalendarGridDay[] = [];
+    for (let d = weekMonday; d <= weekSunday; d = addDays(d, 1)) {
+      days.push({ date: toISODate(d), inMonth: d.getMonth() === monthIndex });
+    }
+    weeks.push({
+      index,
+      start: toISODate(weekMonday),
+      end: toISODate(weekSunday),
+      label: weekRangeLabel(weekMonday, weekSunday),
+      days,
+    });
+    index += 1;
+    weekMonday = addDays(weekMonday, 7);
+  }
+  return weeks;
+}
+
+// Bir tarihin, o ayın haftalarından hangisine (1 tabanlı) düştüğünü bulur.
+// Tarih ayın haftalarının dışındaysa (ör. 1 Ağustos — Temmuz'un son haftasına
+// ait) `null` döner.
+export function weekIndexForDate(monthDate: Date, iso: string): number | null {
+  const found = monthWeeks(monthDate).find((week) => iso >= week.start && iso <= week.end);
+  return found ? found.index : null;
+}
+
 export function formatDateShort(iso: string | null): string {
   if (!iso) return "—";
   return format(parseISO(iso), "d MMM", { locale: tr });

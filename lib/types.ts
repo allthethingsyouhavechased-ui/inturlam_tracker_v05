@@ -29,6 +29,12 @@ export type TaskStatus =
 
 export type TaskPriority = "Dusuk" | "Normal" | "Yuksek" | "Acil";
 
+// Sosyal medya üretim planındaki (hedef/varlık/takvim) sabit üç kategori.
+// `ContentType` (proje türü, 9 üye) ile BİLEREK karıştırılmıyor — ekip
+// "Reels" diyor, ContentType'taki "Reel" ayrı bir kavram (bir proje kaydı).
+// Çalışma zamanı sabitleri (CONTENT_KINDS, etiketler) lib/socialPlan.ts'te.
+export type ContentKind = "Post" | "Story" | "Reels";
+
 export interface Brand {
   id: string;
   name: string;
@@ -287,4 +293,42 @@ export interface BrandSocialRow {
   last_error: string | null;
   days_silent: number | null;
   post_count_30d: number;
+}
+
+// ————— Sosyal medya üretim planı (hedef / varlık / paylaşım takvimi) —————
+// "Takip" (yukarıdaki BrandSocialRow) bloğundan bağımsız — bu üçü elle girilir.
+
+export interface BrandContentTarget {
+  brand_id: string;
+  kind: string;
+  monthly_target: number;
+  updated_at: string;
+}
+
+export interface BrandAssetCount {
+  brand_id: string;
+  kind: string;
+  ready_count: number;
+  updated_at: string;
+}
+
+// Paylaşım takvimindeki tek bir gün. `combo` boş satır hiç üretilmez (silinir),
+// bu yüzden burada nullable değil.
+export interface BrandPlanEntry {
+  brand_id: string;
+  plan_date: string; // 'YYYY-MM-DD'
+  combo: string;
+  updated_at: string;
+}
+
+// Varlık sayfasının okuduğu birleşik satır: marka + üç kategorinin hedef/hazır
+// sayıları. Hedefi/sayacı hiç girilmemiş markada değer 0'dır (satır yine
+// üretilir, "veri yok" diye gizlenmez — arşivli markalar zaten listeye hiç
+// girmiyor).
+export interface BrandVarlikRow {
+  brand_id: string;
+  brand_name: string;
+  logo_path: string | null;
+  targets: Record<ContentKind, number>;
+  ready: Record<ContentKind, number>;
 }

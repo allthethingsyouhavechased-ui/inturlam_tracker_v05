@@ -286,7 +286,54 @@ CREATE TABLE IF NOT EXISTS brand_social_state (
   PRIMARY KEY (brand_id, platform)
 );
 
+-- ————————————————————————————————————————————————————————————————————————
+-- Sosyal medya üretim planı: aylık hedefler, elde hazır bekleyen varlık
+-- sayısı, haftalık paylaşım takvimi. Yukarıdaki "takip" bloğundan (Instagram
+-- taraması) bağımsız — bu üçü tamamen elle girilir.
+-- ————————————————————————————————————————————————————————————————————————
+
+-- Marka başına AYLIK üretim hedefi (ör. 15 Post / 15 Story / 4 Reels).
+-- Aya göre DEĞİŞMEZ: tek sabit hedef, her ay geçerli (kullanıcı kararı,
+-- 2026-08). `kind` üzerinde CHECK YOK — yeni kategori eklemek CHECK
+-- genişletmeyi, o da tabloyu yeniden kurmayı gerektirirdi. Geçerlilik
+-- lib/socialPlan.ts'teki CONTENT_KINDS ile action'da doğrulanır
+-- (people.department ile aynı gerekçe, bkz. migratePeopleDepartmentIfNeeded
+-- yorumu).
+CREATE TABLE IF NOT EXISTS brand_content_targets (
+  brand_id       TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  kind           TEXT NOT NULL,
+  monthly_target INTEGER NOT NULL DEFAULT 0,
+  updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (brand_id, kind)
+);
+
+-- Elde yayına HAZIR bekleyen varlık sayısı — canlı STOK, ay bazlı değil.
+-- Bu yüzden `month` sütunu yok ve geçmiş ay geçmişi tutulmuyor (kullanıcı
+-- kararı). ÖNEMLİ: content_items'tan TÜRETİLMEZ, elle girilir. content_items
+-- bir PROJE kaydıdır (bir projede birden çok varlık olabilir), varlık
+-- sayacı değildir — "otomatik hesaplayalım" diye ikisini birleştirme.
+CREATE TABLE IF NOT EXISTS brand_asset_counts (
+  brand_id    TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  kind        TEXT NOT NULL,
+  ready_count INTEGER NOT NULL DEFAULT 0,
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (brand_id, kind)
+);
+
+-- Paylaşım takvimi: marka × GÜN → o gün planlanan kombinasyon ("Post+Story").
+-- Hücre sabit bir açılır listeden seçildiği için tek TEXT sütun yeterli; tür
+-- bazlı sayım lib/socialPlan.ts'teki COMBO_KINDS haritasıyla JS'te çözülür.
+-- Boş seçim satırı SİLER (combo = '' yazmaz) — bkz. setBrandPlanEntry.
+CREATE TABLE IF NOT EXISTS brand_plan_entries (
+  brand_id   TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  plan_date  TEXT NOT NULL,               -- 'YYYY-MM-DD'
+  combo      TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (brand_id, plan_date)
+);
+
 CREATE INDEX IF NOT EXISTS idx_social_posts_brand ON social_posts(brand_id, posted_at);
+CREATE INDEX IF NOT EXISTS idx_brand_plan_entries_date ON brand_plan_entries(plan_date);
 CREATE INDEX IF NOT EXISTS idx_brands_cluster      ON brands(cluster);
 CREATE INDEX IF NOT EXISTS idx_clusters_sort       ON clusters(sort_order);
 CREATE INDEX IF NOT EXISTS idx_person_active_work_brand ON person_active_work(brand_id);
