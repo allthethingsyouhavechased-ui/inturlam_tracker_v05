@@ -130,6 +130,34 @@ aynı yetkiyi yeniden doğrular. Yunus kendi yönetici rolünü kaldıramaz.
   14 içerik + 41 görev + yorum + aktivite yazar. Tüm id'ler `demo-` ön ekli; script her çalıştığında
   önce bu kayıtları silip yeniden yazar (idempotent), `-- --clean` ile sadece siler. Gerçek veriye
   dokunmaz. Tarihler bugüne göre göreli üretilir, böylece "gecikmiş"/"bu hafta" panoları hep dolu.
+  **`brand_content_targets`/`brand_asset_counts`/`brand_plan_entries` (aşağıya bak) BİLEREK bu
+  script'e eklenmedi**: onlar `content_items` gibi id'li/eklemeli değil, `brands.follower_count`
+  gibi marka başına TEK satır (`PRIMARY KEY (brand_id, kind)` vb.) — demo verisini `demo-%`
+  deseniyle ayırt edip `--clean`'de silmenin bir yolu yok, o yüzden gerçek bir markanın hedefini
+  demo satırıyla ezip sonra `--clean`'de sessizce silme riski var. Aynı sebeple bu üçü hiçbir
+  zaman id'li bir tabloya dönüştürülüp "demo'ya da eklensin" diye genişletilmemeli.
+- Sosyal medya üretim planı (Takip'ten AYRI): `/social` artık `app/social/layout.tsx` altında üç
+  kardeş sayfa — `takip` (mevcut Instagram taraması, yukarıdaki madde), `varlik`, `takvim`.
+  Üçü de `brand_content_targets`/`brand_asset_counts`/`brand_plan_entries`
+  (`lib/repositories/socialPlan.ts`, `lib/actions/socialPlan.ts`) üzerinden okur/yazar — hepsi
+  YENİ tablo, migration fonksiyonu YOK (`CREATE TABLE IF NOT EXISTS` yeterli). Sabitler/saf
+  kurallar `lib/socialPlan.ts`'te (`"use client"` DEĞİL — hem action hem component okuyor,
+  `BRAND_VIEW_COOKIE` tuzağıyla aynı gerekçe): `CONTENT_KINDS` (Post/Story/Reels — `ContentType`
+  ile BİLEREK ayrı, proje türü değil üretim kategorisi), `PLAN_COMBOS` (takvim hücresindeki sabit
+  10 kombinasyonluk açılır liste, LinkedIn YALNIZCA burada var), `countKindsInCombos`.
+  **Hedefler markadan SABİT** (aya göre değişmez, marka sayfasından `BrandContentTargetsSection`
+  ile girilir) — **varlık sayısı ise ay bazlı DEĞİL, sıfırlanmayan canlı STOK** (elle girilir,
+  `content_items`'tan asla türetilmez — biri proje kaydı, öteki üretilmiş varlık sayacı, ikisini
+  birleştirme). İkisi de ortak `components/CountStepper.tsx` (−/+ ve sayıya tıkla-yaz, 400ms
+  debounce + mutlak değer yazar) ile düzenlenir. `app/social/takvim` haftaları
+  `lib/date.ts`'teki `monthWeeks()` ile böler — `calendarGridDays()`'ten BİLEREK farklı bir kural
+  ("bir ayın haftaları = Pazartesi'si o ayın içine düşen haftalar", 4-5 hafta, dolgu yok; takvim
+  ızgarası sabit 6 satır/42 gün) — ikisini birleştirme. `app/social/layout.tsx` uygulamanın İLK iç
+  içe layout'u; bu yüzden `team-page-wide`/`workspace-page-wide` (`.page-shell:has(> ...)`, direkt
+  çocuk seçici) artık `/social` altındaki hiçbir sayfada çalışmaz — araya layout'un kendi
+  wrapper'ı giriyor. Üst menüde "Sosyal" artık `lib/nav.ts`'teki `NavItem.children` ile açılır
+  menü/akordeon: `visibleNav()`/`isNavActive()` de buradan, iki renderer'ın (`NavLinks`
+  masaüstü dropdown, `SidebarNavLinks` mobil akordeon) kopyaladığı yönetici filtresini tekilleştirir.
 
 ## Kritik tuzaklar (bunlara dikkat)
 
