@@ -12,6 +12,7 @@ import {
 } from "@/lib/constants";
 import { formatDateShort, todayISO } from "@/lib/date";
 import { getCurrentPerson } from "@/lib/identity";
+import { notifyTaskUpdate } from "@/lib/notifications";
 import { setPersonalTaskTarget } from "@/lib/repositories/personalTargets";
 import { getPerson } from "@/lib/repositories/people";
 import {
@@ -225,6 +226,19 @@ export async function updateTaskDetailsAction(formData: FormData) {
     brandId: task?.brand_id ?? null,
     summary: `“${title}” görev detaylarını güncelledi`,
   });
+
+  const actor = await getCurrentPerson();
+  if (actor) {
+    notifyTaskUpdate({
+      actor,
+      taskId: id,
+      taskTitle: title,
+      brandId: task?.brand_id ?? null,
+      assigneeId: task?.assignee_id ?? null,
+      message: cleanText(formData.get("notifyMessage")),
+    });
+  }
+
   revalidatePath("/", "layout");
 }
 

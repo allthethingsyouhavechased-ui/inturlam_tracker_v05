@@ -20,6 +20,7 @@ import { listCommentsByTask } from "@/lib/repositories/comments";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listAttachmentsByTask } from "@/lib/repositories/taskAttachments";
 import { getTask } from "@/lib/repositories/tasks";
+import { markTaskNotificationsReadForPerson } from "@/lib/repositories/notifications";
 import { ARCHIVE_AFTER_DAYS, daysUntilArchive } from "@/lib/taskArchive";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,12 @@ export default async function TaskPage({
   const activity = listActivityForEntity("task", taskId);
   const attachments = listAttachmentsByTask(taskId);
   const me = await getCurrentPerson();
+
+  // Görevi açmak, bu görevle ilgili okunmamış bildirimleri (görev güncelleme
+  // + @mention) okundu yapar — Panom'daki "🔔 Güncellendi" rozeti bu sayede
+  // tekrar görülünce kaybolur. sweepArchivablePublishedTasks() ile aynı
+  // "render'dan önce best-effort yan etki" deseni (bkz. app/panom/page.tsx).
+  if (me) markTaskNotificationsReadForPerson(taskId, me.id);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -165,6 +172,19 @@ export default async function TaskPage({
           key={attachments.map((a) => a.id).join(",")}
           attachments={attachments}
         />
+        <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          Bildirim notu (opsiyonel)
+          <input
+            name="notifyMessage"
+            maxLength={160}
+            placeholder="Görev sahibine ve ekibine gidecek bildirimi kişiselleştir…"
+            className={inputClass}
+          />
+          <span className="font-normal normal-case text-zinc-400 dark:text-zinc-500">
+            Boş bırakırsan görev sahibine ve ekibine genel bir “görev güncellendi”
+            bildirimi gider; buraya yazarsan onun yerine bu not gönderilir.
+          </span>
+        </label>
         <div className="flex items-center justify-between">
           {/* Ham <button type="submit"> yerine SubmitButton: useFormStatus ile
               gönderim sırasında kendini devre dışı bırakır (çift kayıt olmaz). */}

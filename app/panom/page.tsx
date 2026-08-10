@@ -9,6 +9,7 @@ import { classifySocial } from "@/lib/socialSilence";
 import { currentWeekRange, todayISO } from "@/lib/date";
 import { getCurrentPerson } from "@/lib/identity";
 import { listBrandsWithOpenCounts } from "@/lib/repositories/brands";
+import { listUnreadTaskIdsForPerson } from "@/lib/repositories/notifications";
 import { listPersonalTaskTargets } from "@/lib/repositories/personalTargets";
 import { listActivePeople } from "@/lib/repositories/people";
 import {
@@ -31,6 +32,14 @@ const BADGE_OVERDUE: TaskCardBadge = {
 const BADGE_THIS_WEEK: TaskCardBadge = {
   label: "Bu hafta",
   className: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+};
+// Görev güncellendiğinde (detay/not düzenleme, yorum) sahibine ve ekibine
+// giden bildirimin panodaki karşılığı — dikkat çeksin diye diğer rozetlerden
+// (gecikmiş=kırmızı, bu hafta=amber, öncelik/arşiv=slate-cyan-orange-amber)
+// bilerek farklı bir renk ailesi (violet) kullanılıyor.
+const BADGE_UPDATED: TaskCardBadge = {
+  label: "🔔 Güncellendi",
+  className: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
 };
 
 export default async function PanomPage() {
@@ -77,6 +86,10 @@ export default async function PanomPage() {
   const myIds = new Set(myTasks.map((t) => t.id));
   const overdueIds = new Set(overdue.map((t) => t.id));
   const thisWeekIds = new Set(thisWeek.map((t) => t.id));
+  // Bu kişi için okunmamış görev bildirimlerinin bağlı olduğu görevler —
+  // "🔔 Güncellendi" rozetini basmak için. Görevi açmak bildirimi okundu
+  // yapar (bkz. app/tasks/[taskId]/page.tsx), rozet böylece kaybolur.
+  const updatedIds = me ? listUnreadTaskIdsForPerson(me.id) : new Set<string>();
 
   // Panom = "benim board'um": ANA board YALNIZCA bana atanmış açık görevleri
   // gösterir. Rozetler bu yüzden "neden buradayım"ı değil aciliyeti anlatır
@@ -86,6 +99,7 @@ export default async function PanomPage() {
   // yerine bunu tercih ediyoruz.
   function badgesFor(task: TaskWithContext): TaskCardBadge[] {
     const badges: TaskCardBadge[] = [];
+    if (updatedIds.has(task.id)) badges.push(BADGE_UPDATED);
     if (overdueIds.has(task.id)) badges.push(BADGE_OVERDUE);
     if (thisWeekIds.has(task.id)) badges.push(BADGE_THIS_WEEK);
     const countdown = archiveCountdownBadge(task);

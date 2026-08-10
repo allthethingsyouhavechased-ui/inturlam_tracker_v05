@@ -67,3 +67,33 @@ export function markAllNotificationsReadForPerson(personId: string): void {
     .prepare(`UPDATE notifications SET read = 1 WHERE recipient_id = ? AND read = 0`)
     .run(personId);
 }
+
+// Bir kişinin okunmamış bildirimlerinin bağlı olduğu görev id'leri — pano
+// kartlarında "🔔 Güncellendi" rozetini hangi görevlere basacağını belirlemek
+// için (bkz. app/panom/page.tsx). @mention ve görev güncelleme bildirimleri
+// ayrım yapılmadan birlikte sayılır: ikisi de "bu görevde senin için yeni bir
+// şey var" anlamına geldiği için rozet açısından fark etmiyor.
+export function listUnreadTaskIdsForPerson(personId: string): Set<string> {
+  const rows = plainList<{ task_id: string }>(
+    getDb()
+      .prepare(
+        `SELECT DISTINCT task_id FROM notifications
+         WHERE recipient_id = ? AND read = 0 AND task_id IS NOT NULL`,
+      )
+      .all(personId),
+  );
+  return new Set(rows.map((r) => r.task_id));
+}
+
+// Görev detay sayfası açıldığında o görevle ilgili bildirimleri okundu
+// yapar — panodaki "🔔 Güncellendi" rozeti tekrar görülünce kaybolsun diye
+// (bkz. sweepArchivablePublishedTasks ile aynı "render'dan önce best-effort
+// yan etki" deseni, app/tasks/[taskId]/page.tsx).
+export function markTaskNotificationsReadForPerson(taskId: string, personId: string): void {
+  getDb()
+    .prepare(
+      `UPDATE notifications SET read = 1
+       WHERE task_id = ? AND recipient_id = ? AND read = 0`,
+    )
+    .run(taskId, personId);
+}

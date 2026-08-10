@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { getCurrentPerson } from "@/lib/identity";
-import { notifyMentions } from "@/lib/notifications";
+import { notifyMentions, notifyTaskUpdate } from "@/lib/notifications";
 import {
   addCommentAttachment,
   createComment,
@@ -53,15 +53,29 @@ export async function addCommentAction(formData: FormData) {
   // @mention edilen kişilere bildirim üret (varsa). Kendini mention etmek
   // bildirim doğurmaz — notifyMentions bunu zaten filtreler. En iyi çabadır,
   // hata olursa yutulur; yorum burada zaten başarıyla kaydedilmiş durumda.
-  if (body) {
-    notifyMentions({
-      body,
-      actor: person,
-      taskId,
-      taskTitle: task?.title ?? "Görev",
-      brandId: task?.brand_id ?? null,
-    });
-  }
+  const mentionedIds = body
+    ? notifyMentions({
+        body,
+        actor: person,
+        taskId,
+        taskTitle: task?.title ?? "Görev",
+        brandId: task?.brand_id ?? null,
+      })
+    : [];
+
+  // Görevin sahibine ve sahibin ekibine "göreve yorum/bilgi eklendi" bildirimi —
+  // yorumun kendi metni zaten kişiselleştirilmiş mesaj olarak kullanılır.
+  // @mention ile zaten bildirilen kişiler (mentionedIds) burada tekrar
+  // bildirilmez, aynı yorum için iki bildirim almasınlar diye.
+  notifyTaskUpdate({
+    actor: person,
+    taskId,
+    taskTitle: task?.title ?? "Görev",
+    brandId: task?.brand_id ?? null,
+    assigneeId: task?.assignee_id ?? null,
+    message: body || (saved.length > 0 ? "📎 görsel eklendi" : null),
+    excludeIds: mentionedIds,
+  });
 
   revalidatePath("/", "layout");
 }
