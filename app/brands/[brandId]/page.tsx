@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import ActivityFeed from "@/components/ActivityFeed";
 import ArchiveContentButton from "@/components/ArchiveContentButton";
 import AutoRefresh from "@/components/AutoRefresh";
+import BrandContentTargetsSection from "@/components/BrandContentTargetsSection";
 import BrandLogo from "@/components/BrandLogo";
 import EditBrandForm from "@/components/EditBrandForm";
 import NewContentForm from "@/components/NewContentForm";
@@ -23,7 +24,10 @@ import { listActivityForBrand } from "@/lib/repositories/activity";
 import { clusterLabelMap, listClusters } from "@/lib/repositories/clusters";
 import { listArchivedContentByBrand, listContentByBrand } from "@/lib/repositories/content";
 import { listActivePeople } from "@/lib/repositories/people";
+import { listContentTargetsForBrand } from "@/lib/repositories/socialPlan";
+import { emptyKindRecord } from "@/lib/socialPlan";
 import { listTemplates } from "@/lib/repositories/templates";
+import type { ContentKind } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +47,10 @@ export default async function BrandPage({
   const clusters = listClusters();
   const clusterLabels = clusterLabelMap();
   const templates = listTemplates();
+  const contentTargets = emptyKindRecord();
+  for (const row of listContentTargetsForBrand(brandId)) {
+    contentTargets[row.kind as ContentKind] = row.monthly_target;
+  }
   const me = await getCurrentPerson();
 
   // Sayılar haftalık tazeleniyor; 7 günden eskiyse (ya da hiç girilmemişse)
@@ -110,7 +118,7 @@ export default async function BrandPage({
                 </span>
               )}
               <Link
-                href="/social"
+                href="/social/takip"
                 className="font-medium text-brand-600 hover:underline dark:text-brand-400"
               >
                 takip →
@@ -121,6 +129,12 @@ export default async function BrandPage({
       </div>
 
       <EditBrandForm brand={brand} clusters={clusters} />
+
+      <BrandContentTargetsSection
+        brandId={brand.id}
+        brandName={brand.name}
+        targets={contentTargets}
+      />
 
       {/* Marka künyesi. Eskiden burada "İlgili markalar" kartları, tam denetim
           raporunun markdown'ı, medyan Reel izlenmesi ve kapak testi rozeti de
