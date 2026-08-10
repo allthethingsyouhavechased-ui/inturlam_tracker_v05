@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { Fragment } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
 import PlanCellSelect from "@/components/PlanCellSelect";
-import { hashColor } from "@/lib/colorHash";
 import {
   formatMonthLabel,
   monthParamISO,
@@ -13,6 +14,7 @@ import {
   WEEKDAY_LABELS,
 } from "@/lib/date";
 import { listBrands } from "@/lib/repositories/brands";
+import { groupBrandsByCluster, listClusters } from "@/lib/repositories/clusters";
 import { listBrandContentTargets, listPlanEntriesInRange } from "@/lib/repositories/socialPlan";
 import {
   CONTENT_KINDS,
@@ -48,7 +50,16 @@ export default async function SocialTakvimPage({
       : defaultWeekIndex;
   const selectedWeek = weeks[selectedIndex - 1] ?? weeks[0];
 
-  const brands = listBrands();
+  // Marka rengi eskiden isme göre rastgele bir renkti (hashColor) — hiçbir şey
+  // ifade etmiyordu. Şimdi gerçek bir anlamı olan grupla: kategoriye (brands
+  // sayfasındaki/Sidebar'daki aynı `clusters`) göre bölünüyor, her kategorinin
+  // içinde Türkçe alfabetik sıralı. Yeni eklenen bir marka (arşivlenmemiş
+  // olduğu sürece) otomatik olarak kendi kategorisinin altına düşer — burada
+  // elle bir liste tutulmuyor.
+  const brands = [...listBrands()].sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  const brandGroups = groupBrandsByCluster(brands, listClusters()).filter(
+    (group) => group.items.length > 0,
+  );
 
   // Tek sorgu, ayın TÜM haftalarını kapsar (ilk haftanın Pazartesi'sinden son
   // haftanın Pazar'ına) — hem seçili haftanın ızgarasını hem sağdaki aylık
@@ -162,49 +173,63 @@ export default async function SocialTakvimPage({
               </tr>
             </thead>
             <tbody>
-              {brands.map((brand) => {
-                const planned = countKindsInCombos(combosByBrand.get(brand.id) ?? []);
-                const targets = targetsByBrand.get(brand.id) ?? emptyKindRecord();
-                return (
-                  <tr
-                    key={brand.id}
-                    className="border-b border-black/5 last:border-0 dark:border-white/5"
-                  >
-                    <td className="sticky left-0 z-10 bg-white px-3 py-2 dark:bg-zinc-900">
-                      <Link
-                        href={`/brands/${brand.id}`}
-                        className={`inline-block max-w-40 truncate rounded-md px-2 py-1 text-xs font-semibold ${hashColor(brand.name)}`}
-                      >
-                        {brand.name}
-                      </Link>
-                    </td>
-                    {selectedWeek.days.map((day) => (
-                      <td key={day.date} className="px-1.5 py-1.5">
-                        <PlanCellSelect
-                          brandId={brand.id}
-                          date={day.date}
-                          combo={comboByKey.get(`${brand.id}|${day.date}`) ?? null}
-                        />
-                      </td>
-                    ))}
-                    {CONTENT_KINDS.map((kind) => {
-                      const reached = targets[kind] > 0 && planned[kind] >= targets[kind];
-                      return (
-                        <td
-                          key={kind}
-                          className={`px-3 py-2 text-xs font-medium tabular-nums ${
-                            reached
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-zinc-600 dark:text-zinc-300"
-                          }`}
-                        >
-                          {planned[kind]}/{targets[kind]}
-                        </td>
-                      );
-                    })}
+              {brandGroups.map((group) => (
+                <Fragment key={group.id}>
+                  <tr className="bg-zinc-50 dark:bg-white/[0.03]">
+                    <th
+                      scope="colgroup"
+                      colSpan={1 + selectedWeek.days.length + CONTENT_KINDS.length}
+                      className="sticky left-0 z-10 bg-zinc-50 px-3 py-1.5 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400"
+                    >
+                      {group.label}
+                    </th>
                   </tr>
-                );
-              })}
+                  {group.items.map((brand) => {
+                    const planned = countKindsInCombos(combosByBrand.get(brand.id) ?? []);
+                    const targets = targetsByBrand.get(brand.id) ?? emptyKindRecord();
+                    return (
+                      <tr
+                        key={brand.id}
+                        className="border-b border-black/5 last:border-0 dark:border-white/5"
+                      >
+                        <td className="sticky left-0 z-10 bg-white px-3 py-2 dark:bg-zinc-900">
+                          <Link
+                            href={`/brands/${brand.id}`}
+                            className="flex min-w-0 max-w-40 items-center gap-2 truncate font-medium hover:text-brand-600 dark:hover:text-brand-400"
+                          >
+                            <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
+                            <span className="truncate">{brand.name}</span>
+                          </Link>
+                        </td>
+                        {selectedWeek.days.map((day) => (
+                          <td key={day.date} className="px-1.5 py-1.5">
+                            <PlanCellSelect
+                              brandId={brand.id}
+                              date={day.date}
+                              combo={comboByKey.get(`${brand.id}|${day.date}`) ?? null}
+                            />
+                          </td>
+                        ))}
+                        {CONTENT_KINDS.map((kind) => {
+                          const reached = targets[kind] > 0 && planned[kind] >= targets[kind];
+                          return (
+                            <td
+                              key={kind}
+                              className={`px-3 py-2 text-xs font-medium tabular-nums ${
+                                reached
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-zinc-600 dark:text-zinc-300"
+                              }`}
+                            >
+                              {planned[kind]}/{targets[kind]}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </section>
