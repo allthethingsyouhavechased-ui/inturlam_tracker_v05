@@ -165,6 +165,10 @@ export interface ActivityEntry {
   id: string;
   actor_id: string | null;
   actor_name: string | null;
+  // Kaydın kendisi anlık görüntü (actor_name), ama avatar OKUMA ANINDA
+  // people'dan JOIN'lenir — kişi hiç kalıcı silinmediği için güvenli, ve
+  // kişi fotoğrafını sonradan değiştirirse eski kayıtlar da güncel gösterir.
+  actor_avatar_path: string | null;
   action: string;
   entity_type: ActivityEntityType;
   entity_id: string | null;

@@ -38,7 +38,7 @@ export default function ActivityFeed({
             className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
           >
             {e.actor_name ? (
-              <PersonAvatar name={e.actor_name} size="xs" />
+              <PersonAvatar name={e.actor_name} avatarPath={e.actor_avatar_path} size="xs" />
             ) : (
               <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] text-zinc-500 dark:text-zinc-400 dark:bg-zinc-700">
                 ?

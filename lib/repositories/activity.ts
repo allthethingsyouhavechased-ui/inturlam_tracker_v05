@@ -32,11 +32,22 @@ export function insertActivity(a: NewActivity): void {
     );
 }
 
+// actor_name activity_log'da anlık görüntü olarak duruyor (FK yok, kişi
+// silinse bile kayıt okunabilir kalsın diye) ama avatar_path'i de aynı
+// şekilde donduracak bir sebep yok: kişiler bu uygulamada kalıcı silinmiyor
+// (yalnızca pasife alınıyor), bu yüzden avatar OKUMA ANINDA people'dan
+// LEFT JOIN'lenir — güncel fotoğraf gösterir, kişi sonradan değiştirse bile.
+const WITH_ACTOR_AVATAR_SELECT = `
+  SELECT a.*, p.avatar_path AS actor_avatar_path
+  FROM activity_log a
+  LEFT JOIN people p ON p.id = a.actor_id
+`;
+
 export function listRecentActivity(limit = 100): ActivityEntry[] {
   return plainList<ActivityEntry>(
     getDb()
       .prepare(
-        `SELECT * FROM activity_log ORDER BY created_at DESC, rowid DESC LIMIT ?`,
+        `${WITH_ACTOR_AVATAR_SELECT} ORDER BY a.created_at DESC, a.rowid DESC LIMIT ?`,
       )
       .all(limit),
   );
@@ -52,9 +63,9 @@ export function listActivityForEntity(
   return plainList<ActivityEntry>(
     getDb()
       .prepare(
-        `SELECT * FROM activity_log
-         WHERE entity_type = ? AND entity_id = ?
-         ORDER BY created_at DESC, rowid DESC LIMIT ?`,
+        `${WITH_ACTOR_AVATAR_SELECT}
+         WHERE a.entity_type = ? AND a.entity_id = ?
+         ORDER BY a.created_at DESC, a.rowid DESC LIMIT ?`,
       )
       .all(entityType, entityId, limit),
   );
@@ -67,9 +78,9 @@ export function listActivityForBrand(
   return plainList<ActivityEntry>(
     getDb()
       .prepare(
-        `SELECT * FROM activity_log
-         WHERE brand_id = ?
-         ORDER BY created_at DESC, rowid DESC LIMIT ?`,
+        `${WITH_ACTOR_AVATAR_SELECT}
+         WHERE a.brand_id = ?
+         ORDER BY a.created_at DESC, a.rowid DESC LIMIT ?`,
       )
       .all(brandId, limit),
   );
