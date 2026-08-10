@@ -318,10 +318,15 @@ export default function TaskExplorer({
               count: departmentCounts.get(NO_DEPARTMENT) ?? 0,
             },
           ]
-            // Kimsenin olmadığı departman sekmesi gösterilmez; "Diğer" de ancak
-            // gerçekten departmansız birinin işi varsa çıkar. Seçili sekme,
-            // sayısı sıfıra düşse bile kalır (yoksa filtre kendini gizlerdi).
-            .filter((option) => option.id === "" || option.count > 0 || option.id === department)
+            // Sabit dört departman (Video/Tasarım/Sosyal Medya/Yönetim) HER ZAMAN
+            // görünür — o an açık görevi olmayan bir ekip "filtrede hiç yok" gibi
+            // görünmesin diye (ekibin sıfır açık işi olduğunu görmek de bir
+            // bilgi). Yalnızca "Diğer" kovası (departmanı olmayan biri) gerçek
+            // bir ekip değil; ancak dolu olduğunda ya da seçiliyken gösterilir.
+            .filter(
+              (option) =>
+                option.id !== NO_DEPARTMENT || option.count > 0 || option.id === department,
+            )
             .map((option) => (
               <button
                 key={option.id || "all"}
