@@ -248,7 +248,11 @@ CREATE TABLE IF NOT EXISTS social_posts (
   -- doğru çalışsın diye hep aynı biçimde yazılır.
   posted_at   TEXT NOT NULL,
   fetched_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (platform, external_id)
+  -- brand_id dahil: aynı gönderi PORTFÖYDEKİ İKİ FARKLI markayı etiketleyen
+  -- bir ortak gönderi (collab) olabilir — o zaman iki markanın da kendi satırı
+  -- olmalı. Yalnızca (platform, external_id) olsaydı ikinci markanın satırı
+  -- INSERT OR IGNORE ile sessizce düşerdi (bkz. migrateSocialPostsUniqueIfNeeded).
+  UNIQUE (brand_id, platform, external_id)
 );
 
 -- Her tarama çalıştırması. "Hesapta paylaşım yok" ile "veriyi çekemedik"

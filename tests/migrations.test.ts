@@ -509,3 +509,63 @@ describe("content_items tür migration'ı", () => {
     );
   });
 });
+
+describe("social_posts UNIQUE migration'ı", () => {
+  it("aynı gönderiyi iki markaya (ortak gönderi/collab) ayrı ayrı yazabiliyor, veri kaybetmiyor", () => {
+    const legacySchema = SCHEMA_SQL.replace(
+      "UNIQUE (brand_id, platform, external_id)",
+      "UNIQUE (platform, external_id)",
+    );
+    assert.notEqual(legacySchema, SCHEMA_SQL, "test eski UNIQUE şemasını üretmeli");
+
+    const legacy = new DatabaseSync(TMP_DB);
+    legacy.exec("PRAGMA foreign_keys = ON");
+    legacy.exec(legacySchema);
+    legacy.prepare("INSERT INTO brands (id, name, cluster) VALUES ('marka-a', 'Marka A', 'tek')").run();
+    legacy.prepare("INSERT INTO brands (id, name, cluster) VALUES ('marka-b', 'Marka B', 'tek')").run();
+    legacy.prepare(
+      `INSERT INTO social_posts (id, brand_id, platform, external_id, posted_at)
+       VALUES ('sp1', 'marka-a', 'instagram', 'eski-gonderi', '2026-08-01T00:00:00.000Z')`,
+    ).run();
+    legacy.close();
+
+    const db = getDb();
+    // Eski satır (migration'dan önce yazılmış) kaybolmamalı.
+    const existing = db.prepare("SELECT * FROM social_posts WHERE id = 'sp1'").get() as
+      | Record<string, unknown>
+      | undefined;
+    assert.equal(existing?.brand_id, "marka-a");
+    assert.equal(existing?.external_id, "eski-gonderi");
+
+    // Asıl senaryo: ORTAK gönderi — aynı external_id, iki farklı marka.
+    // Eski kısıtta (platform, external_id) ikinci INSERT sessizce düşerdi.
+    db.prepare(
+      `INSERT OR IGNORE INTO social_posts (id, brand_id, platform, external_id, posted_at)
+       VALUES ('sp2', 'marka-a', 'instagram', 'ortak-gonderi', '2026-08-09T00:00:00.000Z')`,
+    ).run();
+    db.prepare(
+      `INSERT OR IGNORE INTO social_posts (id, brand_id, platform, external_id, posted_at)
+       VALUES ('sp3', 'marka-b', 'instagram', 'ortak-gonderi', '2026-08-09T00:00:00.000Z')`,
+    ).run();
+    const rows = db
+      .prepare("SELECT brand_id FROM social_posts WHERE external_id = 'ortak-gonderi' ORDER BY brand_id")
+      .all() as { brand_id: string }[];
+    assert.deepEqual(rows.map((r) => r.brand_id), ["marka-a", "marka-b"]);
+
+    // Aynı marka için tekrar hâlâ engellenir (idempotent tarama).
+    db.prepare(
+      `INSERT OR IGNORE INTO social_posts (id, brand_id, platform, external_id, posted_at)
+       VALUES ('sp2-tekrar', 'marka-a', 'instagram', 'ortak-gonderi', '2026-08-09T00:00:00.000Z')`,
+    ).run();
+    const count = db
+      .prepare("SELECT COUNT(*) AS n FROM social_posts WHERE external_id = 'ortak-gonderi' AND brand_id = 'marka-a'")
+      .get() as { n: number };
+    assert.equal(count.n, 1);
+
+    assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+    assert.equal(
+      (db.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check,
+      "ok",
+    );
+  });
+});

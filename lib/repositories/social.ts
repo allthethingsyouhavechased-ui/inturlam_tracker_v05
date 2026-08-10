@@ -42,9 +42,12 @@ export interface IncomingPost {
 
 /**
  * Gönderileri yazar, DAHA ÖNCE görülenleri atlar ve gerçekten yeni olanların
- * sayısını döndürür. `INSERT OR IGNORE` + UNIQUE(platform, external_id): aynı
- * gönderi her taramada tekrar geldiği için "kaç yeni paylaşım" sayısı ancak
- * böyle doğru çıkar.
+ * sayısını döndürür. `INSERT OR IGNORE` + UNIQUE(brand_id, platform,
+ * external_id): aynı gönderi her taramada tekrar geldiği için "kaç yeni
+ * paylaşım" sayısı ancak böyle doğru çıkar. `brand_id` kısıta dahil çünkü bir
+ * ortak gönderi (collab) iki markayı birden etiketleyebilir — her ikisi de
+ * kendi satırını hak eder (bkz. lib/social/apify.ts'teki
+ * `resolveHandlesForItem`, aynı external_id için birden çok handle üretebilir).
  */
 export function insertPostsIfNew(posts: IncomingPost[]): number {
   if (posts.length === 0) return 0;

@@ -46,6 +46,7 @@ function createConnection(): DatabaseSync {
   migratePeopleProfilesIfNeeded(db);
   migratePeopleDepartmentIfNeeded(db);
   migratePeopleAuthIfNeeded(db);
+  migrateSocialPostsUniqueIfNeeded(db);
   // SIRA ÖNEMLİ: yukarıdaki iki brands migration'ı tabloyu SABİT bir sütun
   // listesiyle yeniden kuruyor; bu ALTER onlardan sonra çalışmalı, yoksa
   // eklediği sütun rebuild sırasında düşer.
@@ -603,6 +604,56 @@ function migrateTasksTableIfNeeded(db: DatabaseSync): void {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_content_item ON tasks(content_item_id)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)`);
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  } finally {
+    db.exec("PRAGMA foreign_keys = ON");
+  }
+}
+
+// social_posts eskiden UNIQUE(platform, external_id) idi. Ortak gönderi
+// (collab) paylaşan iki markadan ikincisinin satırı bu kısıt yüzünden
+// sessizce düşüyordu (INSERT OR IGNORE aynı external_id'yi zaten görmüş
+// sayıyordu) — o marka gerçekte paylaşım yapmışken sistemde "sessiz"
+// görünüyordu. UNIQUE artık (brand_id, platform, external_id): aynı gönderi
+// iki markaya da ayrı ayrı sayılabilir, aynı marka için tekrar hâlâ
+// engellenir. Rebuild deseni diğer migration'larla aynı (bkz.
+// migrateContentItemsTableIfNeeded) — SQLite ALTER ile inline UNIQUE
+// değiştirilemiyor.
+function migrateSocialPostsUniqueIfNeeded(db: DatabaseSync): void {
+  const row = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='social_posts'`)
+    .get() as { sql: string } | undefined;
+  if (!row || row.sql.includes("UNIQUE (brand_id, platform, external_id)")) return;
+
+  db.exec("PRAGMA foreign_keys = OFF");
+  try {
+    db.exec("BEGIN");
+    db.exec(`
+      CREATE TABLE social_posts_new_migration (
+        id          TEXT PRIMARY KEY,
+        brand_id    TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+        platform    TEXT NOT NULL DEFAULT 'instagram',
+        external_id TEXT NOT NULL,
+        permalink   TEXT,
+        media_type  TEXT,
+        caption     TEXT,
+        posted_at   TEXT NOT NULL,
+        fetched_at  TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (brand_id, platform, external_id)
+      )
+    `);
+    db.exec(`
+      INSERT INTO social_posts_new_migration
+        (id, brand_id, platform, external_id, permalink, media_type, caption, posted_at, fetched_at)
+      SELECT id, brand_id, platform, external_id, permalink, media_type, caption, posted_at, fetched_at
+      FROM social_posts
+    `);
+    db.exec(`DROP TABLE social_posts`);
+    db.exec(`ALTER TABLE social_posts_new_migration RENAME TO social_posts`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_social_posts_brand ON social_posts(brand_id, posted_at)`);
     db.exec("COMMIT");
   } catch (e) {
     db.exec("ROLLBACK");

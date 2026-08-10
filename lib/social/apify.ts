@@ -39,6 +39,10 @@ interface ApifyPostItem {
   error?: string;
   errorDescription?: string;
   username?: string;
+  // Ortak gönderi (collab): gönderi birden çok hesabın profilinde birden
+  // görünür ama Apify yalnızca birincil sahibi ownerUsername'e yazar — ortak
+  // yazarlar burada listelenir.
+  coauthorProducers?: { username?: string }[];
 }
 
 function requireToken(): string {
@@ -77,6 +81,28 @@ function toIso(timestamp: string | undefined): string | null {
   if (!timestamp) return null;
   const parsed = new Date(timestamp);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+// Bir gönderinin ait sayılacağı TÜM takip edilen hesapları çözer. Normalde tek
+// hesap (ownerUsername) yeterli, ama ORTAK GÖNDERİ'de (collab) gönderi iki
+// hesabın da profilinde görünür; yalnızca ownerUsername'e bakarsak ortak yazar
+// olan taraf hep "hiç paylaşım yapmamış" gibi görünür (gerçek bug — bir hesap
+// başka bir markayla ortak gönderi paylaştığında sessiz sanılıyordu). Burada
+// owner + tüm coauthorProducers birlikte döndürülür; sync.ts zaten bizim
+// TAKİP ETMEDİĞİMİZ handle'ları otomatik eleyeceği için (brandByHandle.get)
+// burada ekstra bir filtreye gerek yok.
+export function resolveHandlesForItem(item: ApifyPostItem): string[] {
+  const handles = new Set<string>();
+  const owner =
+    item.ownerUsername?.toLowerCase() ??
+    item.username?.toLowerCase() ??
+    handleFromUrl(item.inputUrl);
+  if (owner) handles.add(owner);
+  for (const coauthor of item.coauthorProducers ?? []) {
+    const handle = coauthor.username?.toLowerCase();
+    if (handle) handles.add(handle);
+  }
+  return [...handles];
 }
 
 export function createApifyProvider(): SocialProvider {
@@ -144,13 +170,12 @@ export function createApifyProvider(): SocialProvider {
       const errorsByHandle: Record<string, string> = {};
 
       for (const item of Array.isArray(items) ? items : []) {
-        const handle =
-          item.ownerUsername?.toLowerCase() ??
-          item.username?.toLowerCase() ??
-          handleFromUrl(item.inputUrl) ??
-          null;
-
         if (item.error) {
+          const handle =
+            item.ownerUsername?.toLowerCase() ??
+            item.username?.toLowerCase() ??
+            handleFromUrl(item.inputUrl) ??
+            null;
           if (handle) {
             errorsByHandle[handle] = item.errorDescription?.trim() || item.error;
           }
@@ -159,16 +184,16 @@ export function createApifyProvider(): SocialProvider {
 
         const postedAt = toIso(item.timestamp);
         const externalId = item.id ?? item.shortCode ?? null;
-        if (!handle || !postedAt || !externalId) continue;
+        if (!postedAt || !externalId) continue;
 
-        posts.push({
-          externalId,
-          handle,
-          postedAt,
-          permalink: item.url ?? (item.shortCode ? `https://www.instagram.com/p/${item.shortCode}/` : null),
-          mediaType: item.type ?? null,
-          caption: item.caption?.slice(0, 500) ?? null,
-        });
+        const permalink =
+          item.url ?? (item.shortCode ? `https://www.instagram.com/p/${item.shortCode}/` : null);
+        const mediaType = item.type ?? null;
+        const caption = item.caption?.slice(0, 500) ?? null;
+
+        for (const handle of resolveHandlesForItem(item)) {
+          posts.push({ externalId, handle, postedAt, permalink, mediaType, caption });
+        }
       }
 
       return { posts, errorsByHandle };
