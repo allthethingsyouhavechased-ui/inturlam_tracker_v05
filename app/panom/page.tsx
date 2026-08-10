@@ -2,10 +2,6 @@ import Link from "next/link";
 import AutoRefresh from "@/components/AutoRefresh";
 import PanomViews from "@/components/PanomViews";
 import PersonalDeadlineRadar from "@/components/PersonalDeadlineRadar";
-import SilentAccountsCard from "@/components/SilentAccountsCard";
-import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
-import { getLatestSyncRun, listBrandSocialRows } from "@/lib/repositories/social";
-import { classifySocial } from "@/lib/socialSilence";
 import { currentWeekRange, todayISO } from "@/lib/date";
 import { getCurrentPerson } from "@/lib/identity";
 import { listBrandsWithOpenCounts } from "@/lib/repositories/brands";
@@ -66,22 +62,6 @@ export default async function PanomPage() {
     }));
   const brands = listBrandsWithOpenCounts();
   const people = listActivePeople();
-
-  // Sosyal medya takibi: sessiz hesaplar + taramanın kendi sağlığı. Sınıflandırma
-  // /social sayfasıyla AYNI fonksiyondan geliyor, yoksa iki ekran farklı şey
-  // söyleyebilirdi.
-  const socialRows = listBrandSocialRows();
-  const socialHealth = socialRows.map((row) => ({
-    row,
-    health: classifySocial(row, SOCIAL_SILENCE_DAYS, today),
-  }));
-  const silentAccounts = socialHealth
-    .filter((item) => item.health === "silent")
-    .map((item) => item.row);
-  const brokenAccounts = socialHealth.filter(
-    (item) => item.health === "error" || item.health === "unknown",
-  ).length;
-  const lastSocialRun = getLatestSyncRun();
 
   const myIds = new Set(myTasks.map((t) => t.id));
   const overdueIds = new Set(overdue.map((t) => t.id));
@@ -151,13 +131,6 @@ export default async function PanomPage() {
           horizonDays={PERSONAL_DEADLINE_HORIZON_DAYS}
         />
       )}
-
-      <SilentAccountsCard
-        silent={silentAccounts}
-        brokenCount={brokenAccounts}
-        thresholdDays={SOCIAL_SILENCE_DAYS}
-        syncBroken={lastSocialRun?.status === "error"}
-      />
 
       <PanomViews
         myTasks={myBoardTasks}
