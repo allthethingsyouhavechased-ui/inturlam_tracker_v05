@@ -38,7 +38,7 @@ export default function SilentAccountsCard({
             : "Sosyal medya takibi"}
         </h2>
         <Link
-          href="/social"
+          href="/social/takip"
           className="ui-press inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-semibold text-brand-600 hover:bg-white/60 dark:text-brand-400 dark:hover:bg-white/10"
         >
           Tümünü gör →
