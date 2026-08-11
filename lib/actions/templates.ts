@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { CONTENT_TYPES, TASK_PRIORITIES } from "@/lib/constants";
+import { requireSession } from "@/lib/identity";
 import { getContentItem } from "@/lib/repositories/content";
 import {
   addTemplateItem,
@@ -23,6 +24,7 @@ function readContentType(value: FormDataEntryValue | null): ContentType | null {
 }
 
 export async function createTemplateAction(formData: FormData): Promise<void> {
+  await requireSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Şablon adı zorunlu.");
   const contentType = readContentType(formData.get("contentType"));
@@ -38,6 +40,7 @@ export async function createTemplateAction(formData: FormData): Promise<void> {
 }
 
 export async function renameTemplateAction(formData: FormData): Promise<void> {
+  await requireSession();
   const id = String(formData.get("id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   if (!id || !name) throw new Error("Şablon adı zorunlu.");
@@ -55,6 +58,7 @@ export async function renameTemplateAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteTemplateAction(id: string): Promise<void> {
+  await requireSession();
   const template = getTemplate(id);
   if (!template) throw new Error("Şablon bulunamadı.");
 
@@ -69,6 +73,7 @@ export async function deleteTemplateAction(id: string): Promise<void> {
 }
 
 export async function addTemplateItemAction(formData: FormData): Promise<void> {
+  await requireSession();
   const templateId = String(formData.get("templateId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   if (!templateId || !title) throw new Error("Görev başlığı zorunlu.");
@@ -91,6 +96,7 @@ export async function addTemplateItemAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteTemplateItemAction(id: string): Promise<void> {
+  await requireSession();
   deleteTemplateItem(id);
   revalidatePath("/", "layout");
 }
@@ -102,6 +108,7 @@ export async function applyTemplateAction(
   contentItemId: string,
   assigneeId: string | null,
 ): Promise<number> {
+  await requireSession();
   const template = getTemplate(templateId);
   if (!template) throw new Error("Şablon bulunamadı.");
   const content = getContentItem(contentItemId);

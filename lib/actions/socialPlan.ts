@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
+import { requireSession } from "@/lib/identity";
 import { getBrand } from "@/lib/repositories/brands";
 import {
   setBrandAssetCount,
@@ -26,6 +27,7 @@ export async function setBrandContentTargetAction(
   kind: ContentKind,
   value: number,
 ): Promise<void> {
+  await requireSession();
   if (!isContentKind(kind)) throw new Error("Geçersiz içerik türü.");
   const brand = getBrand(brandId);
   if (!brand) throw new Error("Marka bulunamadı.");
@@ -49,6 +51,7 @@ export async function setBrandAssetCountAction(
   kind: ContentKind,
   value: number,
 ): Promise<void> {
+  await requireSession();
   if (!isContentKind(kind)) throw new Error("Geçersiz içerik türü.");
   const brand = getBrand(brandId);
   if (!brand) throw new Error("Marka bulunamadı.");
@@ -62,6 +65,7 @@ export async function setBrandPlanEntryAction(
   planDate: string,
   combo: string | null,
 ): Promise<void> {
+  await requireSession();
   if (!isValidPlanDate(planDate)) throw new Error("Geçersiz tarih.");
   if (combo !== null && !isPlanCombo(combo)) throw new Error("Geçersiz paylaşım türü.");
   const brand = getBrand(brandId);

@@ -13,6 +13,12 @@ export const getCurrentPerson = cache(async (): Promise<Person | null> => {
   return getPersonForSession(token) ?? null;
 });
 
+export async function requireSession(): Promise<Person> {
+  const person = await getCurrentPerson();
+  if (!person) throw new Error("Bu işlem için giriş yapmalısınız.");
+  return person;
+}
+
 export async function requireReportAccess(): Promise<Person> {
   const person = await getCurrentPerson();
   if (!person) redirect("/whoami");

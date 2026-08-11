@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { ensureCluster } from "@/lib/clusters";
+import { requireSession } from "@/lib/identity";
 import {
   countBrandsInCluster,
   deleteCluster,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/repositories/clusters";
 
 export async function createClusterAction(formData: FormData) {
+  await requireSession();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) throw new Error("Kategori adı zorunlu.");
   await ensureCluster(label);
@@ -18,6 +20,7 @@ export async function createClusterAction(formData: FormData) {
 }
 
 export async function renameClusterAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("clusterId") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) throw new Error("Kategori adı zorunlu.");
@@ -36,6 +39,7 @@ export async function renameClusterAction(formData: FormData) {
 }
 
 export async function deleteClusterAction(clusterId: string) {
+  await requireSession();
   const current = getCluster(clusterId);
   if (!current) throw new Error("Kategori bulunamadı.");
 

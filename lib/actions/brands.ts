@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { resolveClusterFromForm } from "@/lib/clusters";
 import { todayISO } from "@/lib/date";
+import { requireSession } from "@/lib/identity";
 import {
   createBrand,
   deleteBrand,
@@ -34,6 +35,7 @@ function cleanInt(value: FormDataEntryValue | null): number | null {
 }
 
 export async function createBrandAction(formData: FormData) {
+  await requireSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Marka adı zorunlu.");
   const cluster = await resolveClusterFromForm(formData);
@@ -62,6 +64,7 @@ export async function createBrandAction(formData: FormData) {
 }
 
 export async function updateBrandAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("brandId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
 
@@ -99,6 +102,7 @@ export async function updateBrandAction(formData: FormData) {
 }
 
 export async function archiveBrandAction(brandId: string) {
+  await requireSession();
   const brand = getBrand(brandId);
   setBrandArchived(brandId, true);
   await recordActivity({
@@ -116,6 +120,7 @@ export async function archiveBrandAction(brandId: string) {
 // olarak kaybetmeyi zorlaştıran bilinçli bir güvenlik adımı (bkz. arşivle
 // önce deseni, DeleteBrandButton yalnızca arşiv listesinde gösteriliyor).
 export async function deleteBrandAction(brandId: string) {
+  await requireSession();
   const brand = getBrand(brandId);
   if (!brand) return;
   if (brand.archived !== 1) {
@@ -136,6 +141,7 @@ export async function deleteBrandAction(brandId: string) {
 }
 
 export async function unarchiveBrandAction(brandId: string) {
+  await requireSession();
   const brand = getBrand(brandId);
   setBrandArchived(brandId, false);
   await recordActivity({

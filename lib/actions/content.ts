@@ -8,6 +8,7 @@ import {
   CONTENT_STATUSES,
   CONTENT_TYPES,
 } from "@/lib/constants";
+import { requireSession } from "@/lib/identity";
 import {
   createContentItem,
   deleteContentItem,
@@ -24,6 +25,7 @@ function cleanValue(value: FormDataEntryValue | null): string | null {
 }
 
 export async function createContentItemAction(formData: FormData): Promise<string> {
+  await requireSession();
   const brandId = String(formData.get("brandId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "") as ContentType;
@@ -56,6 +58,7 @@ export async function setContentStatusAction(
   contentId: string,
   status: ContentStatus,
 ) {
+  await requireSession();
   if (!CONTENT_STATUSES.includes(status)) {
     throw new Error("Geçersiz durum.");
   }
@@ -72,6 +75,7 @@ export async function setContentStatusAction(
 }
 
 export async function updateContentItemAction(formData: FormData) {
+  await requireSession();
   const id = String(formData.get("contentId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "") as ContentType;
@@ -101,6 +105,7 @@ export async function updateContentItemAction(formData: FormData) {
 }
 
 export async function archiveContentItemAction(contentId: string) {
+  await requireSession();
   const content = getContentItem(contentId);
   setContentArchived(contentId, true);
   await recordActivity({
@@ -114,6 +119,7 @@ export async function archiveContentItemAction(contentId: string) {
 }
 
 export async function unarchiveContentItemAction(contentId: string) {
+  await requireSession();
   const content = getContentItem(contentId);
   setContentArchived(contentId, false);
   await recordActivity({
@@ -127,6 +133,7 @@ export async function unarchiveContentItemAction(contentId: string) {
 }
 
 export async function deleteContentItemAction(contentId: string) {
+  await requireSession();
   const content = getContentItem(contentId);
   deleteContentItem(contentId);
   await recordActivity({
