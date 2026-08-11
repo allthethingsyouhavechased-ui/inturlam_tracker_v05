@@ -3,14 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Sosyal menüsünün üç kardeş sayfası arasındaki sekme şeridi. Menüdeki
-// "Sosyal" öğesinin altındaki children ile BİREBİR aynı üç href (lib/nav.ts) —
-// ikisi ayrı yerlerde ama aynı üç rotayı gösteriyor, biri değişirse diğeri de
-// güncellenmeli.
 const TABS = [
   { href: "/social/takip", label: "Takip" },
   { href: "/social/varlik", label: "Varlık" },
-  { href: "/social/takvim", label: "Paylaşım Takvimi" },
+  { href: "/social/takvim", label: "Paylaşım takvimi" },
 ] as const;
 
 export default function SocialTabs() {
@@ -18,8 +14,8 @@ export default function SocialTabs() {
 
   return (
     <nav
-      aria-label="Sosyal alt sayfaları"
-      className="flex flex-wrap gap-1 border-b border-black/10 pb-2 dark:border-white/10"
+      aria-label="Sosyal çalışma alanı"
+      className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[10px] border border-border-default bg-surface-subtle p-1"
     >
       {TABS.map((tab) => {
         const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
@@ -28,10 +24,10 @@ export default function SocialTabs() {
             key={tab.href}
             href={tab.href}
             aria-current={active ? "page" : undefined}
-            className={`ui-press inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-medium transition-colors ${
+            className={`ui-press inline-flex min-h-9 shrink-0 items-center rounded-lg px-3 text-xs font-semibold transition-colors ${
               active
-                ? "bg-brand-600 text-white shadow-sm"
-                : "text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                : "text-muted hover:bg-surface-hover hover:text-secondary"
             }`}
           >
             {tab.label}

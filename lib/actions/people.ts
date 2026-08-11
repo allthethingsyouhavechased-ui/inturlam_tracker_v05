@@ -5,22 +5,33 @@ import { redirect } from "next/navigation";
 import { hashPassword, validatePassword } from "@/lib/auth/password";
 import { assertCanManageRoles, ROLE_ADMIN_PERSON_ID } from "@/lib/auth/authorization";
 import { normalizeDepartment } from "@/lib/departments";
-import { getCurrentPerson } from "@/lib/identity";
+import { requireSession } from "@/lib/identity";
 import {
   createPerson,
   getPerson,
   setPersonActive,
   setPersonManager,
+  updatePersonPassword,
   updatePersonProfile,
 } from "@/lib/repositories/people";
+import { deleteAuthSessionsForPerson } from "@/lib/repositories/authSessions";
 import { saveImageFiles, validateImageFiles } from "@/lib/uploads";
+import type { Person } from "@/lib/types";
 
 function optionalText(value: FormDataEntryValue | null): string | null {
   const text = String(value ?? "").trim();
   return text.length > 0 ? text : null;
 }
 
+function assertAccountManager(actor: Person) {
+  if (actor.is_manager !== 1) {
+    throw new Error("Ekip hesaplarını yalnızca yöneticiler değiştirebilir.");
+  }
+}
+
 export async function createPersonAction(formData: FormData) {
+  const actor = await requireSession();
+  assertAccountManager(actor);
   const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
@@ -36,20 +47,27 @@ export async function createPersonAction(formData: FormData) {
     hashPassword(password),
   );
   revalidatePath("/", "layout");
+  revalidatePath("/team/manage");
 }
 
 export async function deactivatePersonAction(personId: string) {
+  const actor = await requireSession();
+  assertAccountManager(actor);
   setPersonActive(personId, false);
   revalidatePath("/", "layout");
+  revalidatePath("/team/manage");
 }
 
 export async function reactivatePersonAction(personId: string) {
+  const actor = await requireSession();
+  assertAccountManager(actor);
   setPersonActive(personId, true);
   revalidatePath("/", "layout");
+  revalidatePath("/team/manage");
 }
 
 export async function setManagerRoleAction(personId: string, isManager: boolean) {
-  const actor = await getCurrentPerson();
+  const actor = await requireSession();
   assertCanManageRoles(actor);
 
   const person = getPerson(personId);
@@ -61,10 +79,36 @@ export async function setManagerRoleAction(personId: string, isManager: boolean)
   setPersonManager(person.id, isManager);
   revalidatePath("/", "layout");
   revalidatePath("/team");
+  revalidatePath("/team/manage");
   revalidatePath(`/team/${person.id}`);
 }
 
+export async function resetPersonPasswordAction(formData: FormData) {
+  const actor = await requireSession();
+  assertAccountManager(actor);
+
+  const personId = String(formData.get("personId") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const person = getPerson(personId);
+  if (!person || person.active !== 1) throw new Error("Aktif hesap bulunamadı.");
+  if (person.is_manager === 1 && actor.id !== ROLE_ADMIN_PERSON_ID) {
+    throw new Error("Yönetici hesaplarının şifresini yalnızca sistem yöneticisi yenileyebilir.");
+  }
+
+  const passwordError = validatePassword(password);
+  if (passwordError) throw new Error(passwordError);
+  if (password !== confirmPassword) throw new Error("Şifreler eşleşmiyor.");
+
+  updatePersonPassword(person.id, hashPassword(password));
+  deleteAuthSessionsForPerson(person.id);
+  revalidatePath("/", "layout");
+  revalidatePath("/team/manage");
+  revalidatePath("/whoami");
+}
+
 export async function updatePersonProfileAction(formData: FormData) {
+  const actor = await requireSession();
   const id = String(formData.get("personId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const title = optionalText(formData.get("title"));
@@ -76,6 +120,16 @@ export async function updatePersonProfileAction(formData: FormData) {
   if (name.length > 80) throw new Error("İsim en fazla 80 karakter olabilir.");
   if ((title?.length ?? 0) > 120) throw new Error("Unvan en fazla 120 karakter olabilir.");
   if ((bio?.length ?? 0) > 1000) throw new Error("Tanıtım en fazla 1000 karakter olabilir.");
+
+  // Yetki açığı (2026-08-11 tasarım revizyonunda bulundu): bu action önceden
+  // HİÇBİR sahiplik kontrolü yapmıyordu — "sen kimsin" çerezi kolayca
+  // taklit edilebildiği için, isteği yapanın gerçekten bu kişi ya da bir
+  // yönetici olduğunu SUNUCUDA yeniden doğrula. Arayüz de aynı kuralla formu
+  // zaten göstermiyor (bkz. app/settings/profile/page.tsx) — ama arayüz kontrolü
+  // tek başına yeterli değil, bu action doğrudan da çağrılabilir.
+  if (actor.id !== id && actor.is_manager !== 1) {
+    throw new Error("Bu profili yalnızca kendisi ya da bir yönetici düzenleyebilir.");
+  }
 
   const person = getPerson(id);
   if (!person) throw new Error("Kişi bulunamadı.");
@@ -95,5 +149,6 @@ export async function updatePersonProfileAction(formData: FormData) {
   });
   revalidatePath("/", "layout");
   revalidatePath(`/team/${id}`);
-  redirect(`/team/${encodeURIComponent(id)}?saved=1`);
+  revalidatePath("/settings/profile");
+  redirect(`/settings/profile?person=${encodeURIComponent(id)}&saved=1`);
 }

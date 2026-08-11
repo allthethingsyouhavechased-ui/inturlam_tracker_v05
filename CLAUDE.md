@@ -155,9 +155,10 @@ aynı yetkiyi yeniden doğrular. Yunus kendi yönetici rolünü kaldıramaz.
   ızgarası sabit 6 satır/42 gün) — ikisini birleştirme. `app/social/layout.tsx` uygulamanın İLK iç
   içe layout'u; bu yüzden `team-page-wide`/`workspace-page-wide` (`.page-shell:has(> ...)`, direkt
   çocuk seçici) artık `/social` altındaki hiçbir sayfada çalışmaz — araya layout'un kendi
-  wrapper'ı giriyor. Üst menüde "Sosyal" artık `lib/nav.ts`'teki `NavItem.children` ile açılır
-  menü/akordeon: `visibleNav()`/`isNavActive()` de buradan, iki renderer'ın (`NavLinks`
-  masaüstü dropdown, `SidebarNavLinks` mobil akordeon) kopyaladığı yönetici filtresini tekilleştirir.
+  wrapper'ı giriyor. Sidebar nav'da "Sosyal" `lib/nav.ts`'teki `NavItem.children` ile akordeona
+  dönüşür: `visibleNavGroups()`/`isNavActive()` de buradan (2026-08-11'den önce iki ayrı renderer
+  `NavLinks`/`SidebarNavLinks` bu filtreyi kopyalıyordu, artık tek `SidebarNav` var — bkz. aşağıdaki
+  tasarım revizyonu notu).
 
 ## Kritik tuzaklar (bunlara dikkat)
 
@@ -294,11 +295,28 @@ biri gerçekten değiştiğinde bugüne çekilir (yalnızca adı düzeltip kayde
 
 - **Aksan rengi `brand-*`**, asla `indigo-*` değil. Skala `globals.css`'teki `@theme inline`'da;
   marka rengini değiştirmek 11 satır.
-- **Metin kontrastı iki temada da ≥ 4.5:1 olmalı.** Pratikte ikili kural:
-  soluk metin `text-zinc-500 dark:text-zinc-400`, kırmızı `text-rose-600 dark:text-rose-400`,
-  aksan `text-brand-600 dark:text-brand-400`. Tek başına `text-zinc-500` koyu temada 3.67,
-  tek başına `text-zinc-400` açık temada 2.8 — ikisi de kalır. `text-zinc-300` hiç kullanma.
-  Rozetin kendi zemini varsa (`bg-black/5`) bir ton koyulaştır (`text-zinc-600`).
+- **Yüzey/kenarlık/soluk-metin token'ları (2026-08-11 tasarım revizyonu).** `globals.css`'teki
+  `:root`/`.dark` artık `--surface`/`--surface-muted`/`--surface-hover`/`--border-subtle`/
+  `--border-default`/`--text-muted` tanımlıyor, `@theme inline` bunları `bg-surface`,
+  `bg-surface-muted`, `bg-surface-hover`, `border-border-subtle`, `border-border-default`,
+  `text-muted` utility'lerine bağlıyor. Bunlar temaya göre KENDİ değerini değiştirir — yani
+  `bg-surface`/`border-border-default`/`text-muted` yazarken AYRICA bir `dark:` class'ı gerekmez
+  (eski `border-black/10 bg-white ... dark:border-white/10 dark:bg-zinc-900` dörtlüsünün tek
+  karşılığı). Yeni bileşen/sayfa yazarken önce `components/ui/*`e bak (aşağı), oradaki
+  primitive'ler bu token'ları zaten kullanıyor.
+- **`components/ui/` altında paylaşılan primitive'ler var: `Button`, `Card`, `Badge`, `Input`,
+  `Select`, `Textarea`, `PageHeader`.** Öncesinde her form kendi input/buton class string'ini
+  (17 neredeyse-aynı varyant) tekrar yazıyordu, her sayfa kendi `<h1>` bloğunu icat ediyordu.
+  Yeni bir form/sayfa/kart yazarken BUNLARI kullan, yeni bir inline class string YAZMA. `Button`
+  hem gerçek `<button>` hem de `buttonClass({variant,size})` (Link gibi başka öğeleri buton gibi
+  göstermek için) export ediyor. Async form gönderiminde hâlâ `SubmitButton` (useFormStatus ile
+  çift gönderimi engeller) — o da artık aynı `buttonClass`'ı kullanıyor, ayrıca stil yazma.
+- **Metin kontrastı iki temada da ≥ 4.5:1 olmalı.** Yeni kodda tercih edilen yol `text-muted`
+  (yukarıdaki token — teması otomatik değişir). Eski `text-zinc-500 dark:text-zinc-400` ikilisi
+  de hâlâ geçerli/doğru, ikisi aynı amaca hizmet ediyor. Kırmızı `text-rose-600 dark:text-rose-400`,
+  aksan `text-brand-600 dark:text-brand-400`. Tek başına `text-zinc-500` koyu temada 3.67, tek
+  başına `text-zinc-400` açık temada 2.8 — ikisi de kalır. `text-zinc-300` hiç kullanma. Rozetin
+  kendi zemini varsa (`bg-black/5`) bir ton koyulaştır (`text-zinc-600`).
 - **Odak halkası merkezi.** `globals.css`'te `:focus-visible` kuralı `@layer` dışında yazıldığı
   için Tailwind'in `focus:outline-none` utility'sini ezer — bileşene ayrıca `focus:ring-*`
   eklemeye gerek yok, `outline-none` yazmak da zararsız.
@@ -306,20 +324,31 @@ biri gerçekten değiştiğinde bugüne çekilir (yalnızca adı düzeltip kayde
   `truncate`lı (nowrap) metnin ya da bir `<select>`'in en uzun seçeneğinin TAM genişliğini alt
   sınır kabul eder; hücre taşar ve telefonda sayfa yatay kayar. Kart/panel bir grid çocuğuysa
   `min-w-0` ekle (bkz. `app/page.tsx` TaskPanel, `components/TaskGridCard.tsx`).
+- **Sidebar artık header'ın YANINDA, altında değil** (`app/layout.tsx`: `<div className="flex
+  min-h-screen">` → sidebar sütunu + [Header, main] sütunu). Eskiden header tüm viewport
+  genişliğinde tek başına duruyor, sidebar ve sayfa içeriği ayrı ayrı ortalanıyordu (1920px'te
+  logo ile sayfa başlığı ~215px kayık düşüyordu). Yeni sayfa/bileşen eklerken header'ın sidebar'ın
+  ÜSTÜNDEN geçtiğini VARSAYMA — artık geçmiyor.
 - **Sidebar daraltması CSS'ten, React'ten değil.** Tercih `<html data-sidebar>` özniteliğinde ve
   layout'taki no-FOUC script'i onu ilk boyamadan önce yazıyor; genişliği `globals.css`'teki
-  `.sidebar-panel` kuralı veriyor. React state'i olsaydı sayfa bir kare açık sidebar'la çizilirdi.
-  `SidebarContext` bu yüzden `useSyncExternalStore` ile özniteliği okuyor (`useEffect` + `setState`
-  fazladan render turu demek ve `react-hooks/set-state-in-effect` kuralına takılıyor).
-- **Üst menü `md`nin altında gizli.** 7 bölüm linki dar ekrana sığmıyor; liste tek yerde
-  (`lib/nav.ts`), masaüstünde `NavLinks`, mobilde off-canvas panelde `SidebarNavLinks`.
-  Yeni sayfa eklerken `MAIN_NAV`'a yaz, iki yer birden güncellenir.
+  `.sidebar-panel` kuralı (16rem/256px) veriyor. React state'i olsaydı sayfa bir kare açık
+  sidebar'la çizilirdi. `SidebarContext` bu yüzden `useSyncExternalStore` ile özniteliği okuyor
+  (`useEffect` + `setState` fazladan render turu demek ve `react-hooks/set-state-in-effect`
+  kuralına takılıyor).
+- **Bölüm navigasyonu artık TEK bileşende: `components/SidebarNav.tsx`.** Hem masaüstü (her zaman
+  görünen sol sütun) hem mobil off-canvas panel AYNI bileşeni render eder — eskiden `NavLinks`
+  (üst bar dropdown) + `SidebarNavLinks` (mobil akordeon) diye iki ayrı bileşen aynı listeyi dört
+  farklı görsel dilde tekrarlıyordu, ikisi de kaldırıldı. Liste `lib/nav.ts`'teki `NAV_GROUPS`'ta
+  üç grupla (İşler/Marka/Yönetim, kullanıcı tercihiyle gruplanmış): yeni sayfa eklerken ilgili
+  gruba yaz, tek yer güncellenir. `visibleNavGroups(canViewReports)` yönetici filtresini uyguluyor.
 - **Küçük ikon butonlarına `touch-target`.** Görünümü değiştirmeden tıklama alanını mobilde
   44×44'e çıkarır (`globals.css`); `min-h-11` vermek satır yüksekliğini şişirirdi.
 - **Hata mesajlarına `role="alert"`**, ikon-only butonlara `aria-label`, form gönderim
   butonları için `SubmitButton` (useFormStatus ile çift gönderimi engeller).
-- Yarıçap hiyerarşisi: dış panel `rounded-xl`, iç kart `rounded-lg`, form/buton `rounded-md`,
-  rozet/avatar `rounded-full`.
+- Yarıçap hiyerarşisi (2026-08-11 revizyonu — "yumuşak kart" yönü daha büyük dış yarıçap seçti):
+  dış panel/kart `rounded-2xl` (`components/ui/Card.tsx`), form/buton `rounded-xl`/`rounded-lg`
+  (`components/ui/Button.tsx`/`Input.tsx`, boyuta göre), rozet/avatar `rounded-full`. Eski kodda
+  hâlâ `rounded-lg`/`rounded-md` iç kart olarak geçebilir, bu bir hata değil — kademeli göç.
 
 ## Genişletirken
 

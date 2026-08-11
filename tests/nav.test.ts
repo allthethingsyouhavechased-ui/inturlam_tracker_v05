@@ -1,70 +1,73 @@
-// Üst menü verisi ve saf yardımcıları. Sosyal'in alt sayfalarla açılır menüye
-// dönüşmesiyle iki renderer (NavLinks, SidebarNavLinks) arasında href
-// çakışması/kopyası kolayca sızabilir — burada kilitleniyor.
-
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAIN_NAV, isNavActive, visibleNav } from "@/lib/nav";
+import {
+  NAV_GROUPS,
+  isNavActive,
+  routeContextForPathname,
+  visibleNavGroups,
+  type NavItem,
+} from "@/lib/nav";
 
-function allHrefs(items: readonly { href: string; children?: readonly { href: string }[] }[]): string[] {
-  return items.flatMap((item) => [item.href, ...(item.children ?? []).map((c) => c.href)]);
+function allHrefs(groups: readonly { items: readonly NavItem[] }[]): string[] {
+  return groups.flatMap((group) => group.items.map((item) => item.href));
 }
 
-describe("visibleNav", () => {
-  it("yönetici değilse Raporlar'ı eler, sırayı korur", () => {
-    const withReports = visibleNav(true);
-    const withoutReports = visibleNav(false);
-    assert.ok(withReports.some((item) => item.href === "/reports"));
-    assert.ok(!withoutReports.some((item) => item.href === "/reports"));
-    assert.equal(withoutReports.length, withReports.length - 1);
-    assert.deepEqual(
-      withoutReports.map((item) => item.href),
-      withReports.map((item) => item.href).filter((href) => href !== "/reports"),
-    );
+describe("visibleNavGroups", () => {
+  it("yönetici değilse Raporlar'ı eler, ürün gruplarını korur", () => {
+    const withReports = visibleNavGroups(true);
+    const withoutReports = visibleNavGroups(false);
+    const withHrefs = allHrefs(withReports);
+    const withoutHrefs = allHrefs(withoutReports);
+    assert.ok(withHrefs.includes("/reports"));
+    assert.ok(!withoutHrefs.includes("/reports"));
+    assert.equal(withoutHrefs.length, withHrefs.length - 1);
+    assert.equal(withoutReports.length, withReports.length);
   });
 });
 
-describe("MAIN_NAV yapısı", () => {
-  it("tüm href'ler (üst + alt) tekildir", () => {
-    const hrefs = allHrefs(MAIN_NAV);
+describe("NAV_GROUPS bilgi mimarisi", () => {
+  it("tüm global hedefler tekildir", () => {
+    const hrefs = allHrefs(NAV_GROUPS);
     assert.equal(new Set(hrefs).size, hrefs.length);
   });
 
-  it("Sosyal tam 3 alt sayfa taşır, her birinin href'i ebeveynin öneki", () => {
-    const social = MAIN_NAV.find((item) => item.href === "/social");
-    assert.ok(social?.children);
-    assert.equal(social.children.length, 3);
-    for (const child of social.children) {
-      assert.ok(child.href.startsWith("/social/"), child.href);
-    }
+  it("Bugün, Panom, Talepler, Görevler ve Takvim aynı çalışma grubundadır", () => {
+    const calisma = NAV_GROUPS.find((group) => group.id === "calisma");
+    assert.ok(calisma);
     assert.deepEqual(
-      social.children.map((c) => c.href),
-      ["/social/takip", "/social/varlik", "/social/takvim"],
+      calisma.items.map((item) => item.href),
+      ["/", "/panom", "/requests", "/tasks", "/calendar"],
     );
   });
 
-  it("Sosyal dışındaki öğelerin çocuğu yok", () => {
-    for (const item of MAIN_NAV) {
-      if (item.href === "/social") continue;
-      assert.equal(item.children, undefined, item.href);
-    }
+  it("Markalar ve Sosyal portföyde; marka ağacı global navda değildir", () => {
+    const portfoy = NAV_GROUPS.find((group) => group.id === "portfoy");
+    assert.ok(portfoy);
+    assert.deepEqual(portfoy.items.map((item) => item.href), ["/brands", "/social"]);
+    assert.equal(allHrefs(NAV_GROUPS).some((href) => href.startsWith("/brands/")), false);
   });
 });
 
 describe("isNavActive", () => {
-  it("tam eşleşmeyi aktif sayar", () => {
-    assert.equal(isNavActive("/social", "/social"), true);
+  it("ana sayfayı yalnızca tam eşleşmede aktif sayar", () => {
+    assert.equal(isNavActive("/", "/"), true);
+    assert.equal(isNavActive("/tasks", "/"), false);
   });
 
-  it("alt rotayı aktif sayar", () => {
+  it("bir bölümün alt rotasını aktif sayar", () => {
     assert.equal(isNavActive("/social/takvim", "/social"), true);
   });
 
-  it("benzer ama alakasız bir yolu aktif SAYMAZ (eski çıplak startsWith'in bug'ı)", () => {
+  it("benzer ama alakasız yolu aktif saymaz", () => {
     assert.equal(isNavActive("/socialmedia", "/social"), false);
   });
+});
 
-  it("alakasız bir yolu aktif saymaz", () => {
-    assert.equal(isNavActive("/tasks", "/social"), false);
+describe("routeContextForPathname", () => {
+  it("profil, ayar ve güvenliği farklı sorumluluklar olarak adlandırır", () => {
+    assert.deepEqual(routeContextForPathname("/team/p1"), { section: "Ekip", label: "Kişi profili" });
+    assert.deepEqual(routeContextForPathname("/team/manage"), { section: "Ekip", label: "Hesap yönetimi" });
+    assert.deepEqual(routeContextForPathname("/settings/profile"), { section: "Ayarlar", label: "Profil bilgileri" });
+    assert.deepEqual(routeContextForPathname("/settings/security"), { section: "Ayarlar", label: "Güvenlik" });
   });
 });

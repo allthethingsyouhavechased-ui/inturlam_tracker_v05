@@ -18,12 +18,12 @@ import AssigneeSelect from "@/components/AssigneeSelect";
 import PersonAvatar from "@/components/PersonAvatar";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
+import Icon from "@/components/ui/Icon";
 import { setTaskStatusAction } from "@/lib/actions/tasks";
 import {
   CONTENT_TYPE_LABEL,
   TASK_PRIORITY_BORDER,
   TASK_PRIORITY_FLAG_THRESHOLD,
-  TASK_PRIORITY_ICON,
   TASK_STATUS_BADGE,
   TASK_STATUS_BORDER_TOP,
   TASK_STATUS_DOT,
@@ -66,7 +66,7 @@ function TaskCard({
           onPointerDown={(e) => e.stopPropagation()}
         >
           {TASK_PRIORITY_FLAG_THRESHOLD.includes(task.priority) && (
-            <span className="mr-1">{TASK_PRIORITY_ICON[task.priority]}</span>
+            <Icon name="alert" className="mr-1 inline size-3.5 text-warning" />
           )}
           {task.title}
         </Link>
@@ -115,7 +115,7 @@ function TaskCard({
         <div
           className={`text-xs ${isOverdue(task.due_date) ? "font-medium text-rose-600 dark:text-rose-400" : "text-zinc-500 dark:text-zinc-400"}`}
         >
-          📅 {formatDateShort(task.due_date)}
+          <span className="inline-flex items-center gap-1"><Icon name="calendar" className="size-3.5" />{formatDateShort(task.due_date)}</span>
         </div>
       )}
       <div

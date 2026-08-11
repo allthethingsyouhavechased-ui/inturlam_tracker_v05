@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+const RUNTIME_UPLOAD_ROOT = path.join(process.cwd(), "data", "uploads");
+
 export const MAX_IMAGE_FILES = 6;
 export const MAX_IMAGE_SIZE = 8 * 1024 * 1024; // 8MB
 
@@ -36,7 +38,7 @@ export async function saveImageFiles(
   subdir: string,
 ): Promise<{ filePath: string; originalName: string | null }[]> {
   if (images.length === 0) return [];
-  const uploadDir = path.join(process.cwd(), "public", "uploads", subdir);
+  const uploadDir = path.join(RUNTIME_UPLOAD_ROOT, subdir);
   await fs.mkdir(uploadDir, { recursive: true });
   const saved: { filePath: string; originalName: string | null }[] = [];
   for (const image of images) {
@@ -50,7 +52,10 @@ export async function saveImageFiles(
 }
 
 export async function deleteUploadedFile(filePath: string): Promise<void> {
-  const abs = path.join(process.cwd(), "public", filePath.replace(/^\//, ""));
+  const relative = filePath.replace(/^\/uploads\//, "");
+  const abs = path.resolve(RUNTIME_UPLOAD_ROOT, relative);
+  const insideRoot = path.relative(RUNTIME_UPLOAD_ROOT, abs);
+  if (insideRoot.startsWith("..") || path.isAbsolute(insideRoot)) return;
   await fs.unlink(abs).catch(() => {});
 }
 

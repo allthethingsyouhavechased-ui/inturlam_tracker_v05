@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "İNTURLAM · İş Takip",
-  description: "İNTURLAM marka içerik ve görev takip aracı",
+  title: "İNTURLAM · Operations",
+  description: "İNTURLAM marka, içerik ve görev operasyon merkezi",
 };
 
 export default function RootLayout({
@@ -32,29 +32,26 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-zinc-50 font-sans text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-        {/* Sayfa boyanmadan önce iki tercihi uygula (FOUC yok):
-            - tema → `.dark` class'ı (localStorage, yoksa OS tercihi)
-            - sidebar daraltması → `data-sidebar` özniteliği; genişliği
-              globals.css bundan okuyor, React'i beklemez. */}
+      <body className="min-h-full bg-background font-sans text-foreground">
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}try{if(localStorage.getItem('sidebar-collapsed')==='1'){document.documentElement.dataset.sidebar='collapsed'}}catch(e){}`,
           }}
         />
+        <a href="#main-content" className="skip-link">İçeriğe geç</a>
         <SidebarProvider>
-          <Header />
-          <div className="flex">
+          <div className="flex min-h-screen bg-background">
             <SidebarMobileFrame>
               <Sidebar />
             </SidebarMobileFrame>
-            <main className="min-w-0 flex-1">
-              {/* 5xl (1024px) veri yoğun tablolar/panolar için dardı: 1920px
-                  ekranda tablo sıkışırken sağ-sol boş kalıyordu. Uzun metin
-                  okunan yerler (marka denetim metni, yorumlar) kendi içinde
-                  max-w-3xl ile sınırlanıyor — satır uzunluğu bozulmasın. */}
-              <div className="page-shell mx-auto max-w-7xl px-4 py-6">{children}</div>
-            </main>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Header />
+              <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
+                <div className="page-shell mx-auto w-full max-w-[var(--page-max)] px-4 py-6 sm:px-6 sm:py-8">
+                  {children}
+                </div>
+              </main>
+            </div>
           </div>
         </SidebarProvider>
       </body>

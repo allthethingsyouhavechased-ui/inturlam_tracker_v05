@@ -19,6 +19,12 @@ export async function requireSession(): Promise<Person> {
   return person;
 }
 
+export async function requirePageSession(): Promise<Person> {
+  const person = await getCurrentPerson();
+  if (!person) redirect("/whoami");
+  return person;
+}
+
 export async function requireReportAccess(): Promise<Person> {
   const person = await getCurrentPerson();
   if (!person) redirect("/whoami");

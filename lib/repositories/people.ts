@@ -121,17 +121,6 @@ export function createPerson(
   return id;
 }
 
-export function setInitialPassword(id: string, passwordHash: string): boolean {
-  const result = getDb()
-    .prepare(
-      `UPDATE people
-          SET password_hash = ?
-        WHERE id = ? AND active = 1 AND password_hash IS NULL`,
-    )
-    .run(passwordHash, id);
-  return Number(result.changes) === 1;
-}
-
 export function updatePersonPassword(id: string, passwordHash: string): void {
   getDb().prepare("UPDATE people SET password_hash = ? WHERE id = ?").run(passwordHash, id);
 }

@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import PersonAvatar from "@/components/PersonAvatar";
-import TaskGridCard from "@/components/TaskGridCard";
+import Icon from "@/components/ui/Icon";
 import { setActiveBrandAction } from "@/lib/actions/activeWork";
-import { hashColor } from "@/lib/colorHash";
 import {
   groupPeopleByDepartment,
   type DepartmentKey,
@@ -18,7 +17,6 @@ import type {
   PersonActiveWork,
   TaskWithContext,
 } from "@/lib/types";
-import { usePanelOpen } from "@/lib/usePanelOpen";
 
 function formatUpdatedAt(value: string): string {
   const isoValue = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
@@ -90,6 +88,31 @@ export default function ActiveWorkBoard({
     () => groupPeopleByDepartment(people),
     [people],
   );
+  const currentWorkstreamId = workstreamRows.find((row) =>
+    row.people.some((person) => person.id === currentPersonId),
+  )?.id;
+  const [selectedWorkstreamId, setSelectedWorkstreamId] = useState<DepartmentKey | "all">(
+    currentWorkstreamId ?? workstreamRows[0]?.id ?? "all",
+  );
+  const [query, setQuery] = useState("");
+  const visibleWorkstreams = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
+    if (normalizedQuery) {
+      return workstreamRows
+        .map((row) => ({
+          ...row,
+          people: row.people.filter((person) =>
+            [person.name, person.title, person.department]
+              .filter(Boolean)
+              .some((value) => value!.toLocaleLowerCase("tr-TR").includes(normalizedQuery)),
+          ),
+        }))
+        .filter((row) => row.people.length > 0);
+    }
+    return selectedWorkstreamId === "all"
+      ? workstreamRows
+      : workstreamRows.filter((row) => row.id === selectedWorkstreamId);
+  }, [query, selectedWorkstreamId, workstreamRows]);
 
   function changeBrand(nextBrandId: string) {
     const previousBrandId = selectedBrandId;
@@ -115,30 +138,25 @@ export default function ActiveWorkBoard({
     <section className="space-y-3" aria-labelledby="active-work-title">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="size-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgb(16_185_129_/_0.12)]" />
-            <h2
-              id="active-work-title"
-              className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
-            >
-              Disiplin bazlı ekip kanbanı
-            </h2>
-          </div>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-[11px] font-semibold tracking-[0.08em] text-muted">KAPASİTE</p>
+          <h2 id="active-work-title" className="mt-1 text-base font-semibold text-foreground">
+            Aktif çalışma dağılımı
+          </h2>
+          <p className="mt-1 text-xs text-muted">
             Ekip üyeleri çalışma alanlarına göre satırlarda; aktif marka ve açık işleri kişi kartında.
           </p>
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="text-[11px] text-muted">
           Değişiklikler ekipte en geç 15 saniye içinde görünür.
         </p>
       </div>
 
       {!currentPersonId && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border-default border-l-[3px] border-l-amber-500 bg-surface px-4 py-3 text-sm text-secondary">
           <span>Kendi çalışma markanı seçmek için önce kimliğini belirle.</span>
           <Link
             href="/whoami"
-            className="ui-press shrink-0 rounded-lg bg-amber-100 px-3 py-2 font-semibold hover:bg-amber-200 dark:bg-amber-900/50 dark:hover:bg-amber-900"
+            className="ui-press shrink-0 rounded-[9px] bg-amber-100 px-3 py-2 font-semibold text-amber-900 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-950"
           >
             Kimliğimi seç
           </Link>
@@ -154,8 +172,51 @@ export default function ActiveWorkBoard({
         </p>
       )}
 
+      <div className="flex flex-col gap-3 rounded-xl border border-border-default bg-surface p-3 lg:flex-row lg:items-center lg:justify-between">
+        <nav aria-label="Departman filtresi" className="flex min-w-0 gap-1 overflow-x-auto pb-1 lg:pb-0">
+          <button
+            type="button"
+            onClick={() => { setSelectedWorkstreamId("all"); setQuery(""); }}
+            aria-pressed={selectedWorkstreamId === "all" && !query}
+            className={`ui-press min-h-9 shrink-0 rounded-[9px] px-3 text-xs font-semibold ${
+              selectedWorkstreamId === "all" && !query
+                ? "bg-brand-600 text-white"
+                : "text-secondary hover:bg-surface-hover"
+            }`}
+          >
+            Tümü · {people.length}
+          </button>
+          {workstreamRows.map((row) => (
+            <button
+              key={row.id}
+              type="button"
+              onClick={() => { setSelectedWorkstreamId(row.id); setQuery(""); }}
+              aria-pressed={selectedWorkstreamId === row.id && !query}
+              className={`ui-press min-h-9 shrink-0 rounded-[9px] px-3 text-xs font-semibold ${
+                selectedWorkstreamId === row.id && !query
+                  ? "bg-brand-600 text-white"
+                  : "text-secondary hover:bg-surface-hover"
+              }`}
+            >
+              {row.label} · {row.people.length}
+            </button>
+          ))}
+        </nav>
+        <label className="relative min-w-0 lg:w-64">
+          <span className="sr-only">Ekipte kişi ara</span>
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="İsim, unvan veya departman…"
+            className="min-h-10 w-full rounded-[9px] border border-border-default bg-surface-subtle pl-9 pr-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
+          />
+        </label>
+      </div>
+
       <div className="space-y-3">
-        {workstreamRows.map((workstream) => (
+        {visibleWorkstreams.map((workstream) => (
           <WorkstreamSection
             key={workstream.id}
             workstream={workstream}
@@ -169,17 +230,16 @@ export default function ActiveWorkBoard({
             changeBrand={changeBrand}
           />
         ))}
+        {visibleWorkstreams.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border-default bg-surface-subtle px-4 py-10 text-center text-sm text-muted">
+            Bu aramayla eşleşen ekip üyesi bulunamadı.
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-// Kartın açık/kapalı tercihi `usePanelOpen` ile localStorage'a yazılır —
-// eskiden çıplak `<details open>` kullanılıyordu, bu yüzden her sayfa
-// yenilemesinde/navigasyonda kullanıcının kapattığı kart yeniden AÇIK
-// başlıyordu (gerçek bug, 2026-08-10'da bildirildi). Ayrı bileşen olarak
-// çıkarılma sebebi: hook'lar `workstreamRows.map()` içinde koşullu
-// çağrılamaz, her departman satırının KENDİ `usePanelOpen` çağrısı olmalı.
 function WorkstreamSection({
   workstream,
   tone,
@@ -201,26 +261,17 @@ function WorkstreamSection({
   pending: boolean;
   changeBrand: (nextBrandId: string) => void;
 }) {
-  const { open, toggle } = usePanelOpen(`team-workstream-${workstream.id}`, true);
-  const bodyId = `workstream-body-${workstream.id}`;
-
   return (
     <section
       aria-labelledby={`workstream-${workstream.id}`}
-      className="rounded-2xl border border-black/10 bg-white/55 p-3 dark:border-white/10 dark:bg-white/[0.018]"
+      className="rounded-xl border border-border-default bg-surface p-3"
     >
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        aria-controls={bodyId}
-        className="ui-press flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-1 text-left outline-none transition-colors hover:bg-black/[0.025] focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:hover:bg-white/[0.04]"
-      >
+      <div className="flex min-h-11 w-full items-center justify-between gap-3 px-1">
         <div className="flex items-center gap-2">
           <span className={`size-2.5 rounded-full ${tone.dot}`} />
           <h3
             id={`workstream-${workstream.id}`}
-            className="text-sm font-semibold text-zinc-900 dark:text-zinc-100"
+            className="text-sm font-semibold text-foreground"
           >
             {workstream.label}
           </h3>
@@ -231,22 +282,10 @@ function WorkstreamSection({
           >
             {workstream.people.length} kişi
           </span>
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-            className={`size-4 text-zinc-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-          >
-            <path fillRule="evenodd" d="M5.22 7.47a.75.75 0 0 1 1.06 0L10 11.19l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-          </svg>
         </span>
-      </button>
+      </div>
 
-      {open && (
-        <div
-          id={bodyId}
-          className="ui-enter mt-3 grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(210px,1fr))]"
-        >
+      <div className="ui-enter mt-3 grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(230px,1fr))]">
           {workstream.people.map((person) => {
             const isCurrent = person.id === currentPersonId;
             const storedSelection = selections.find(
@@ -268,10 +307,10 @@ function WorkstreamSection({
             return (
               <article
                 key={person.id}
-                className={`min-w-0 rounded-2xl border bg-zinc-50/80 p-2.5 dark:bg-white/[0.025] ${
+                className={`min-w-0 rounded-xl border bg-surface-subtle p-2.5 ${
                   isCurrent
                     ? "border-brand-400 ring-2 ring-brand-500/15 dark:border-brand-700"
-                    : "border-black/10 dark:border-white/10"
+                    : "border-border-subtle"
                 }`}
               >
                 <header className="flex min-h-12 items-center gap-2.5 px-1">
@@ -281,14 +320,14 @@ function WorkstreamSection({
                     size="md"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    <Link href={`/team/${person.id}`} className="block truncate text-sm font-semibold text-foreground hover:text-brand-600 dark:hover:text-brand-300">
                       {person.name}
-                    </span>
+                    </Link>
                     <span
                       className={`mt-0.5 flex items-center gap-1.5 text-[11px] ${
                         selectedBrand
                           ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-zinc-500 dark:text-zinc-400"
+                          : "text-muted"
                       }`}
                     >
                       <span
@@ -314,7 +353,7 @@ function WorkstreamSection({
                         value={brandId}
                         onChange={(event) => changeBrand(event.target.value)}
                         disabled={pending}
-                        className="min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 disabled:opacity-60 dark:border-white/15 dark:bg-zinc-900"
+                        className="min-h-10 w-full rounded-[9px] border border-border-default bg-surface px-3 text-sm font-medium text-foreground outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 disabled:opacity-60"
                       >
                         <option value="">Müsaitim / marka seçmedim</option>
                         {brands.map((brand) => (
@@ -330,13 +369,12 @@ function WorkstreamSection({
                       )}
                     </label>
                   ) : selectedBrand ? (
-                    <div
-                      className={`rounded-xl px-3 py-2.5 text-xs font-semibold uppercase tracking-wide ${hashColor(selectedBrand.name)}`}
-                    >
-                      {selectedBrand.name}
+                    <div className="flex min-h-10 items-center gap-2 rounded-[9px] border border-border-subtle bg-surface px-3 text-xs font-semibold text-secondary">
+                      <Icon name="brands" className="size-3.5 text-muted" />
+                      <span className="truncate">{selectedBrand.name}</span>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-dashed border-black/10 px-3 py-3 text-center text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+                    <div className="rounded-[9px] border border-dashed border-border-default px-3 py-3 text-center text-xs text-muted">
                       Henüz marka seçmedi
                     </div>
                   )}
@@ -350,28 +388,34 @@ function WorkstreamSection({
                     </p>
                   )}
 
-                <div className="mt-3 space-y-2">
-                  {personTasks.slice(0, 3).map((task) => (
-                    <TaskGridCard key={task.id} task={task} showStatus />
+                <div className="mt-3 space-y-1">
+                  {personTasks.slice(0, 2).map((task) => (
+                    <Link
+                      key={task.id}
+                      href={`/tasks/${task.id}`}
+                      className="flex min-h-9 items-center gap-2 rounded-[8px] border border-border-subtle bg-surface px-2.5 text-[11px] text-secondary hover:border-border-strong hover:text-foreground"
+                    >
+                      <span className="size-1.5 shrink-0 rounded-full bg-brand-500" />
+                      <span className="min-w-0 flex-1 truncate font-medium">{task.title}</span>
+                    </Link>
                   ))}
 
                   {selectedBrand && personTasks.length === 0 && (
-                    <div className="flex min-h-20 items-center justify-center rounded-xl border border-dashed border-black/10 bg-white/60 px-4 text-center text-xs leading-relaxed text-zinc-500 dark:border-white/10 dark:bg-zinc-900/60 dark:text-zinc-400">
-                      Bu marka için {person.name} üzerine atanmış açık görev yok.
+                    <div className="rounded-[9px] border border-dashed border-border-subtle px-3 py-2 text-center text-[11px] text-muted">
+                      Bu marka için açık görev yok.
                     </div>
                   )}
 
-                  {personTasks.length > 3 && (
-                    <p className="rounded-lg bg-black/5 px-3 py-2 text-center text-xs font-medium text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
-                      +{personTasks.length - 3} görev daha
+                  {personTasks.length > 2 && (
+                    <p className="rounded-lg bg-surface-muted px-3 py-1.5 text-center text-[11px] font-medium text-secondary">
+                      +{personTasks.length - 2} görev daha
                     </p>
                   )}
                 </div>
               </article>
             );
           })}
-        </div>
-      )}
+      </div>
     </section>
   );
 }

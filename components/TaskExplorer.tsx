@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import TaskBoard, { type SortKey } from "@/components/TaskBoard";
 import TaskListView from "@/components/TaskListView";
+import Button from "@/components/ui/Button";
+import Icon from "@/components/ui/Icon";
+import { controlClass } from "@/components/ui/Input";
 import {
   TASK_PRIORITIES,
-  TASK_PRIORITY_BORDER,
-  TASK_PRIORITY_ICON,
+  TASK_PRIORITY_DOT,
   TASK_PRIORITY_LABEL,
   TASK_STATUS_LABEL,
   TASK_STATUSES,
@@ -20,6 +22,11 @@ import {
   departmentLabel,
 } from "@/lib/departments";
 import type { Person, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
+import {
+  TASKS_VIEW_PREFERENCE,
+  rememberWorkspaceView,
+  type WorkspaceView,
+} from "@/lib/uiPreferences";
 
 const UNASSIGNED = "__unassigned__";
 
@@ -31,8 +38,7 @@ const SORT_LABEL: Record<SortKey, string> = {
   atanan: "Atanan",
 };
 
-const selectClass =
-  "min-h-11 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm shadow-sm outline-none transition-[border-color,box-shadow] focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 dark:border-white/15 dark:bg-zinc-950";
+const selectClass = controlClass("focus:ring-2 focus:ring-brand-500/15");
 
 function FilterChip({
   label,
@@ -62,12 +68,14 @@ export default function TaskExplorer({
   people,
   initialAssigneeId = "",
   initialDepartment = "",
+  initialView = "pano",
 }: {
   tasks: TaskWithContext[];
   brands: { id: string; name: string }[];
   people: Person[];
   initialAssigneeId?: string;
   initialDepartment?: string;
+  initialView?: WorkspaceView;
 }) {
   const [brandId, setBrandId] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -76,7 +84,12 @@ export default function TaskExplorer({
   const [assigneeId, setAssigneeId] = useState(initialAssigneeId);
   const [q, setQ] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("varsayilan");
-  const [view, setView] = useState<"pano" | "liste">("pano");
+  const [view, setView] = useState<WorkspaceView>(initialView);
+
+  function changeView(next: WorkspaceView) {
+    setView(next);
+    rememberWorkspaceView(TASKS_VIEW_PREFERENCE, next);
+  }
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Arşiv bir "ekle/çıkar" anahtarı DEĞİL, ayrı bir görünüm: kapalıyken arşiv
   // tamamen gizli, açıkken SADECE arşiv listelenir. Karışık liste denenmişti —
@@ -186,25 +199,14 @@ export default function TaskExplorer({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <section
         aria-label="Görev araçları"
-        className="rounded-2xl border border-black/10 bg-zinc-50/80 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.025]"
+        className="min-w-0 overflow-hidden rounded-xl border border-border-default bg-surface p-3"
       >
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-64 flex-1">
-            <svg
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
-                clipRule="evenodd"
-              />
-            </svg>
+          <div className="relative w-full min-w-0 basis-full sm:min-w-64 sm:basis-auto sm:flex-1">
+            <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
             <input
               value={q}
               onChange={(event) => setQ(event.target.value)}
@@ -217,95 +219,27 @@ export default function TaskExplorer({
                 type="button"
                 onClick={() => setQ("")}
                 aria-label="Aramayı temizle"
-                className="ui-press absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-lg text-zinc-400 hover:bg-black/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+                className="ui-press absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-faint hover:bg-surface-hover hover:text-secondary"
               >
-                ×
+                <Icon name="close" className="size-3.5" />
               </button>
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((open) => !open)}
-            aria-expanded={filtersOpen}
-            className={`ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${
-              filtersOpen || filterCount > 0
-                ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
-                : "border-black/10 bg-white text-zinc-600 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10"
-            }`}
-          >
-            <svg viewBox="0 0 20 20" fill="none" className="size-4" stroke="currentColor">
-              <path d="M3 5h14M6 10h8M8.5 15h3" strokeWidth="1.7" strokeLinecap="round" />
-            </svg>
-            Filtreler
-            {filterCount > 0 && (
-              <span className="grid size-5 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
-                {filterCount}
-              </span>
-            )}
-          </button>
-
-          {/* Yayınlanan görevler panoda kalır, ARCHIVE_AFTER_DAYS gün sonra
-              arşive düşer. Düğme ayrı bir GÖRÜNÜM açar (bkz. `archiveOnly`) —
-              hiç arşivlenmiş iş yoksa görünmez. */}
-          {archivedCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setArchiveOnly((only) => !only)}
-              aria-pressed={archiveOnly}
-              className={`ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${
-                archiveOnly
-                  ? "border-brand-600 bg-brand-600 text-white"
-                  : "border-black/10 bg-white text-zinc-600 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10"
-              }`}
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
-                <path d="M2 4.25A1.25 1.25 0 0 1 3.25 3h13.5A1.25 1.25 0 0 1 18 4.25v1.5A1.25 1.25 0 0 1 16.75 7H3.25A1.25 1.25 0 0 1 2 5.75v-1.5Z" />
-                <path
-                  fillRule="evenodd"
-                  d="M3 8.5h14v6.25A2.25 2.25 0 0 1 14.75 17h-9.5A2.25 2.25 0 0 1 3 14.75V8.5Zm4.25 2a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {archiveOnly ? "Arşivden çık" : "Arşiv"}
-              <span
-                className={`tabular-nums ${
-                  archiveOnly ? "text-white/75" : "text-zinc-500 dark:text-zinc-400"
-                }`}
-              >
-                {archivedCount}
-              </span>
-            </button>
-          )}
-
-          <div className="inline-flex overflow-hidden rounded-xl border border-black/10 bg-white p-0.5 text-xs shadow-sm dark:border-white/15 dark:bg-zinc-950">
-            {(["pano", "liste"] as const).map((nextView) => (
-              <button
-                key={nextView}
-                type="button"
-                onClick={() => setView(nextView)}
-                aria-pressed={view === nextView}
-                className={`ui-press min-h-10 rounded-lg px-3 font-medium ${
-                  view === nextView
-                    ? "bg-brand-600 text-white"
-                    : "text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-                }`}
-              >
-                {nextView === "pano" ? "Pano" : "Liste"}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div
-          className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-black/[0.07] pt-3 dark:border-white/10"
-          role="group"
-          aria-label="Departmana göre filtrele"
+          className="mt-3 flex flex-col gap-3 border-t border-border-subtle pt-3 lg:flex-row lg:items-center lg:justify-between"
         >
-          <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Ekip
-          </span>
-          {[
+          <div
+            className="flex min-w-0 flex-wrap items-center gap-1.5"
+            role="group"
+            aria-label="Departmana göre filtrele"
+          >
+            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-muted">
+              Ekip
+            </span>
+            {[
             { id: "", label: "Tümü", count: withoutDepartment.length },
             ...DEPARTMENTS.map((option) => ({
               id: option.id as string,
@@ -336,7 +270,7 @@ export default function TaskExplorer({
                 className={`ui-press inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium ${
                   department === option.id
                     ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-black/10 bg-white text-zinc-600 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10"
+                    : "border-border-default bg-surface text-muted hover:bg-surface-hover"
                 }`}
               >
                 {option.label}
@@ -344,18 +278,80 @@ export default function TaskExplorer({
                   className={`tabular-nums ${
                     department === option.id
                       ? "text-white/75"
-                      : "text-zinc-500 dark:text-zinc-400"
+                      : "text-muted"
                   }`}
                 >
                   {option.count}
                 </span>
               </button>
             ))}
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              className={`ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${
+                filtersOpen || filterCount > 0
+                  ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                  : "border-border-default bg-surface text-muted hover:bg-surface-hover"
+              }`}
+            >
+              <Icon name="filter" className="size-4" />
+              Filtreler
+              {filterCount > 0 && (
+                <span className="grid size-5 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                  {filterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Yayınlanan görevler panoda kalır, ARCHIVE_AFTER_DAYS gün sonra
+                arşive düşer. Düğme ayrı bir GÖRÜNÜM açar (bkz. `archiveOnly`) —
+                hiç arşivlenmiş iş yoksa görünmez. */}
+            {archivedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setArchiveOnly((only) => !only)}
+                aria-pressed={archiveOnly}
+                className={`ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${
+                  archiveOnly
+                    ? "border-brand-600 bg-brand-600 text-white"
+                    : "border-border-default bg-surface text-muted hover:bg-surface-hover"
+                }`}
+              >
+                <Icon name="archive" className="size-4" />
+                {archiveOnly ? "Arşivden çık" : "Arşiv"}
+                <span className={`tabular-nums ${archiveOnly ? "text-white/75" : "text-muted"}`}>
+                  {archivedCount}
+                </span>
+              </button>
+            )}
+
+            <div className="inline-flex overflow-hidden rounded-[10px] border border-border-default bg-surface-subtle p-0.5 text-xs">
+              {(["pano", "liste"] as const).map((nextView) => (
+                <button
+                  key={nextView}
+                  type="button"
+                  onClick={() => changeView(nextView)}
+                  aria-pressed={view === nextView}
+                  className={`ui-press min-h-10 rounded-lg px-3 font-medium ${
+                    view === nextView
+                      ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                      : "text-muted hover:bg-surface-hover hover:text-secondary"
+                  }`}
+                >
+                  {nextView === "pano" ? "Pano" : "Liste"}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {filtersOpen && (
-          <div className="ui-enter mt-3 grid gap-2 border-t border-black/[0.07] pt-3 md:grid-cols-2 xl:grid-cols-4 dark:border-white/10">
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <div className="ui-enter mt-3 grid gap-2 border-t border-border-subtle pt-3 md:grid-cols-2 xl:grid-cols-4">
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
               Marka
               <select
                 value={brandId}
@@ -373,7 +369,7 @@ export default function TaskExplorer({
                 ))}
               </select>
             </label>
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
               Durum
               <select
                 value={statusFilter}
@@ -391,7 +387,7 @@ export default function TaskExplorer({
                 ))}
               </select>
             </label>
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
               Öncelik
               <select
                 value={priority}
@@ -409,7 +405,7 @@ export default function TaskExplorer({
                 ))}
               </select>
             </label>
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
               Atanan
               <select
                 value={assigneeId}
@@ -432,8 +428,8 @@ export default function TaskExplorer({
         )}
 
         {hasFilter && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-black/[0.07] pt-3 dark:border-white/10">
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3">
+            <span className="text-xs font-medium text-muted">
               Aktif:
             </span>
             {selectedBrand && (
@@ -504,7 +500,7 @@ export default function TaskExplorer({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs text-muted">
           <span className="font-semibold text-zinc-700 dark:text-zinc-200">
             {filtered.length}
           </span>{" "}
@@ -517,17 +513,16 @@ export default function TaskExplorer({
         </p>
 
         <div
-          className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400"
-          aria-label="Kart çerçevesi öncelik renkleri"
+            className="hidden flex-wrap items-center gap-2 text-[11px] text-muted sm:flex"
+          aria-label="Kart öncelik göstergeleri"
         >
-          <span className="font-medium">Kart çerçevesi = öncelik:</span>
+          <span className="font-medium">Sol çizgi = öncelik:</span>
           {TASK_PRIORITIES.map((taskPriority) => (
             <span key={taskPriority} className="inline-flex items-center gap-1">
               <span
-                className={`size-3 rounded border-2 bg-white dark:bg-zinc-900 ${TASK_PRIORITY_BORDER[taskPriority]}`}
+                className={`h-3 w-0.5 rounded-full ${TASK_PRIORITY_DOT[taskPriority]}`}
                 aria-hidden="true"
               />
-              <span aria-hidden="true">{TASK_PRIORITY_ICON[taskPriority]}</span>
               {TASK_PRIORITY_LABEL[taskPriority]}
             </span>
           ))}
@@ -550,13 +545,7 @@ export default function TaskExplorer({
           }
           action={
             hasFilter ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="ui-press min-h-11 rounded-xl bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-500"
-              >
-                Filtreleri temizle
-              </button>
+              <Button onClick={clearFilters}>Filtreleri temizle</Button>
             ) : undefined
           }
         />

@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "name": "INTURLAM Operations Desk",
+    "description": "A disciplined editorial operations system for an internal creative-agency tracker.",
+    "source_references": ["current localhost:3001 product", "Linear project model", "Plane workspace model", "Jira navigation model"],
+    "created_at": "2026-08-11"
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "monochromatic neutrals with a single split-complementary semantic layer",
+      "primary": { "hex": "#5649D8", "role": "navigation, focus, and primary actions" },
+      "secondary": { "hex": "#1A1A1E", "role": "high-authority ink and inverse surfaces" },
+      "accent": { "hex": "#8E86F7", "role": "dark-mode primary and restrained emphasis" },
+      "neutral": {
+        "scale": ["#FFFFFF", "#FAFAF8", "#F5F5F2", "#EFEFEB", "#E9E8E3", "#DCDAD4", "#C8C5BD", "#74737D", "#55545D", "#1A1A1E", "#0C0C0E"],
+        "usage": "warm canvas, porcelain surfaces, ink typography, cool-dark inverse surfaces"
+      },
+      "semantic": { "success": "#177A55", "warning": "#A15C00", "error": "#C43652", "info": "#2965C7" },
+      "surface": { "background": "#F5F5F2", "card": "#FFFFFF", "elevated": "#FFFFFF" },
+      "contrast_strategy": "ink-on-porcelain in light mode and soft-white-on-ink in dark mode; muted text remains AA"
+    },
+    "typography": {
+      "type_scale": {
+        "display": { "size": "32px", "weight": "620", "line_height": "38px", "tracking": "-0.035em" },
+        "heading_1": { "size": "26px", "weight": "620", "line_height": "32px", "tracking": "-0.025em" },
+        "heading_2": { "size": "18px", "weight": "600", "line_height": "24px", "tracking": "-0.015em" },
+        "heading_3": { "size": "15px", "weight": "600", "line_height": "21px", "tracking": "-0.01em" },
+        "body": { "size": "14px", "weight": "400", "line_height": "21px", "tracking": "0" },
+        "body_small": { "size": "13px", "weight": "400", "line_height": "19px", "tracking": "0" },
+        "caption": { "size": "12px", "weight": "450", "line_height": "17px", "tracking": "0.005em" },
+        "overline": { "size": "11px", "weight": "620", "line_height": "16px", "tracking": "0.09em" }
+      },
+      "font_families": { "heading": "Geist Sans", "body": "Geist Sans", "mono": "Geist Mono" },
+      "font_style_notes": "editorial hierarchy with restrained weight and compact operational density"
+    },
+    "spacing": { "base_unit": "4px", "scale": ["4px", "8px", "12px", "16px", "20px", "24px", "32px", "40px", "48px"], "content_density": "comfortable-compact", "section_rhythm": "24px within work areas and 32px between responsibilities" },
+    "layout": { "grid_system": "12-column responsive app grid", "max_content_width": "1360px", "columns": "1 mobile, 6 tablet, 12 desktop", "gutter": "16px mobile, 24px desktop", "breakpoints": ["375px", "768px", "1024px", "1440px"], "alignment_tendency": "strict grid with contextual asymmetry" },
+    "shape": { "border_radius": { "small": "6px", "medium": "10px", "large": "12px", "pill": "999px" }, "border_usage": "subtle 1px boundaries with a stronger active leading marker", "divider_style": "hairline warm-neutral" },
+    "elevation": { "shadow_style": "minimal diffused", "levels": { "low": "0 1px 2px rgb(16 16 20 / 0.04)", "medium": "0 16px 40px -24px rgb(16 16 20 / 0.32)", "high": "0 28px 70px -30px rgb(8 8 12 / 0.55)" }, "depth_cues": "surface lightness first, border second, shadow only for floating layers" },
+    "iconography": { "style": "rounded outline", "stroke_weight": "1.7px", "size_scale": ["16px", "18px", "20px"], "preferred_set": "single custom SVG set aligned to Lucide geometry" },
+    "motion": { "easing": "cubic-bezier(0.2, 0, 0, 1)", "duration_scale": { "micro": "100ms", "normal": "160ms", "macro": "220ms" }, "entrance_pattern": "opacity plus 4px vertical arrival", "exit_pattern": "faster opacity plus 2px vertical departure", "philosophy": "minimal functional corporate motion" },
+    "components": { "button_style": "10px radius with filled primary, bordered secondary and quiet ghost hierarchy", "input_style": "persistent label, 40-44px height, clear iris focus", "card_style": "12px hairline surface used only when containment is meaningful", "navigation_pattern": "persistent grouped sidebar plus contextual in-page tabs", "modal_style": "16px elevated surface with direct title and footer actions", "list_style": "divided rows with stable hover and no card-per-row", "component_notes": "all interactive components implement default, hover, focus, active and disabled states" }
+  },
+  "design_style": {
+    "aesthetic": { "mood": ["precise", "calm", "editorial", "capable", "creative"], "visual_metaphor": "an agency operations desk with ordered trays and sharp annotations", "era_influence": "contemporary productivity software with print-editorial restraint", "genre": "creative operations SaaS", "personality_traits": ["confident", "meticulous", "unshowy"], "adjectives": ["systematic", "professional", "focused", "tactile"] },
+    "visual_language": { "complexity": "moderate", "ornamentation": "subtle accents", "whitespace_usage": "purposeful rather than expansive", "visual_weight_distribution": "navigation and content share a stable 18/82 frame", "focal_strategy": "one operational priority per page", "contrast_level": "high for hierarchy, restrained for chrome", "texture_usage": "none" },
+    "composition": { "hierarchy_method": "spatial isolation plus typographic scale", "balance_type": "asymmetric", "flow_direction": "top-left to primary work surface", "grouping_strategy": "responsibility-based sections and progressive disclosure", "negative_space_role": "separates responsibilities rather than decorating cards" },
+    "imagery": { "photo_treatment": "avatars and brand marks retain native color", "illustration_style": "none", "graphic_elements": "hairlines, compact counters and a single iris marker", "pattern_usage": "none", "image_shape": "circular identity, softly squared brand assets" },
+    "interaction_feel": { "feedback_style": "immediate and quiet", "hover_behavior": "surface or border shift with at most 1px translation", "transition_personality": "snappy controlled", "loading_style": "layout-preserving skeleton or plain progress copy", "microinteraction_density": "low-medium" },
+    "brand_voice_in_ui": { "tone": "direct and operational", "formality": "professional conversational Turkish", "cta_style": "clear imperative", "empty_state_approach": "state what is empty and the next useful action", "error_tone": "specific, calm and recoverable" }
+  },
+  "visual_effects": {
+    "overview": { "effect_intensity": "subtle-accent", "performance_tier": "lightweight", "fallback_strategy": "remove transforms and animation under reduced motion", "primary_technology": "CSS only" },
+    "background_effects": { "type": "none", "description": "solid warm or ink canvas", "technology": "CSS", "params": { "color_palette": ["#F5F5F2", "#0C0C0E"], "speed": "0", "density": "0", "opacity": "1", "blend_mode": "normal" } },
+    "particle_systems": { "enabled": false, "type": "none", "description": "not appropriate for daily operations", "technology": "none", "params": { "count": 0, "shape": "none", "size_range": "none", "movement_pattern": "none", "color_behavior": "none", "interaction": "none", "spawn_area": "none" } },
+    "3d_elements": { "enabled": false, "type": "none", "description": "no 3D layer", "technology": "none", "params": { "renderer": "none", "lighting": "none", "camera": "none", "materials": "none", "geometry": "none", "post_processing": [], "interaction_model": "none" } },
+    "shader_effects": { "enabled": false, "type": "none", "description": "no shaders", "technology": "none", "params": { "uniforms": [], "vertex_manipulation": "none", "fragment_output": "none", "noise_type": "none", "distortion": "none" } },
+    "scroll_effects": { "parallax": { "enabled": false, "layers": 0, "depth_range": "0", "speed_curve": "none" }, "scroll_triggered_animations": { "enabled": false, "trigger_points": [], "animation_type": "none", "scrub_behavior": "none" }, "scroll_morphing": { "enabled": false, "description": "none" } },
+    "text_effects": { "type": "none", "description": "typography remains stable", "technology": "none", "params": { "split_strategy": "none", "animation_per_unit": "none", "stagger": "0", "effect_style": "none" } },
+    "cursor_effects": { "enabled": false, "type": "none", "description": "native cursor retained", "params": { "shape": "native", "size": "native", "blend_mode": "normal", "trail": "none", "interaction_zone": "none" } },
+    "image_effects": { "type": "none", "description": "identity imagery stays stable", "technology": "CSS", "params": { "filter_pipeline": "none", "hover_transform": "none", "reveal_animation": "none", "distortion_type": "none" } },
+    "glassmorphism_neumorphism": { "enabled": false, "style": "none", "params": { "blur_radius": "0", "transparency": "0", "border_treatment": "hairline", "shadow_type": "minimal", "light_source_angle": "none" } },
+    "canvas_drawings": { "enabled": false, "type": "none", "description": "none", "technology": "none", "params": { "draw_method": "none", "animation_loop": "none", "color_scheme": "none", "responsiveness": "none", "interaction": "none" } },
+    "svg_animations": { "enabled": false, "type": "none", "description": "icons use static SVG", "params": { "animation_method": "none", "path_morphing": "none", "stroke_animation": "none", "filter_effects": "none" } },
+    "composite_notes": "The visual signature comes from disciplined composition, an ink/porcelain frame and iris markers, not decorative rendering."
+  }
+}

@@ -46,6 +46,10 @@ next-env.d.ts
 /data/*.db-wal
 /data/backup/
 /data/runtime/
+/data/uploads/
 
 # user-uploaded comment images (runtime data, not source)
 /public/uploads/
+
+# local security verification output
+/.security-audit/

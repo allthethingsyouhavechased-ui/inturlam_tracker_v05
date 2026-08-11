@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import PersonAvatar from "@/components/PersonAvatar";
+import Icon from "@/components/ui/Icon";
 import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
@@ -90,21 +91,9 @@ export default function NotificationBell({
         aria-label={unread > 0 ? `Bildirimler (${unread} okunmamış)` : "Bildirimler"}
         aria-expanded={open}
         aria-haspopup="true"
-        className="touch-target relative rounded-md p-1.5 text-zinc-500 hover:bg-black/5 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-100"
+        className="touch-target ui-press relative inline-flex size-10 items-center justify-center rounded-[10px] text-muted hover:bg-surface-hover hover:text-foreground"
       >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
+        <Icon name="bell" className="size-[18px]" />
         {unread > 0 && (
           <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold leading-none text-white">
             {unread > 99 ? "99+" : unread}
@@ -113,7 +102,7 @@ export default function NotificationBell({
       </button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-black/10 bg-white p-2 shadow-lg dark:border-white/10 dark:bg-zinc-900">
+        <div className="ui-enter absolute right-0 z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border-default bg-surface-elevated p-2 shadow-md">
           <div className="flex items-center justify-between px-2 py-1">
             <h2 className="text-sm font-semibold">Bildirimler</h2>
             <button

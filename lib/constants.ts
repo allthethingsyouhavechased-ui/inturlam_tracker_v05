@@ -189,8 +189,8 @@ export const TASK_PRIORITY_BORDER: Record<TaskPriority, string> = {
 // yorumu) burada da literal bir sözlük olarak yazılmalı.
 export const TASK_PRIORITY_DOT: Record<TaskPriority, string> = {
   Dusuk: "bg-slate-300 dark:bg-slate-600",
-  Normal: "bg-sky-400 dark:bg-sky-600",
-  Yuksek: "bg-amber-500",
+  Normal: "bg-cyan-400 dark:bg-cyan-600",
+  Yuksek: "bg-orange-500",
   Acil: "bg-rose-500",
 };
 
@@ -198,4 +198,4 @@ export const TASK_PRIORITY_DOT: Record<TaskPriority, string> = {
 // `CollapsiblePanel` hem `ReportPrimitives` kullanıyor; bileşenlerden birinde
 // tanımlansaydı ikisi birbirini import edip döngü oluşturuyordu.
 export const REPORT_SURFACE_CLASS =
-  "report-surface rounded-2xl border border-black/10 bg-white dark:border-white/10 dark:bg-zinc-900";
+  "report-surface rounded-2xl border border-border-default bg-surface";

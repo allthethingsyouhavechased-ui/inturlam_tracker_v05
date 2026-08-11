@@ -29,6 +29,42 @@ export type TaskStatus =
 
 export type TaskPriority = "Dusuk" | "Normal" | "Yuksek" | "Acil";
 
+export type ClientRequestStatus =
+  | "Beklemede"
+  | "Incelemede"
+  | "Onaylandi"
+  | "Reddedildi";
+
+export interface ClientRequest {
+  id: string;
+  brand_id: string;
+  title: string;
+  description: string;
+  requested_by_name: string | null;
+  source: string | null;
+  reference_url: string | null;
+  department: string;
+  content_type: ContentType;
+  status: ClientRequestStatus;
+  priority: TaskPriority;
+  assignee_id: string | null;
+  due_date: string | null;
+  created_by_id: string;
+  reviewed_by_id: string | null;
+  converted_task_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientRequestComment {
+  id: string;
+  request_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+}
+
 // Sosyal medya üretim planındaki (hedef/varlık/takvim) sabit üç kategori.
 // `ContentType` (proje türü, 9 üye) ile BİLEREK karıştırılmıyor — ekip
 // "Reels" diyor, ContentType'taki "Reel" ayrı bir kavram (bir proje kaydı).
@@ -165,7 +201,8 @@ export type ActivityEntityType =
   | "content"
   | "brand"
   | "cluster"
-  | "template";
+  | "template"
+  | "request";
 
 export interface ActivityEntry {
   id: string;

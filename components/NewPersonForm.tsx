@@ -48,11 +48,11 @@ export default function NewPersonForm({
       </label>
       <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         Şifre
-        <input name="password" type="password" required minLength={6} maxLength={128} autoComplete="new-password" className={inputClass} />
+        <input name="password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" className={inputClass} />
       </label>
       <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         Şifre tekrar
-        <input name="confirmPassword" type="password" required minLength={6} maxLength={128} autoComplete="new-password" className={inputClass} />
+        <input name="confirmPassword" type="password" required minLength={8} maxLength={128} autoComplete="new-password" className={inputClass} />
       </label>
       <div className="sm:col-span-2 sm:flex sm:justify-end">
         <SubmitButton>Ekip üyesi ekle</SubmitButton>

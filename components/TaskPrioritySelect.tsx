@@ -5,7 +5,6 @@ import { setTaskPriorityAction } from "@/lib/actions/tasks";
 import {
   TASK_PRIORITIES,
   TASK_PRIORITY_BADGE,
-  TASK_PRIORITY_ICON,
   TASK_PRIORITY_LABEL,
 } from "@/lib/constants";
 import type { TaskPriority } from "@/lib/types";
@@ -31,7 +30,7 @@ export default function TaskPrioritySelect({
     >
       {TASK_PRIORITIES.map((p) => (
         <option key={p} value={p}>
-          {TASK_PRIORITY_ICON[p]} {TASK_PRIORITY_LABEL[p]}
+          {TASK_PRIORITY_LABEL[p]}
         </option>
       ))}
     </select>

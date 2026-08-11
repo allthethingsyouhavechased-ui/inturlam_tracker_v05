@@ -10,6 +10,7 @@ import TaskDueDateEdit from "@/components/TaskDueDateEdit";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
+import Icon from "@/components/ui/Icon";
 import { formatDateShort } from "@/lib/date";
 import {
   bulkDeleteTasksAction,
@@ -20,8 +21,6 @@ import {
 import {
   CONTENT_TYPE_LABEL,
   TASK_PRIORITIES,
-  TASK_PRIORITY_FLAG_THRESHOLD,
-  TASK_PRIORITY_ICON,
   TASK_PRIORITY_LABEL,
   TASK_STATUS_LABEL,
   TASK_STATUSES,
@@ -302,9 +301,6 @@ export default function TaskListView({
                       href={`/tasks/${t.id}`}
                       className="font-medium hover:text-brand-600 dark:hover:text-brand-400 dark:hover:text-brand-400"
                     >
-                      {TASK_PRIORITY_FLAG_THRESHOLD.includes(t.priority) && (
-                        <span className="mr-1">{TASK_PRIORITY_ICON[t.priority]}</span>
-                      )}
                       {t.title}
                     </Link>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">{t.content_title}</div>
@@ -348,8 +344,8 @@ export default function TaskListView({
                     {t.personal_target_date !== undefined && t.status !== "Yayinlandi" ? (
                       <TaskTargetDateEdit taskId={t.id} targetDate={t.personal_target_date} />
                     ) : t.personal_target_date ? (
-                      <span className="whitespace-nowrap text-xs font-medium text-brand-600 dark:text-brand-400">
-                        🎯 {formatDateShort(t.personal_target_date)}
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-brand-600 dark:text-brand-300">
+                        <Icon name="clock" className="size-3.5" /> {formatDateShort(t.personal_target_date)}
                       </span>
                     ) : (
                       <span className="text-zinc-400 dark:text-zinc-600">—</span>

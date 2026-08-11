@@ -85,3 +85,20 @@ export function listActivityForBrand(
       .all(brandId, limit),
   );
 }
+
+// Bir kişinin KENDİ yaptığı işlemler (actor_id) — `/activity` ve marka
+// sayfaları herkesin/bir markanın akışını gösteriyor, profil sayfası bunu tek
+// kişiye daraltıyor. `activity_log` zaten her satırda `actor_id` tutuyor,
+// yalnızca bu sorgu eksikti (2026-08-11 tasarım revizyonu — profil sayfası
+// artık gerçek bir kişisel dashboard).
+export function listActivityForActor(actorId: string, limit = 20): ActivityEntry[] {
+  return plainList<ActivityEntry>(
+    getDb()
+      .prepare(
+        `${WITH_ACTOR_AVATAR_SELECT}
+         WHERE a.actor_id = ?
+         ORDER BY a.created_at DESC, a.rowid DESC LIMIT ?`,
+      )
+      .all(actorId, limit),
+  );
+}

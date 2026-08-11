@@ -1,13 +1,14 @@
 {
-  "name": "inturlam-tracker",
-  "version": "0.1.0",
+  "name": "inturlam-tracker-v02",
+  "version": "0.2.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
-    "predev": "node db/backup.mts",
+    "predev": "node db/prepare.mts",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
-    "prestart": "node db/backup.mts",
+    "prestart": "node db/prepare.mts",
     "lint": "eslint",
     "test": "node --import ./scripts/register.mjs --test \"tests/**/*.test.ts\"",
     "db:migrate": "node db/migrate.mts",
@@ -21,7 +22,7 @@
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "date-fns": "^4.4.0",
-    "next": "16.2.11",
+    "next": "^16.3.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -31,7 +32,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.11",
+    "eslint-config-next": "^16.3.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

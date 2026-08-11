@@ -102,7 +102,7 @@ fs.copyFileSync(source, DB_PATH);
 
 const uploads = path.join(BACKUP_ROOT, name, "uploads");
 if (fs.existsSync(uploads)) {
-  fs.cpSync(uploads, path.join(process.cwd(), "public", "uploads"), { recursive: true });
+  fs.cpSync(uploads, path.join(process.cwd(), "data", "uploads"), { recursive: true });
   console.log("Dosya ekleri de geri yüklendi.");
 }
 

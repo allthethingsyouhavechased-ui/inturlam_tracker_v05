@@ -123,6 +123,41 @@ CREATE TABLE IF NOT EXISTS tasks (
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Müşteriden gelen iş, gerçek göreve dönüşmeden önce bu kuyrukta değerlendirilir.
+-- Talep onaylandığında `converted_task_id` doldurulur; özgün brief ve karar geçmişi
+-- kaybolmaz. Yetki kuralları lib/requestAccess.ts ve Server Action katmanındadır.
+CREATE TABLE IF NOT EXISTS client_requests (
+  id                TEXT PRIMARY KEY,
+  brand_id          TEXT NOT NULL REFERENCES brands(id) ON DELETE RESTRICT,
+  title             TEXT NOT NULL,
+  description       TEXT NOT NULL,
+  requested_by_name TEXT,
+  source            TEXT,
+  reference_url     TEXT,
+  department        TEXT NOT NULL,
+  content_type      TEXT NOT NULL DEFAULT 'Diger',
+  status            TEXT NOT NULL DEFAULT 'Beklemede'
+                    CHECK (status IN ('Beklemede','Incelemede','Onaylandi','Reddedildi')),
+  priority          TEXT NOT NULL DEFAULT 'Normal'
+                    CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
+  assignee_id       TEXT REFERENCES people(id) ON DELETE SET NULL,
+  due_date          TEXT,
+  created_by_id     TEXT NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
+  reviewed_by_id    TEXT REFERENCES people(id) ON DELETE SET NULL,
+  converted_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+  reviewed_at       TEXT,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS client_request_comments (
+  id         TEXT PRIMARY KEY,
+  request_id TEXT NOT NULL REFERENCES client_requests(id) ON DELETE CASCADE,
+  author_id  TEXT NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
+  body       TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Resmi teslim tarihinden bağımsız kişisel çalışma hedefi. Kişi bazlı ayrı
 -- tabloda tutulur: görev başka birine geçtiğinde hedef yeni sahibine taşınmaz.
 CREATE TABLE IF NOT EXISTS task_personal_targets (
@@ -344,6 +379,16 @@ CREATE INDEX IF NOT EXISTS idx_tasks_assignee      ON tasks(assignee_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date      ON tasks(due_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_completed_at  ON tasks(completed_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_archived_at   ON tasks(archived_at);
+CREATE INDEX IF NOT EXISTS idx_client_requests_status
+  ON client_requests(status, updated_at);
+CREATE INDEX IF NOT EXISTS idx_client_requests_creator
+  ON client_requests(created_by_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_client_requests_department
+  ON client_requests(department, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_client_requests_converted_task
+  ON client_requests(converted_task_id) WHERE converted_task_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_client_request_comments_request
+  ON client_request_comments(request_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_personal_targets_person
   ON task_personal_targets(person_id, target_date);
 CREATE INDEX IF NOT EXISTS idx_task_status_events_task

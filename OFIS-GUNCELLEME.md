@@ -77,7 +77,7 @@ Ofis PC'sinde uygulamanın bulunduğu klasörde PowerShell aç:
 ## Güncellemeden sonra kontrol listesi
 
 - Markalar, ekip üyeleri, içerikler ve mevcut görevler duruyor mu?
-- Sağ üstten “Sen kimsin?” seçimi yapılabiliyor mu?
+- Hesap seçip şifreyle giriş yapılabiliyor mu?
 - **Ekip** sayfasındaki aktif marka kanbanı açılıyor mu?
 - **Görevler** sayfasında filtreler ile pano/liste geçişi çalışıyor mu?
 - **Raporlar** sayfasında dönem ve tablolar açılıyor mu?

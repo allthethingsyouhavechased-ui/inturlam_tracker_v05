@@ -5,8 +5,13 @@ import TaskBoard from "@/components/TaskBoard";
 import TaskGridCard from "@/components/TaskGridCard";
 import TaskListView from "@/components/TaskListView";
 import type { Person, TaskWithContext } from "@/lib/types";
+import {
+  PANOM_VIEW_PREFERENCE,
+  rememberWorkspaceView,
+  type WorkspaceView,
+} from "@/lib/uiPreferences";
 
-type View = "pano" | "liste";
+type View = WorkspaceView;
 
 // Görünüm düğmesi bölüm başlığının sağında duruyor (eskiden sayfanın en
 // üstünde, tek başına bir satırdaydı) — hangi listeyi değiştirdiği başlıkla
@@ -51,17 +56,23 @@ export default function PanomViews({
   otherTasks,
   people,
   hasIdentity,
+  initialView,
 }: {
   myTasks: TaskWithContext[];
   otherTasks: TaskWithContext[];
   people: Person[];
   hasIdentity: boolean;
+  initialView: View;
 }) {
-  const [view, setView] = useState<View>("pano");
+  const [view, setView] = useState<View>(initialView);
+  function changeView(next: View) {
+    setView(next);
+    rememberWorkspaceView(PANOM_VIEW_PREFERENCE, next);
+  }
 
   // Düğme tek: hangi bölüm önce çiziliyorsa onun başlığında durur. Kimlik
   // seçilmemişken üst bölüm hiç render edilmiyor, düğme de aşağıya iner.
-  const toggle = <ViewToggle view={view} onChange={setView} />;
+  const toggle = <ViewToggle view={view} onChange={changeView} />;
 
   return (
     <div className="space-y-8">

@@ -3,10 +3,10 @@ import AutoRefresh from "@/components/AutoRefresh";
 import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
 import SocialHealthBadge from "@/components/SocialHealthBadge";
+import { requirePageSession } from "@/lib/identity";
 import { formatDateShort, formatIsoDateTime, formatDateTime, todayISO } from "@/lib/date";
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import {
-  getLatestSyncRun,
   listBrandSocialRows,
   listRecentSyncRuns,
 } from "@/lib/repositories/social";
@@ -17,9 +17,9 @@ export const dynamic = "force-dynamic";
 const HEALTH_ORDER: SocialHealth[] = ["silent", "error", "unknown", "never-checked", "ok"];
 
 export default async function SocialTakipPage() {
+  await requirePageSession();
   const today = todayISO();
   const rows = listBrandSocialRows();
-  const latestRun = getLatestSyncRun();
   const runs = listRecentSyncRuns(5);
 
   const withHealth = rows
@@ -41,45 +41,6 @@ export default async function SocialTakipPage() {
     <div className="space-y-6">
       <AutoRefresh />
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sosyal medya takibi</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Markaların Instagram hesapları düzenli taranır; {SOCIAL_SILENCE_DAYS} günden uzun
-            süredir paylaşım yapmayan hesaplar burada ve bildirimlerde işaretlenir.
-          </p>
-        </div>
-        {/* Verinin ne kadar taze olduğu HER ZAMAN görünür olmalı: tarama
-            duruyorsa ekrandaki "aktif" rozetleri de bayattır. */}
-        <div className="rounded-xl border border-black/10 bg-white px-3 py-2 text-xs dark:border-white/10 dark:bg-zinc-900">
-          {latestRun ? (
-            <>
-              <div className="font-medium">
-                Son tarama:{" "}
-                <span className="tabular-nums">{formatDateTime(latestRun.started_at)}</span>
-              </div>
-              <div
-                className={
-                  latestRun.status === "error"
-                    ? "text-rose-600 dark:text-rose-400"
-                    : "text-zinc-500 dark:text-zinc-400"
-                }
-              >
-                {latestRun.status === "error"
-                  ? `Hata: ${latestRun.error ?? "bilinmiyor"}`
-                  : latestRun.status === "running"
-                    ? "Sürüyor…"
-                    : `${latestRun.accounts} hesap · ${latestRun.new_posts} yeni gönderi`}
-              </div>
-            </>
-          ) : (
-            <span className="text-zinc-500 dark:text-zinc-400">
-              Henüz tarama yapılmadı — <code className="font-mono">npm run social:sync</code>
-            </span>
-          )}
-        </div>
-      </div>
-
       {rows.length === 0 ? (
         <EmptyState
           title="Takip edilecek hesap yok"
@@ -88,7 +49,7 @@ export default async function SocialTakipPage() {
       ) : (
         <>
           {silent.length > 0 && (
-            <section className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50/60 p-4 dark:border-rose-900/70 dark:bg-rose-950/20">
+            <section className="space-y-2 rounded-xl border border-border-default border-l-[3px] border-l-danger bg-surface p-4">
               <h2 className="text-sm font-semibold text-rose-700 dark:text-rose-300">
                 Sessiz hesaplar ({silent.length})
               </h2>
@@ -96,7 +57,7 @@ export default async function SocialTakipPage() {
                 {silent.map(({ row }) => (
                   <li
                     key={row.brand_id}
-                    className="flex min-w-0 items-center gap-2.5 rounded-xl border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900"
+                    className="flex min-w-0 items-center gap-2.5 rounded-[10px] border border-border-subtle bg-surface-subtle px-3 py-2"
                   >
                     <BrandLogo name={row.brand_name} logoPath={row.logo_path} size="sm" />
                     <span className="min-w-0 flex-1">
@@ -121,7 +82,7 @@ export default async function SocialTakipPage() {
           )}
 
           {(broken.length > 0 || neverChecked.length > 0) && (
-            <section className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/70 dark:bg-amber-950/20">
+            <section className="space-y-2 rounded-xl border border-border-default border-l-[3px] border-l-amber-500 bg-surface p-4">
               <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
                 Veri gelmeyen hesaplar ({broken.length + neverChecked.length})
               </h2>
@@ -134,7 +95,7 @@ export default async function SocialTakipPage() {
                 {[...broken, ...neverChecked].map(({ row, health }) => (
                   <li
                     key={row.brand_id}
-                    className="flex flex-wrap items-center gap-2 rounded-lg bg-white/70 px-2.5 py-1.5 text-xs dark:bg-zinc-900/70"
+                    className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-subtle px-2.5 py-1.5 text-xs"
                   >
                     <span className="font-medium">{row.brand_name}</span>
                     <span className="text-zinc-500 dark:text-zinc-400">@{row.handle}</span>

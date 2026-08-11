@@ -58,8 +58,14 @@ export function countUnreadForPerson(personId: string): number {
   return n;
 }
 
-export function markNotificationRead(id: string): void {
-  getDb().prepare(`UPDATE notifications SET read = 1 WHERE id = ?`).run(id);
+export function markNotificationRead(id: string, personId: string): boolean {
+  const result = getDb()
+    .prepare(
+      `UPDATE notifications SET read = 1
+       WHERE id = ? AND recipient_id = ? AND read = 0`,
+    )
+    .run(id, personId);
+  return Number(result.changes) > 0;
 }
 
 export function markAllNotificationsReadForPerson(personId: string): void {

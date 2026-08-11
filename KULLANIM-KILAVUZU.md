@@ -40,39 +40,40 @@ Adresi bir kere aldıktan sonra:
 
 ---
 
-## 3. İlk girişte: kendini seç
+## 3. İlk girişte: hesabını seç
 
-Adrese ilk girdiğinde sağ üstte **"Sen kimsin?"** yazan mor bir buton göreceksin.
+Adrese ilk girdiğinde hesap seçme ekranı açılır.
 
-1. Ona tıkla.
-2. Listeden kendi adını seç.
+1. Listeden kendi adını seç.
+2. Şifreni girip **Giriş yap** düğmesine bas.
 
-Bir daha sorulmaz — o tarayıcı seni hatırlar (yaklaşık 1 yıl). Sadece başka bir
-bilgisayardan veya telefondan girersen tekrar seçmen gerekir.
+Oturumun bu tarayıcıda 30 gün hatırlanır. Şifren yoksa yöneticiden **Ekip → Hesap
+yönetimi** ekranında ilk şifreni belirlemesini iste.
 
 Kendi adını değiştirmek/çıkış yapmak istersen: sağ üstteki adının yanındaki
-**"değiştir"** yazısına tıkla.
+menüyü açıp **Kimliği değiştir**e tıkla. Menü dışına tıklayınca kapanır.
 
 ---
 
 ## 4. Üst menüye genel bakış
 
-Üstteki menüde 8 bölüm var (dar ekranda/telefonda sağ üstteki **☰** menü ikonuna taşınır):
+Sol menüde 10 ana bölüm var (dar ekranda/telefonda üstteki menü ikonuna taşınır):
 
 | Bölüm | Ne işe yarar |
 |---|---|
 | **Markalar** | 19 markanın listesi, marka bilgileri, içerik/proje ekleme |
+| **Sosyal** | Hesap sağlığı, hazır içerik varlığı ve paylaşım takvimi |
+| **Talepler** | Müşteri brieflerini kaydetme ve ön onay kuyruğu |
 | **Görevler** | Portföydeki TÜM görevler, filtreleme, pano/liste görünümü |
 | **Takvim** | Görevleri teslim tarihine göre ay ay gör |
 | **Raporlar** | Kim/hangi marka ne kadar iş tamamladı |
 | **Aktivite** | Portföydeki tüm hareketlerin (kim ne yaptı) kronolojik akışı |
 | **Ekip** | Aktif marka kanbanı ve kullanıcı/kişi listesi yönetimi |
-| **Şablonlar** | Tekrarlayan görev grupları (brief→çekim→kurgu→onay→yayın gibi) |
 | **Panom** | Sana özel: senin görevlerin, gecikmişler, bu hafta teslimler |
 
 Menünün yanında ayrıca:
 - 🔍 **Arama kutusu** (masaüstünde ortada) — marka/içerik/görev adı yaz, Enter'a bas.
-- **"+ Yeni"** butonu — herhangi bir sayfadan hızlıca görev eklemek için (bkz. §19).
+- **"+ Yeni görev"** butonu — herhangi bir sayfadan hızlıca görev eklemek için (bkz. §19).
 - 🔔 **Bildirim zili** — biri seni bir yorumda @etiketlediğinde burada görürsün (§20).
 - ☀️/🌙 **Tema düğmesi** — açık/koyu tema, tercih tarayıcında hatırlanır.
 
@@ -402,8 +403,9 @@ görev sayfasındaki "Hareketler" bölümleri bu akışın o markaya/göreve ait
   seç; sonra kendi sütunundaki listeden o an çalıştığın markayı seç. O markada sana
   atanmış açık görevler sütununda görünür. Diğer ekip üyelerinin seçimini herkes
   görebilir; değişiklikler en geç yaklaşık 15 saniyede yansır.
-- **Yeni ekip üyesi ekle** — isim yaz, **departmanını seç**, ekle. O kişi artık
-  "Sen kimsin?" listesinde ve atanan/etiketleme seçeneklerinde görünür.
+- **Hesap yönetimi** yalnızca yöneticilere görünür. Yeni ekip üyesinin adını,
+  departmanını ve ilk şifresini birlikte belirleyebilirsin. Şifresi olmayan eski
+  hesaplarda **İlk şifreyi belirle** düğmesini kullan.
 - **Departman** — kişiye tıklayıp profilinden değiştirilir. Bu seçim üç yeri birden
   belirler: yukarıdaki kanbanda hangi satırda göründüğü, **Görevler** sayfasındaki
   ekip sekmeleri ve **Raporlar**daki departman filtresi. Departmanı boş bırakılan
@@ -413,24 +415,16 @@ görev sayfasındaki "Hareketler" bölümleri bu akışın o markaya/göreve ait
 
 ---
 
-## 17. Şablonlar sayfası
+## 17. Müşteri talepleri
 
-Üstteki menüden **"Şablonlar"**a tıkla. Her içerikte tekrarlayan iş akışını
-(brief → çekim → kurgu → kapak → yayın gibi) bir kere tanımlarsın, her yeni
-içerikte elle tek tek görev yazmazsın.
+**Talepler** sayfasında müşteriden gelen briefi marka, iş türü, hedef departman,
+teslim tarihi ve referans bağlantısıyla kaydet. Kaydeden kişi kendi taleplerinin
+durumunu izler. Yunus, Sıla, Erhan ve Sosyal Medya ekibi bütün kuyruğu görebilir;
+talebe değerlendirme notu ekler, hedef departmandaki kişiye atar, önceliğini belirler
+ve onaylar. Onaylanan talep otomatik olarak içerik ve görev kaydına dönüşür.
 
-- Her şablon satırı bir görev: başlık + öncelik + **gün kayması** + (isteğe
-  bağlı) sabit atanan.
-- **Gün kayması**, içeriğin *hedef tarihine* göre hesaplanır: `-6` → teslimden
-  6 gün önce, `0` → teslim günü, `+7` → teslimden bir hafta sonra. İçeriğin hedef
-  tarihi yoksa görevler tarihsiz açılır.
-- Bir şablonu tek bir içerik türüne bağlayabilirsin (ör. "Reel akışı" → Reel);
-  yeni içerik formundaki şablon listesi seçilen türe göre filtrelenir.
-- Uygulama iki yerden: marka sayfasındaki "yeni içerik" formunun **Şablon**
-  alanından (içerik açılır açılmaz görevler de açılır), ya da mevcut bir içeriğin
-  sayfasındaki **"Şablondan görev ekle…"** kutusundan.
-- Bir şablonu silersen geri gelmez, ama daha önce ondan açılmış görevlere
-  dokunmaz.
+Şablonlar v02 alışma döneminde menüden ve görev oluşturma akışından kaldırıldı;
+önceki şablon verileri silinmeden korunuyor.
 
 ---
 
@@ -444,13 +438,14 @@ Markalar / İçerikler / Görevler — istediğine tıklayıp doğrudan o sayfay
 
 ## 19. Hızlı ekle ("+ Yeni")
 
-Hangi sayfada olursan ol, sağ üstteki **"+ Yeni"** butonuyla marka sayfasına
+Hangi sayfada olursan ol, sağ üstteki **"+ Yeni görev"** butonuyla marka sayfasına
 gitmeden hızlıca görev ekleyebilirsin:
 
 1. Marka seç.
-2. Var olan bir içerik/proje seç, ya da **"+ Yeni içerik oluştur"**la anında
-   yeni bir içerik açıp görevi onun altına koy.
-3. Görev başlığı, öncelik, atanan, teslim tarihi (son ikisi opsiyonel) yaz,
+2. Varsayılan **Yeni çalışma oluştur** akışında çalışma başlığını ve görev türünü
+   (Reel, Post, Foto, Video, Kurumsal Kimlik vb.) seç. İstersen bunun yerine var
+   olan bir çalışmayı seç.
+3. Görev başlığı, öncelik, atanan ve teslim tarihini (son ikisi opsiyonel) yaz,
    **"Oluştur"**a bas.
 
 Aklına gelen küçük bir işi not almak için görev panosuna girmeye gerek kalmaz.
@@ -472,8 +467,9 @@ yazması yeterli — kişi aktif ekip listesinde olmalı (§16).
 
 ## 21. Bilmen gereken küçük detaylar
 
-- **Yetki sınırı yok** — herkes her markaya görev/içerik ekleyebilir, durum
-  değiştirebilir. Ortak bir güven üzerine kurulu, dikkatli kullan.
+- **Yetkiler sunucuda kontrol edilir.** Raporlar ve hesap yönetimi yalnızca
+  yöneticilere; müşteri talebi kararları tanımlı sorumlulara ve Sosyal Medya ekibine
+  açıktır. Oturum açmış ekip üyeleri ortak operasyon görevlerini güncelleyebilir.
 - **Değişiklikler diğerlerine ~15 saniyede yansır.** Aynı sayfayı açık tutan biri
   senin yaptığın değişikliği hemen görmeyebilir, sayfa kendini birkaç saniyede bir
   arkada tazeliyor — F5'e basmana genelde gerek yok ama basarsan da bir şey bozulmaz.
@@ -491,7 +487,7 @@ yazması yeterli — kişi aktif ekip listesinde olmalı (§16).
 
 - **Adrese hiç giremiyorsan:** aynı ofis Wi-Fi'ında olduğundan emin ol, sunucunun
   (Yunus Emre'nin bilgisayarı) açık olup olmadığını sor.
-- **"Sen kimsin?" listesinde adın yoksa:** Yunus Emre'ye söyle, Ekip sayfasından
+- **Hesap listesinde adın yoksa veya şifren yoksa:** Yunus Emre'ye söyle, Ekip sayfasından
   eklenmen gerekiyor.
 - **Sayfa garip görünüyorsa / bir şey tıklanmıyorsa:** sayfayı yenile (F5). Hâlâ
   düzelmiyorsa Yunus Emre'ye haber ver.

@@ -92,7 +92,7 @@ function Column({
       ref={setNodeRef}
       data-drop-column={status}
       data-drop-active={isOver || undefined}
-      className={`min-h-40 space-y-2 rounded-2xl border border-black/5 border-t-2 bg-slate-50/60 p-3 transition-[background-color,border-color,box-shadow,transform] duration-200 dark:border-white/5 dark:bg-white/[0.02] ${TASK_STATUS_BORDER_TOP[status]} ${
+      className={`min-h-40 min-w-0 space-y-2 rounded-xl border border-border-default border-t-2 bg-surface-subtle p-3 transition-[background-color,border-color,box-shadow,transform] duration-200 ${TASK_STATUS_BORDER_TOP[status]} ${
         isOver
           ? "scale-[1.01] border-brand-400 bg-brand-50/80 shadow-md ring-2 ring-brand-500/20 dark:border-brand-700 dark:bg-brand-950/30"
           : ""
@@ -232,7 +232,7 @@ export default function TaskBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="grid gap-3 lg:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-5">
           {TASK_STATUSES.map((s) => (
             <Column
               key={s}

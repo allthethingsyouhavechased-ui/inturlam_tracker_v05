@@ -1,80 +1,84 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ActivityFeed from "@/components/ActivityFeed";
+import Icon from "@/components/ui/Icon";
 import { filterActivityEntries } from "@/lib/activitySearch";
 import type { ActivityEntry } from "@/lib/types";
 
 export default function ActivitySearch({ entries }: { entries: ActivityEntry[] }) {
-  const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
+  const [entityType, setEntityType] = useState<"all" | "task" | "content" | "brand">("all");
   const filteredEntries = useMemo(
-    () => filterActivityEntries(entries, query),
-    [entries, query],
+    () => filterActivityEntries(entries, query).filter((entry) => entityType === "all" || entry.entity_type === entityType),
+    [entries, entityType, query],
   );
 
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setQuery(draftQuery.trim());
-  }
-
   function clearSearch() {
-    setDraftQuery("");
     setQuery("");
+    setEntityType("all");
   }
 
   return (
     <div className="space-y-3">
-      <form
+      <div
         role="search"
         aria-label="Aktivitelerde ara"
-        onSubmit={submitSearch}
-        className="flex flex-col gap-2 rounded-2xl border border-black/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-zinc-900 sm:flex-row"
+        className="rounded-xl border border-border-default bg-surface p-3"
       >
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Aktivite ara</span>
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400"
-          >
-            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.473 9.768l3.63 3.63a.75.75 0 1 0 1.06-1.06l-3.63-3.63A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clipRule="evenodd" />
-          </svg>
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
           <input
             type="search"
-            value={draftQuery}
-            onChange={(event) => setDraftQuery(event.target.value)}
-            placeholder="Kişi veya aktivite içinde ara…"
-            className="min-h-11 w-full rounded-xl border border-black/10 bg-zinc-50 pl-10 pr-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 dark:border-white/15 dark:bg-zinc-950"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Kişi, görev veya işlem ara…"
+            className="min-h-10 w-full rounded-[9px] border border-border-default bg-surface-subtle pl-9 pr-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
           />
         </label>
-        <div className="flex gap-2">
-          {query && (
+        <div className="flex min-w-0 gap-1 overflow-x-auto">
+          {([
+            ["all", "Tümü"],
+            ["task", "Görev"],
+            ["content", "İçerik"],
+            ["brand", "Marka"],
+          ] as const).map(([value, label]) => (
             <button
+              key={value}
               type="button"
-              onClick={clearSearch}
-              className="ui-press min-h-11 rounded-xl px-4 text-sm font-medium text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+              onClick={() => setEntityType(value)}
+              aria-pressed={entityType === value}
+              className={`ui-press min-h-9 shrink-0 rounded-[9px] px-3 text-xs font-semibold ${entityType === value ? "bg-brand-600 text-white" : "text-secondary hover:bg-surface-hover"}`}
             >
-              Temizle
+              {label}
             </button>
-          )}
+          ))}
+          {(query || entityType !== "all") && (
           <button
-            type="submit"
-            className="ui-press min-h-11 flex-1 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700 sm:flex-none"
+            type="button"
+            onClick={clearSearch}
+            className="ui-press min-h-9 shrink-0 rounded-[9px] px-3 text-xs font-semibold text-muted hover:bg-surface-hover hover:text-foreground"
           >
-            Ara
+            Temizle
           </button>
+          )}
         </div>
-      </form>
+        </div>
+        <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-3 text-[11px] text-muted">
+          <span>En yeni hareketler önce gösterilir.</span>
+          <span className="font-semibold tabular-nums text-secondary">{filteredEntries.length} kayıt</span>
+        </div>
+      </div>
 
-      {query && (
+      {(query || entityType !== "all") && (
         <p role="status" className="text-xs text-zinc-500 dark:text-zinc-400">
-          “{query}” için {filteredEntries.length} sonuç
+          {query ? `“${query}” araması` : "Seçili tür"} için {filteredEntries.length} sonuç
         </p>
       )}
 
-      <div className="rounded-xl border border-black/10 bg-white p-2 dark:border-white/10 dark:bg-zinc-900">
+      <div className="overflow-hidden rounded-xl border border-border-default bg-surface">
         <ActivityFeed
           entries={filteredEntries}
           emptyText={

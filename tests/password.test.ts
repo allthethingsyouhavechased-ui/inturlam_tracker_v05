@@ -23,7 +23,7 @@ describe("şifre güvenliği", () => {
 
   it("bozuk özetleri reddeder ve şifre uzunluğunu denetler", () => {
     assert.equal(verifyPassword("deneme", "bozuk"), false);
-    assert.match(validatePassword("123") ?? "", /en az 6/);
-    assert.equal(validatePassword("123456"), null);
+    assert.match(validatePassword("1234567") ?? "", /en az 8/);
+    assert.equal(validatePassword("12345678"), null);
   });
 });

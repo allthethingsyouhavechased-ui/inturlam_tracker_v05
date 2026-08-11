@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ApplyTemplateForm from "@/components/ApplyTemplateForm";
 import ArchiveContentButton from "@/components/ArchiveContentButton";
 import ArchiveTaskButton from "@/components/ArchiveTaskButton";
 import AutoRefresh from "@/components/AutoRefresh";
@@ -9,9 +8,10 @@ import DeleteContentButton from "@/components/DeleteContentButton";
 import EditContentForm from "@/components/EditContentForm";
 import KanbanBoard from "@/components/KanbanBoard";
 import NewTaskForm from "@/components/NewTaskForm";
+import PageHeader from "@/components/ui/PageHeader";
 import { CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { formatDateShort } from "@/lib/date";
-import { getCurrentPerson } from "@/lib/identity";
+import { requirePageSession } from "@/lib/identity";
 import { getBrand } from "@/lib/repositories/brands";
 import { getContentItem } from "@/lib/repositories/content";
 import { listActivePeople } from "@/lib/repositories/people";
@@ -20,7 +20,6 @@ import {
   listTasksByContent,
   sweepArchivablePublishedTasks,
 } from "@/lib/repositories/tasks";
-import { listTemplates } from "@/lib/repositories/templates";
 import { ARCHIVE_AFTER_DAYS, archiveCountdownBadge } from "@/lib/taskArchive";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +29,7 @@ export default async function ContentPage({
 }: {
   params: Promise<{ brandId: string; contentId: string }>;
 }) {
+  const me = await requirePageSession();
   const { brandId, contentId } = await params;
   const content = getContentItem(contentId);
   const brand = getBrand(brandId);
@@ -42,68 +42,42 @@ export default async function ContentPage({
   });
   const archivedTasks = listArchivedTasksByContent(contentId);
   const people = listActivePeople();
-  const me = await getCurrentPerson();
-  // Bu içerik türüne uyan şablonlar + her türe uyanlar.
-  const templates = listTemplates().filter(
-    (t) => t.content_type === null || t.content_type === content.type,
-  );
-
   return (
     <div className="space-y-6">
       <AutoRefresh />
-      <div className="text-sm text-zinc-500 dark:text-zinc-400">
-        <Link href="/brands" className="hover:text-zinc-800 dark:hover:text-zinc-200">
-          Markalar
-        </Link>{" "}
-        /{" "}
-        <Link
-          href={`/brands/${brand.id}`}
-          className="hover:text-zinc-800 dark:hover:text-zinc-200"
-        >
-          {brand.name}
-        </Link>{" "}
-        /{" "}
-        <span className="text-zinc-800 dark:text-zinc-200">{content.title}</span>
-      </div>
+      <PageHeader
+        eyebrow={CONTENT_TYPE_LABEL[content.type].toLocaleUpperCase("tr-TR")}
+        title={content.title}
+        description={[
+          brand.name,
+          content.assignee_name ? `Sorumlu: ${content.assignee_name}` : "Sorumlu atanmamış",
+          content.target_date ? `Hedef: ${formatDateShort(content.target_date)}` : "Hedef tarihi yok",
+        ].join(" · ")}
+        breadcrumb={[
+          { label: "Markalar", href: "/brands" },
+          { label: brand.name, href: `/brands/${brand.id}` },
+          { label: content.title },
+        ]}
+        actions={
+          <>
+            <ContentStatusSelect contentId={content.id} status={content.status} />
+            <EditContentForm content={content} people={people} />
+            <ArchiveContentButton contentId={content.id} archived={content.archived === 1} />
+            <DeleteContentButton contentId={content.id} />
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{content.title}</h1>
-        <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
-          {CONTENT_TYPE_LABEL[content.type]}
-        </span>
-        <ContentStatusSelect contentId={content.id} status={content.status} />
-        {content.assignee_name && (
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            👤 {content.assignee_name}
-          </span>
-        )}
-        {content.target_date && (
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            📅 Hedef: {formatDateShort(content.target_date)}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-4">
-        <EditContentForm content={content} people={people} />
-        <ArchiveContentButton contentId={content.id} archived={content.archived === 1} />
-        <DeleteContentButton contentId={content.id} />
-      </div>
-
-      <section className="space-y-3 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold">Yeni görev</h2>
+      <section className="space-y-3 rounded-xl border border-border-default bg-surface p-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Görev oluştur</h2>
+          <p className="mt-0.5 text-xs text-muted">Bu içerik için yeni bir görev ekle.</p>
+        </div>
         <NewTaskForm
           contentItemId={content.id}
           people={people}
           defaultAssigneeId={me?.id ?? null}
         />
-        <div className="border-t border-black/10 pt-3 dark:border-white/10">
-          <ApplyTemplateForm
-            contentItemId={content.id}
-            templates={templates}
-            defaultAssigneeId={me?.id ?? null}
-          />
-        </div>
       </section>
 
       <section>

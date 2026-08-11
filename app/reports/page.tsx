@@ -3,6 +3,7 @@ import ReportsClient, {
   type PersonReportView,
   type RangeKey,
 } from "@/components/ReportsClient";
+import PageHeader from "@/components/ui/PageHeader";
 import { currentMonthRange, currentWeekRange, todayISO } from "@/lib/date";
 import { withAllDepartments } from "@/lib/departments";
 import { requireReportAccess } from "@/lib/identity";
@@ -127,15 +128,14 @@ export default async function ReportsPage({
   }).format(new Date());
 
   return (
-    <div className="report-page space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">Operasyon analitiği</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Raporlar</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">İş yükü, teslim sağlığı, tamamlanma süresi ve ekip/marka performans görünümü</p>
-        </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{reportLabel}</p>
-      </div>
+    <div className="report-page">
+      <PageHeader
+        eyebrow="OPERASYON ANALİTİĞİ"
+        title="Raporlar"
+        description="İş yükünü, teslim sağlığını, çevrim süresini ve ekip performansını karşılaştır."
+        actions={<p className="text-xs font-semibold text-secondary">{reportLabel}</p>}
+        className="print:hidden"
+      />
       <ReportsClient
         summary={summary}
         previousSummary={previousSummary}

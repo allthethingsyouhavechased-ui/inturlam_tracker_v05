@@ -3,6 +3,7 @@ import BrandLogo from "@/components/BrandLogo";
 import CountStepper from "@/components/CountStepper";
 import EmptyState from "@/components/EmptyState";
 import { setBrandAssetCountAction } from "@/lib/actions/socialPlan";
+import { requirePageSession } from "@/lib/identity";
 import { listBrandVarlikRows } from "@/lib/repositories/socialPlan";
 import { CONTENT_KINDS, CONTENT_KIND_LABEL } from "@/lib/socialPlan";
 import type { ContentKind } from "@/lib/types";
@@ -19,7 +20,8 @@ function progressTone(ready: number, target: number): string {
   return "text-amber-600 dark:text-amber-400";
 }
 
-export default function SocialVarlikPage() {
+export default async function SocialVarlikPage() {
+  await requirePageSession();
   const rows = listBrandVarlikRows();
 
   const totals: Record<ContentKind, { ready: number; target: number }> = {
@@ -35,13 +37,10 @@ export default function SocialVarlikPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Varlık</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Elde yayına hazır bekleyen içerik sayısı — güncel stok: paylaşınca azalt,
-          üretince artır. Aylık hedefler her markanın kendi sayfasından girilir.
-        </p>
+        <h2 className="text-base font-semibold text-foreground">Hazır içerik varlığı</h2>
+        <p className="mt-1 text-xs text-muted">Yayına hazır stok ve marka bazlı aylık hedef karşılaştırması.</p>
       </div>
 
       {rows.length === 0 ? (
@@ -50,10 +49,10 @@ export default function SocialVarlikPage() {
           description="Aktif bir marka eklendiğinde varlık takibi burada başlar."
         />
       ) : (
-        <section className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-zinc-900">
+        <section className="overflow-x-auto rounded-xl border border-border-default bg-surface">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="border-b border-black/10 text-left text-xs uppercase tracking-wider text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+              <tr className="border-b border-border-default text-left text-[11px] tracking-[0.08em] text-muted">
                 <th className="px-3 py-2 font-medium">Marka</th>
                 {CONTENT_KINDS.map((kind) => (
                   <th key={kind} className="px-3 py-2 font-medium">
@@ -66,7 +65,7 @@ export default function SocialVarlikPage() {
               {rows.map((row) => (
                 <tr
                   key={row.brand_id}
-                  className="border-b border-black/5 last:border-0 dark:border-white/5"
+                  className="border-b border-border-subtle last:border-0 hover:bg-surface-hover"
                 >
                   <td className="px-3 py-2">
                     <Link
@@ -110,7 +109,7 @@ export default function SocialVarlikPage() {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-black/10 bg-zinc-50 text-xs font-semibold text-zinc-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-200">
+              <tr className="border-t border-border-default bg-surface-subtle text-xs font-semibold text-secondary">
                 <td className="px-3 py-2">Portföy toplamı</td>
                 {CONTENT_KINDS.map((kind) => (
                   <td key={kind} className="px-3 py-2 tabular-nums">

@@ -15,6 +15,7 @@ export async function createClusterAction(formData: FormData) {
   await requireSession();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) throw new Error("Kategori adı zorunlu.");
+  if (label.length > 80) throw new Error("Kategori adı en fazla 80 karakter olabilir.");
   await ensureCluster(label);
   revalidatePath("/", "layout");
 }
@@ -24,6 +25,7 @@ export async function renameClusterAction(formData: FormData) {
   const id = String(formData.get("clusterId") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) throw new Error("Kategori adı zorunlu.");
+  if (label.length > 80) throw new Error("Kategori adı en fazla 80 karakter olabilir.");
   const current = getCluster(id);
   if (!current) throw new Error("Kategori bulunamadı.");
   if (current.label === label) return;

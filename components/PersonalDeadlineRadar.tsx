@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
+import Icon from "@/components/ui/Icon";
 import { setPersonalTaskTargetAction } from "@/lib/actions/tasks";
 import {
   CONTENT_TYPE_LABEL,
@@ -201,8 +202,8 @@ function DayCell({
 
   const hint = [
     formatDateLong(date),
-    targetTitles.length > 0 ? `🎯 ${targetTitles.join(", ")}` : null,
-    dueTitles.length > 0 ? `📅 ${dueTitles.join(", ")}` : null,
+    targetTitles.length > 0 ? `Kişisel hedef: ${targetTitles.join(", ")}` : null,
+    dueTitles.length > 0 ? `Resmi teslim: ${dueTitles.join(", ")}` : null,
     isPast ? "Geçmiş güne kişisel hedef verilemez" : null,
   ]
     .filter(Boolean)
@@ -552,8 +553,8 @@ export default function PersonalDeadlineRadar({
 
             <DragOverlay modifiers={[snapToCursor]} dropAnimation={null}>
               {activeRow && (
-                <div className="rotate-[1deg] rounded-xl border border-brand-400 bg-white px-3 py-2 text-xs font-medium shadow-2xl dark:bg-zinc-900">
-                  🎯 {activeRow.task.title}
+                <div className="flex items-center gap-1.5 rotate-[1deg] rounded-xl border border-brand-400 bg-surface px-3 py-2 text-xs font-medium shadow-xl">
+                  <Icon name="clock" className="size-3.5" /> {activeRow.task.title}
                 </div>
               )}
             </DragOverlay>

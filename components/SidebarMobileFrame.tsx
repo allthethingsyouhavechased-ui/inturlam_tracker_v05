@@ -2,22 +2,14 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import Icon from "@/components/ui/Icon";
 import { useSidebar } from "./SidebarContext";
 
-// Sidebar sunucu component'i (marka verisi çeker); bu client sarmalayıcı
-// sadece aç/kapa davranışını yönetir. Mobilde tam ekran off-canvas panel,
-// masaüstünde normal akışta duran ve daraltılabilen bir sütun.
-//
-// Masaüstü daraltmasında `display:none` DEĞİL genişlik sıfırlanıyor: panel
-// DOM'da kalsın ki geri açıldığında marka ağacının açık/kapalı durumu
-// (SidebarBrandGroup'un kendi state'i) sıfırlanmasın.
 export default function SidebarMobileFrame({ children }: { children: React.ReactNode }) {
-  const { open, close, collapsed } = useSidebar();
+  const { open, close } = useSidebar();
   const pathname = usePathname();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Mobilde bir markaya/içeriğe tıklayıp gezinince off-canvas menü açık
-  // kalmasın — rota değişiminde otomatik kapat.
   useEffect(() => {
     close();
   }, [pathname, close]);
@@ -31,9 +23,6 @@ export default function SidebarMobileFrame({ children }: { children: React.React
     return () => desktop.removeEventListener("change", closeWhenDesktop);
   }, [close]);
 
-  // Açık mobil drawer bir modal gezinme yüzeyi gibi davranır: sayfanın arkası
-  // kaymaz, Escape kapatır, ilk odak kapatma düğmesine gider ve kapanınca
-  // kullanıcının önceki odağı geri gelir.
   useEffect(() => {
     if (!open) return;
     const previousFocus = document.activeElement instanceof HTMLElement
@@ -41,8 +30,6 @@ export default function SidebarMobileFrame({ children }: { children: React.React
       : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    // Görünürlük/transform geçişi aynı commit'te başladığı için ilk odak bir
-    // sonraki frame'den sonra güvenilir şekilde kabul ediliyor.
     const focusTimer = window.setTimeout(() => {
       panelRef.current?.querySelector<HTMLElement>("[data-sidebar-close]")?.focus();
     }, 100);
@@ -79,43 +66,35 @@ export default function SidebarMobileFrame({ children }: { children: React.React
   return (
     <>
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-zinc-950/55 backdrop-blur-[2px] md:hidden"
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Menüyü kapat"
+          className="fixed inset-0 z-40 bg-zinc-950/60 backdrop-blur-[2px] md:hidden"
           onClick={close}
-          aria-hidden
         />
       )}
       <div
         ref={panelRef}
         id="app-sidebar"
-        // `md:w-*` sınıfları burada YOK: masaüstü genişliğini globals.css'teki
-        // `html[data-sidebar]` kuralı veriyor. Sebep, sayfa ilk boyanmadan
-        // önce (React çalışmadan) doğru genişlikte çizilmesi gerektiği.
-        inert={collapsed && !open ? true : undefined}
         role={open ? "dialog" : undefined}
         aria-modal={open ? true : undefined}
-        aria-label={open ? "Gezinme menüsü" : undefined}
-        className={`sidebar-panel invisible fixed inset-y-0 left-0 z-50 w-72 -translate-x-full bg-zinc-50 shadow-2xl transition-[transform,visibility] duration-200 md:visible md:static md:z-auto md:w-auto md:translate-x-0 md:bg-transparent md:shadow-none md:transition-[width] dark:bg-zinc-950 ${
+        aria-label={open ? "Ana gezinme" : undefined}
+        className={`sidebar-panel invisible fixed inset-y-0 left-0 z-50 w-72 -translate-x-full bg-surface shadow-lg transition-[transform,visibility] duration-200 md:visible md:sticky md:top-0 md:z-auto md:h-screen md:w-auto md:shrink-0 md:self-start md:translate-x-0 md:bg-transparent md:shadow-none ${
           open ? "visible translate-x-0" : ""
         }`}
       >
-        <div className="flex h-[var(--header-h)] items-center justify-between border-b border-black/5 px-4 md:hidden dark:border-white/5">
-          <span className="text-sm font-semibold tracking-tight">Gezinme</span>
-          {open && (
-            <button
-              type="button"
-              onClick={close}
-              autoFocus
-              data-sidebar-close
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-zinc-500 hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
-              aria-label="Menüyü kapat"
-            >
-              <svg viewBox="0 0 20 20" className="h-5 w-5 fill-current" aria-hidden="true">
-                <path d="m5.2 4.15 4.8 4.8 4.8-4.8 1.05 1.05-4.8 4.8 4.8 4.8-1.05 1.05-4.8-4.8-4.8 4.8-1.05-1.05 4.8-4.8-4.8-4.8L5.2 4.15Z" />
-              </svg>
-            </button>
-          )}
-        </div>
+        {open && (
+          <button
+            type="button"
+            onClick={close}
+            data-sidebar-close
+            className="ui-press absolute right-3 top-3 z-10 inline-flex size-10 items-center justify-center rounded-[10px] border border-border-default bg-surface text-muted shadow-sm hover:bg-surface-hover hover:text-foreground md:hidden"
+            aria-label="Menüyü kapat"
+          >
+            <Icon name="close" className="size-[18px]" />
+          </button>
+        )}
         {children}
       </div>
     </>

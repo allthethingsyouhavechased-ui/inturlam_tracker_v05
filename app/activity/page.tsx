@@ -1,21 +1,23 @@
 import ActivitySearch from "@/components/ActivitySearch";
 import AutoRefresh from "@/components/AutoRefresh";
+import PageHeader from "@/components/ui/PageHeader";
+import { requirePageSession } from "@/lib/identity";
 import { listRecentActivity } from "@/lib/repositories/activity";
 
 export const dynamic = "force-dynamic";
 
-export default function ActivityPage() {
+export default async function ActivityPage() {
+  await requirePageSession();
   const entries = listRecentActivity(150);
 
   return (
-    <div className="space-y-4">
+    <div>
       <AutoRefresh />
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Aktivite</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Portföydeki tüm hareketler — en yeni en üstte (son 150 kayıt).
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="DENETİM İZİ"
+        title="Aktivite"
+        description="Portföydeki son 150 değişikliği kişi, görev ve işlem bazında ara."
+      />
 
       <ActivitySearch entries={entries} />
     </div>

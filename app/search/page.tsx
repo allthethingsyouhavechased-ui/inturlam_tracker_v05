@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import { requirePageSession } from "@/lib/identity";
 import {
   CONTENT_TYPE_LABEL,
   TASK_PRIORITY_BADGE,
@@ -18,6 +19,7 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requirePageSession();
   const { q } = await searchParams;
   const query = (q ?? "").trim();
   const results = query ? searchAll(query) : { brands: [], content: [], tasks: [] };

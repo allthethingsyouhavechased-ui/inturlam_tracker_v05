@@ -24,6 +24,17 @@ function cleanValue(value: FormDataEntryValue | null): string | null {
   return s.length > 0 ? s : null;
 }
 
+function cleanDate(value: FormDataEntryValue | null): string | null {
+  const date = cleanValue(value);
+  if (!date) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Geçersiz tarih.");
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+    throw new Error("Geçersiz tarih.");
+  }
+  return date;
+}
+
 export async function createContentItemAction(formData: FormData): Promise<string> {
   await requireSession();
   const brandId = String(formData.get("brandId") ?? "").trim();
@@ -32,13 +43,14 @@ export async function createContentItemAction(formData: FormData): Promise<strin
 
   if (!brandId) throw new Error("Marka bulunamadı.");
   if (!title) throw new Error("Başlık zorunlu.");
+  if (title.length > 200) throw new Error("Başlık en fazla 200 karakter olabilir.");
   if (!CONTENT_TYPES.includes(type)) throw new Error("Geçersiz içerik türü.");
 
   const id = createContentItem({
     brandId,
     title,
     type,
-    targetDate: cleanValue(formData.get("targetDate")),
+    targetDate: cleanDate(formData.get("targetDate")),
     assigneeId: cleanValue(formData.get("assigneeId")),
   });
 
@@ -82,6 +94,7 @@ export async function updateContentItemAction(formData: FormData) {
 
   if (!id) throw new Error("İçerik bulunamadı.");
   if (!title) throw new Error("Başlık zorunlu.");
+  if (title.length > 200) throw new Error("Başlık en fazla 200 karakter olabilir.");
   if (!CONTENT_TYPES.includes(type)) throw new Error("Geçersiz içerik türü.");
 
   const before = getContentItem(id);
@@ -89,7 +102,7 @@ export async function updateContentItemAction(formData: FormData) {
     id,
     title,
     type,
-    targetDate: cleanValue(formData.get("targetDate")),
+    targetDate: cleanDate(formData.get("targetDate")),
     assigneeId: cleanValue(formData.get("assigneeId")),
   });
 

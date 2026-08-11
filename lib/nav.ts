@@ -1,46 +1,86 @@
-// Üst menüdeki bölüm linkleri. Hem masaüstü header'ı (components/NavLinks.tsx)
-// hem de mobil off-canvas panel (components/SidebarNavLinks.tsx) buradan okur
-// — header dar ekranda linkleri sığdıramadığı için gizleniyor, linkler panele
-// taşınıyor. Tek liste, iki yerde: yeni sayfa eklerken burayı güncellemek yeter.
+import type { IconName } from "@/lib/icons";
+
 export interface NavItem {
   readonly href: string;
   readonly label: string;
-  // Yalnızca "Sosyal" gibi bir grubun alt sayfaları olduğunda dolu. Masaüstünde
-  // açılır menüye, mobilde akordeona dönüşür (bkz. NavLinks/SidebarNavLinks).
-  readonly children?: readonly NavItem[];
+  readonly icon: IconName;
 }
 
-export const MAIN_NAV: readonly NavItem[] = [
-  { href: "/brands", label: "Markalar" },
-  { href: "/tasks", label: "Görevler" },
-  { href: "/calendar", label: "Takvim" },
+export interface NavGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly items: readonly NavItem[];
+}
+
+export const NAV_GROUPS: readonly NavGroup[] = [
   {
-    href: "/social",
-    label: "Sosyal",
-    children: [
-      { href: "/social/takip", label: "Takip" },
-      { href: "/social/varlik", label: "Varlık" },
-      { href: "/social/takvim", label: "Paylaşım Takvimi" },
+    id: "calisma",
+    label: "Çalışma",
+    items: [
+      { href: "/", label: "Bugün", icon: "home" },
+      { href: "/panom", label: "Panom", icon: "board" },
+      { href: "/requests", label: "Talepler", icon: "inbox" },
+      { href: "/tasks", label: "Görevler", icon: "tasks" },
+      { href: "/calendar", label: "Takvim", icon: "calendar" },
     ],
   },
-  { href: "/reports", label: "Raporlar" },
-  { href: "/activity", label: "Aktivite" },
-  { href: "/team", label: "Ekip" },
-  { href: "/templates", label: "Şablonlar" },
-  { href: "/panom", label: "Panom" },
+  {
+    id: "portfoy",
+    label: "Portföy",
+    items: [
+      { href: "/brands", label: "Markalar", icon: "brands" },
+      { href: "/social", label: "Sosyal", icon: "social" },
+    ],
+  },
+  {
+    id: "organizasyon",
+    label: "Organizasyon",
+    items: [
+      { href: "/team", label: "Ekip", icon: "team" },
+      { href: "/reports", label: "Raporlar", icon: "reports" },
+      { href: "/activity", label: "Aktivite", icon: "activity" },
+    ],
+  },
 ] as const;
 
-// Raporlar yalnızca yöneticilere açık. Eskiden bu filtre NavLinks VE
-// SidebarNavLinks'te birebir kopyalanmıştı — Sosyal'in alt sayfalarıyla bu
-// çoğalma büyürdü, tek yerde topluyoruz.
-export function visibleNav(canViewReports: boolean): readonly NavItem[] {
-  return canViewReports ? MAIN_NAV : MAIN_NAV.filter((item) => item.href !== "/reports");
+export function visibleNavGroups(canViewReports: boolean): readonly NavGroup[] {
+  if (canViewReports) return NAV_GROUPS;
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.href !== "/reports"),
+  }));
 }
 
-// Bir linkin "aktif" sayılıp sayılmayacağı: tam eşleşme ya da alt rota
-// (`/social` → `/social/takvim` aktif sayar). Eski masaüstü kodundaki çıplak
-// `pathname.startsWith(href)` "/socialmedia" gibi alakasız bir yolu da
-// yanlışlıkla aktif sayardı — mobildeki (doğru) kural artık tek yerde.
 export function isNavActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export interface RouteContext {
+  readonly section: string;
+  readonly label: string;
+}
+
+export function routeContextForPathname(pathname: string): RouteContext {
+  if (pathname.startsWith("/settings/security")) return { section: "Ayarlar", label: "Güvenlik" };
+  if (pathname.startsWith("/settings/profile")) return { section: "Ayarlar", label: "Profil bilgileri" };
+  if (pathname.startsWith("/settings")) return { section: "Ayarlar", label: "Hesap" };
+  if (pathname.startsWith("/tasks/")) return { section: "Görevler", label: "Görev detayı" };
+  if (pathname.startsWith("/requests/")) return { section: "Talepler", label: "Talep değerlendirme" };
+  if (pathname.startsWith("/brands/") && pathname.includes("/content/")) {
+    return { section: "Markalar", label: "İçerik detayı" };
+  }
+  if (pathname.startsWith("/brands/")) return { section: "Markalar", label: "Marka çalışma alanı" };
+  if (pathname.startsWith("/team/manage")) return { section: "Ekip", label: "Hesap yönetimi" };
+  if (pathname.startsWith("/team/")) return { section: "Ekip", label: "Kişi profili" };
+  if (pathname.startsWith("/reports/")) return { section: "Raporlar", label: "Rapor detayı" };
+  if (pathname.startsWith("/search")) return { section: "Arama", label: "Sonuçlar" };
+  if (pathname.startsWith("/whoami")) return { section: "Hesap", label: "Kimlik seçimi" };
+
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      if (isNavActive(pathname, item.href)) return { section: group.label, label: item.label };
+    }
+  }
+  return { section: "INTURLAM", label: "Tracker" };
 }

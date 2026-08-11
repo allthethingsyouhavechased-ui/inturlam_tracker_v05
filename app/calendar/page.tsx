@@ -3,7 +3,9 @@ import AutoRefresh from "@/components/AutoRefresh";
 import CalendarGrid from "@/components/CalendarGrid";
 import QuickAddModal from "@/components/QuickAddModal";
 import TaskListView from "@/components/TaskListView";
-import { getCurrentPerson } from "@/lib/identity";
+import Icon from "@/components/ui/Icon";
+import PageHeader from "@/components/ui/PageHeader";
+import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
 import { listAllContentSummaries } from "@/lib/repositories/content";
 import {
@@ -28,6 +30,7 @@ export default async function CalendarPage({
 }: {
   searchParams: Promise<{ month?: string; day?: string; yeni?: string }>;
 }) {
+  const me = await requirePageSession();
   const sp = await searchParams;
   const monthDate = monthParamToDate(sp.month);
   const monthParam = monthParamISO(monthDate);
@@ -48,7 +51,6 @@ export default async function CalendarPage({
   const today = todayISO();
   // Gün panelindeki hızlı görev formu için (marka → içerik → görev), header'daki
   // "+ Yeni" ile aynı bileşen.
-  const me = await getCurrentPerson();
   const brands = listBrands();
   const contents = listAllContentSummaries();
 
@@ -72,47 +74,52 @@ export default async function CalendarPage({
   const dayTasks = selectedDay ? (tasksByDate.get(selectedDay) ?? []) : [];
 
   return (
-    <div className="space-y-3">
+    <div>
       <AutoRefresh />
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-        <h1 className="justify-self-start text-2xl font-semibold tracking-tight">Takvim</h1>
-        <nav aria-label="Aylar arasında gezin" className="flex items-center gap-1 justify-self-center">
-          <Link
-            href={`/calendar?month=${prevMonthParam}`}
-            aria-label="Önceki ay"
-            className="ui-press inline-flex size-10 items-center justify-center rounded-xl text-xl leading-none text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-          >
-            ‹
-          </Link>
-          <h2 className="min-w-[12ch] text-center text-base font-semibold sm:text-lg">
-            {formatMonthLabel(monthDate)}
-          </h2>
-          <Link
-            href={`/calendar?month=${nextMonthParam}`}
-            aria-label="Sonraki ay"
-            className="ui-press inline-flex size-10 items-center justify-center rounded-xl text-xl leading-none text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-          >
-            ›
-          </Link>
-        </nav>
-        <div className="justify-self-end">
-          {!isCurrentMonth && (
-            <Link
-              href="/calendar"
-              className="ui-press inline-flex min-h-10 items-center rounded-xl px-3 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950/30"
-            >
-              Bugün
-            </Link>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="PLANLAMA"
+        title="Takvim"
+        description="Teslim tarihlerini aylık görünümde izle ve gün bazında planla."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {!isCurrentMonth && (
+              <Link
+                href="/calendar"
+                className="ui-press inline-flex min-h-10 items-center rounded-[10px] px-3 text-sm font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950"
+              >
+                Bugün
+              </Link>
+            )}
+            <nav aria-label="Aylar arasında gezin" className="flex items-center rounded-[10px] border border-border-default bg-surface p-0.5">
+              <Link
+                href={`/calendar?month=${prevMonthParam}`}
+                aria-label="Önceki ay"
+                className="ui-press grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
+              >
+                <Icon name="chevron-left" className="size-4" />
+              </Link>
+              <h2 className="min-w-[12ch] px-2 text-center text-sm font-semibold text-foreground">
+                {formatMonthLabel(monthDate)}
+              </h2>
+              <Link
+                href={`/calendar?month=${nextMonthParam}`}
+                aria-label="Sonraki ay"
+                className="ui-press grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
+              >
+                <Icon name="chevron-right" className="size-4" />
+              </Link>
+            </nav>
+          </div>
+        }
+      />
 
+      <div className="space-y-3">
       {!hasTasksThisMonth && (
-        <div className="rounded-xl border border-black/10 bg-white p-6 text-center dark:border-white/10 dark:bg-zinc-900">
-          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+        <div className="rounded-xl border border-border-default bg-surface p-6 text-center">
+          <p className="text-sm font-medium text-foreground">
             Bu ayda teslim tarihi olan görev yok.
           </p>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-xs text-muted">
             Başka bir aya bakabilir ya da{" "}
             <Link href="/tasks" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
               Görevler
@@ -131,11 +138,11 @@ export default async function CalendarPage({
       />
 
       {selectedDay && (
-        <section className="ui-enter space-y-3 rounded-xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+        <section className="ui-enter space-y-3 rounded-xl border border-border-default bg-surface p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">
               {formatDateLong(selectedDay)}{" "}
-              <span className="font-normal text-zinc-500 dark:text-zinc-400">
+              <span className="font-normal text-muted">
                 · {dayTasks.length > 0 ? `${dayTasks.length} görev` : "görev yok"}
               </span>
             </h2>
@@ -150,12 +157,12 @@ export default async function CalendarPage({
                 defaultAssigneeId={me?.id ?? null}
                 defaultDueDate={selectedDay}
                 initialOpen={wantsNewTask}
-                triggerLabel="+ Bu güne görev ekle"
-                triggerClassName="ui-press inline-flex min-h-11 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-500"
+                triggerLabel="Bu güne görev ekle"
+                triggerClassName="ui-press inline-flex min-h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-500"
               />
               <Link
                 href={`/calendar?month=${monthParam}`}
-                className="ui-press inline-flex min-h-11 items-center rounded-lg px-3 text-xs font-medium text-zinc-500 hover:bg-black/5 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+                className="ui-press inline-flex min-h-10 items-center rounded-[10px] px-3 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground"
               >
                 Kapat ×
               </Link>
@@ -170,6 +177,7 @@ export default async function CalendarPage({
           )}
         </section>
       )}
+      </div>
     </div>
   );
 }

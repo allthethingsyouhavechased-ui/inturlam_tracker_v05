@@ -628,3 +628,39 @@ describe("sosyal medya üretim planı tabloları (yeni tablolar, migration YOK)"
     );
   });
 });
+
+describe("müşteri talebi tabloları (yeni tablolar, migration YOK)", () => {
+  it("mevcut veritabanını açınca talep tablolarını veri kaybetmeden kurar", () => {
+    const legacySchema = SCHEMA_SQL
+      .replace(/CREATE TABLE IF NOT EXISTS client_requests[\s\S]*?\);\r?\n\r?\n/, "")
+      .replace(/CREATE TABLE IF NOT EXISTS client_request_comments[\s\S]*?\);\r?\n\r?\n/, "")
+      .replace(/CREATE (?:UNIQUE )?INDEX IF NOT EXISTS idx_client_request[\s\S]*?;\r?\n/g, "");
+
+    const legacy = new DatabaseSync(TMP_DB);
+    legacy.exec("PRAGMA foreign_keys = ON");
+    legacy.exec(legacySchema);
+    legacy.prepare("INSERT INTO brands (id, name, cluster) VALUES ('b1', 'Korunan Marka', 'tek')").run();
+    legacy.close();
+
+    const db = getDb();
+    const tables = db
+      .prepare(
+        `SELECT name FROM sqlite_master WHERE type = 'table'
+         AND name IN ('client_requests', 'client_request_comments') ORDER BY name`,
+      )
+      .all() as { name: string }[];
+    assert.deepEqual(tables.map((row) => row.name), [
+      "client_request_comments",
+      "client_requests",
+    ]);
+    assert.equal(
+      (db.prepare("SELECT name FROM brands WHERE id = 'b1'").get() as { name: string }).name,
+      "Korunan Marka",
+    );
+    assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+    assert.equal(
+      (db.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check,
+      "ok",
+    );
+  });
+});

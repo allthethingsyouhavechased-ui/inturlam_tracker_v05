@@ -9,6 +9,7 @@ function hrefFor(e: ActivityEntry): string | null {
   if (!e.entity_id) return null;
   if (e.entity_type === "task") return `/tasks/${e.entity_id}`;
   if (e.entity_type === "brand") return `/brands/${e.entity_id}`;
+  if (e.entity_type === "request") return `/requests/${e.entity_id}`;
   if (e.entity_type === "content" && e.brand_id) {
     return `/brands/${e.brand_id}/content/${e.entity_id}`;
   }
@@ -25,17 +26,18 @@ export default function ActivityFeed({
   emptyText?: string;
 }) {
   if (entries.length === 0) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">{emptyText}</p>;
+    return <p className="px-4 py-5 text-[13px] text-muted">{emptyText}</p>;
   }
 
   return (
-    <ul className="space-y-1">
+    <ul className="divide-y divide-border-subtle">
       {entries.map((e) => {
         const href = showLink ? hrefFor(e) : null;
+        const entityLabel = e.entity_type === "task" ? "Görev" : e.entity_type === "content" ? "İçerik" : e.entity_type === "brand" ? "Marka" : e.entity_type === "request" ? "Talep" : "Sistem";
         return (
           <li
             key={e.id}
-            className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+            className="group grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-hover sm:grid-cols-[auto_minmax(0,1fr)_auto]"
           >
             {e.actor_name ? (
               <PersonAvatar name={e.actor_name} avatarPath={e.actor_avatar_path} size="xs" />
@@ -44,11 +46,15 @@ export default function ActivityFeed({
                 ?
               </span>
             )}
-            <div className="min-w-0 flex-1 text-sm">
-              <span className="text-zinc-700 dark:text-zinc-200">
+            <div className="min-w-0 text-sm">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="rounded-md bg-surface-muted px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-muted">{entityLabel.toLocaleUpperCase("tr-TR")}</span>
+                <span className="truncate text-[11px] font-semibold text-secondary">{e.actor_name ?? "Sistem"}</span>
+              </div>
+              <span className="text-[13px] leading-5 text-secondary">
                 <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                  {e.actor_name ?? "Biri"}
-                </span>{" "}
+                  {e.actor_name ?? "Biri"}{" "}
+                </span>
                 {href ? (
                   <Link
                     href={href}
@@ -60,10 +66,10 @@ export default function ActivityFeed({
                   e.summary
                 )}
               </span>
-              <span className="ml-2 whitespace-nowrap text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-                {formatDateTime(e.created_at)}
-              </span>
             </div>
+            <time className="col-start-2 whitespace-nowrap text-[10px] tabular-nums text-muted sm:col-start-3 sm:row-start-1">
+              {formatDateTime(e.created_at)}
+            </time>
           </li>
         );
       })}

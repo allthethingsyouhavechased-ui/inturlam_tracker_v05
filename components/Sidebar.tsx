@@ -1,52 +1,52 @@
-import { listBrandsWithOpenCounts } from "@/lib/repositories/brands";
-import { groupBrandsByCluster, listClusters } from "@/lib/repositories/clusters";
-import { listAllContentSummaries } from "@/lib/repositories/content";
+import Link from "next/link";
+import Logo from "@/components/Logo";
+import SidebarNav from "@/components/SidebarNav";
+import SidebarToggle from "@/components/SidebarToggle";
+import Icon from "@/components/ui/Icon";
 import { getCurrentPerson } from "@/lib/identity";
-import SidebarBrandGroup from "./SidebarBrandGroup";
-import SidebarClusterGroup from "./SidebarClusterGroup";
-import SidebarNavLinks from "./SidebarNavLinks";
+import { canReviewClientRequests } from "@/lib/requestAccess";
+import { countOpenClientRequests } from "@/lib/repositories/clientRequests";
 
 export default async function Sidebar() {
   const person = await getCurrentPerson();
-  const brands = listBrandsWithOpenCounts();
-  const contents = listAllContentSummaries();
-  const groups = groupBrandsByCluster(brands, listClusters());
+  const pendingRequestCount = canReviewClientRequests(person) ? countOpenClientRequests() : 0;
 
-  const contentsByBrand = new Map<string, typeof contents>();
-  for (const c of contents) {
-    const arr = contentsByBrand.get(c.brand_id);
-    if (arr) arr.push(c);
-    else contentsByBrand.set(c.brand_id, [c]);
-  }
-
-  // `md:overflow-visible` ŞART: aside'da overflow-y-auto kalırsa içindeki
-  // `sticky` nav için yeni bir kaydırma bağlamı oluşur ve sticky sayfaya göre
-  // değil bu kutuya göre çalışır — yani hiç çalışmaz, sidebar sayfayla birlikte
-  // yukarı kayıp altında boşluk bırakır. Masaüstünde kaydırma içerideki nav'ın
-  // işi; mobilde (off-canvas panel) aside'ın kendisi kayar.
   return (
-    <aside className="h-[calc(100vh-var(--header-h))] w-72 overflow-y-auto border-r border-black/5 bg-zinc-50/95 md:h-full md:w-60 md:overflow-visible md:bg-transparent dark:border-white/5 dark:bg-zinc-950/95 dark:md:bg-transparent">
-      <nav className="space-y-4 p-4 md:sticky md:top-[var(--header-h)] md:max-h-[calc(100vh-var(--header-h))] md:overflow-y-auto">
-        <SidebarNavLinks canViewReports={person?.is_manager === 1} />
-        {groups.map((group) => {
-          if (group.items.length === 0) return null;
-          return (
-            <SidebarClusterGroup
-              key={group.id}
-              label={group.label}
-              brandIds={group.items.map((b) => b.id)}
-            >
-              {group.items.map((brand) => (
-                <SidebarBrandGroup
-                  key={brand.id}
-                  brand={brand}
-                  contents={contentsByBrand.get(brand.id) ?? []}
-                />
-              ))}
-            </SidebarClusterGroup>
-          );
-        })}
-      </nav>
+    <aside className="app-sidebar flex h-full w-72 flex-col border-r border-border-subtle bg-surface md:w-full">
+      <div className="flex h-[var(--header-h)] shrink-0 items-center border-b border-border-subtle px-4 md:px-3">
+        <Link
+          href="/"
+          className="flex min-w-0 items-center gap-3 rounded-[10px] px-1.5 py-1.5 text-foreground transition-colors hover:bg-surface-hover"
+          aria-label="INTURLAM Tracker ana sayfa"
+        >
+          <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-border-default bg-white text-zinc-900 shadow-sm">
+            <Logo className="size-6" />
+          </span>
+          <span className="sidebar-wordmark min-w-0 whitespace-nowrap transition-[width,opacity] duration-150">
+            <span className="block text-[13px] font-semibold tracking-[-0.015em]">INTURLAM</span>
+            <span className="block text-[9px] font-semibold tracking-[0.12em] text-muted">OPERATIONS</span>
+          </span>
+        </Link>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <SidebarNav
+          canViewReports={person?.is_manager === 1}
+          pendingRequestCount={pendingRequestCount}
+        />
+      </div>
+
+      <div className="sidebar-footer flex shrink-0 items-center gap-1 border-t border-border-subtle p-3">
+        <Link
+          href="/settings/profile"
+          title="Ayarlar"
+          className="sidebar-nav-item ui-press flex min-h-10 min-w-0 flex-1 items-center gap-3 rounded-[10px] px-2.5 text-[13px] font-medium text-secondary hover:bg-surface-hover hover:text-foreground"
+        >
+          <Icon name="settings" className="size-[18px] text-muted" />
+          <span className="sidebar-copy whitespace-nowrap transition-[width,opacity] duration-150">Ayarlar</span>
+        </Link>
+        <SidebarToggle />
+      </div>
     </aside>
   );
 }

@@ -7,7 +7,9 @@ import BrandContentTargetsSection from "@/components/BrandContentTargetsSection"
 import BrandLogo from "@/components/BrandLogo";
 import EditBrandForm from "@/components/EditBrandForm";
 import NewContentForm from "@/components/NewContentForm";
+import QuickAddModal from "@/components/QuickAddModal";
 import SocialHealthBadge from "@/components/SocialHealthBadge";
+import PageHeader from "@/components/ui/PageHeader";
 import {
   CONTENT_STATUS_BADGE,
   CONTENT_STATUS_LABEL,
@@ -18,7 +20,7 @@ import { daysAgoISO, formatDateShort, formatIsoDateTime, todayISO } from "@/lib/
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
 import { classifySocial } from "@/lib/socialSilence";
-import { getCurrentPerson } from "@/lib/identity";
+import { requirePageSession } from "@/lib/identity";
 import { getBrand } from "@/lib/repositories/brands";
 import { listActivityForBrand } from "@/lib/repositories/activity";
 import { clusterLabelMap, listClusters } from "@/lib/repositories/clusters";
@@ -26,7 +28,6 @@ import { listArchivedContentByBrand, listContentByBrand } from "@/lib/repositori
 import { listActivePeople } from "@/lib/repositories/people";
 import { listContentTargetsForBrand } from "@/lib/repositories/socialPlan";
 import { emptyKindRecord } from "@/lib/socialPlan";
-import { listTemplates } from "@/lib/repositories/templates";
 import type { ContentKind } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export default async function BrandPage({
 }: {
   params: Promise<{ brandId: string }>;
 }) {
+  const me = await requirePageSession();
   const { brandId } = await params;
   const brand = getBrand(brandId);
   if (!brand) notFound();
@@ -46,13 +48,10 @@ export default async function BrandPage({
   const activity = listActivityForBrand(brandId);
   const clusters = listClusters();
   const clusterLabels = clusterLabelMap();
-  const templates = listTemplates();
   const contentTargets = emptyKindRecord();
   for (const row of listContentTargetsForBrand(brandId)) {
     contentTargets[row.kind as ContentKind] = row.monthly_target;
   }
-  const me = await getCurrentPerson();
-
   // Sayılar haftalık tazeleniyor; 7 günden eskiyse (ya da hiç girilmemişse)
   // "tazelenmeli" uyarısı çıkar. Tarihler 'YYYY-MM-DD' olduğu için düz metin
   // karşılaştırması kronolojik sıralamayı doğru verir.
@@ -68,139 +67,118 @@ export default async function BrandPage({
   return (
     <div className="space-y-6">
       <AutoRefresh />
-      <div className="text-sm text-zinc-500 dark:text-zinc-400">
-        <Link href="/brands" className="hover:text-zinc-800 dark:hover:text-zinc-200">
-          Markalar
-        </Link>{" "}
-        / <span className="text-zinc-800 dark:text-zinc-200">{brand.name}</span>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <BrandLogo name={brand.name} logoPath={brand.logo_path} size="lg" />
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{brand.name}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>{clusterLabels[brand.cluster] ?? UNKNOWN_CLUSTER_LABEL}</span>
-            {brand.instagram_handle && (
-              <>
-                <span>·</span>
-                <a
-                  href={`https://instagram.com/${brand.instagram_handle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-brand-600 hover:text-brand-500 dark:text-brand-400"
-                >
-                  @{brand.instagram_handle}
-                </a>
-              </>
-            )}
-            {brand.tier && (
-              <>
-                <span>·</span>
-                <span className="font-medium">Tier {brand.tier}</span>
-              </>
-            )}
-          </div>
-          {/* Sosyal takip durumu: hesap taranıyorsa son paylaşımın ne kadar
-              geride kaldığı burada da görünsün — markaya bakan kişi /social'a
-              gitmeden fark etsin. */}
-          {socialHealth && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-              <SocialHealthBadge
-                health={socialHealth}
-                detail={
-                  socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined
-                }
-              />
-              {socialRow?.last_post_at && (
-                <span className="text-zinc-500 dark:text-zinc-400">
-                  son paylaşım {formatIsoDateTime(socialRow.last_post_at)}
-                </span>
-              )}
-              <Link
-                href="/social/takip"
-                className="font-medium text-brand-600 hover:underline dark:text-brand-400"
-              >
-                takip →
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <EditBrandForm brand={brand} clusters={clusters} />
-
-      <BrandContentTargetsSection
-        brandId={brand.id}
-        brandName={brand.name}
-        targets={contentTargets}
+      <PageHeader
+        className="!mb-0"
+        eyebrow="MARKA ÇALIŞMA ALANI"
+        title={brand.name}
+        description={[
+          clusterLabels[brand.cluster] ?? UNKNOWN_CLUSTER_LABEL,
+          brand.instagram_handle ? `@${brand.instagram_handle}` : null,
+          brand.tier ? `Tier ${brand.tier}` : null,
+        ].filter(Boolean).join(" · ")}
+        breadcrumb={[{ label: "Markalar", href: "/brands" }, { label: brand.name }]}
+        media={<BrandLogo name={brand.name} logoPath={brand.logo_path} size="lg" />}
+        actions={
+          <>
+            <QuickAddModal
+              brands={[{ id: brand.id, name: brand.name }]}
+              contents={items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title }))}
+              people={people}
+              defaultAssigneeId={me?.id ?? null}
+              defaultBrandId={brand.id}
+              triggerLabel="Görev oluştur"
+            />
+            <EditBrandForm brand={brand} clusters={clusters} />
+          </>
+        }
       />
 
-      {/* Marka künyesi. Eskiden burada "İlgili markalar" kartları, tam denetim
-          raporunun markdown'ı, medyan Reel izlenmesi ve kapak testi rozeti de
-          vardı — günlük iş takibinde kullanılmadıkları için kaldırıldı.
-          Kalanlar: haftalık tazelenen iki sayı ve kısa bir bilgilendirme. */}
-      {(brand.follower_count != null ||
-        brand.post_count != null ||
-        brand.key_finding) && (
-        <section className="space-y-3 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900">
-          {(brand.follower_count != null || brand.post_count != null) && (
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-              {brand.follower_count != null && (
-                <span>
-                  <b className="tabular-nums">
-                    {brand.follower_count.toLocaleString("tr-TR")}
-                  </b>{" "}
-                  <span className="text-zinc-500 dark:text-zinc-400">takipçi</span>
+      <section
+        aria-label={`${brand.name} operasyon özeti`}
+        className="grid overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-[0.9fr_1.25fr_1.35fr]"
+      >
+        <div className="min-w-0 px-4 py-3.5">
+          <p className="text-[10px] font-semibold tracking-[0.09em] text-faint">SOSYAL DURUM</p>
+          <div className="mt-2.5 flex min-w-0 items-center gap-2.5">
+            {socialHealth ? (
+              <>
+                <SocialHealthBadge
+                  health={socialHealth}
+                  detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
+                />
+                <span className="truncate text-xs text-muted">
+                  {socialRow?.last_post_at
+                    ? `Son paylaşım ${formatIsoDateTime(socialRow.last_post_at)}`
+                    : "Paylaşım kaydı yok"}
                 </span>
-              )}
-              {brand.post_count != null && (
-                <span>
-                  <b className="tabular-nums">
-                    {brand.post_count.toLocaleString("tr-TR")}
-                  </b>{" "}
-                  <span className="text-zinc-500 dark:text-zinc-400">gönderi</span>
-                </span>
-              )}
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {brand.stats_updated_at
-                  ? `Son güncelleme: ${formatDateShort(brand.stats_updated_at)}`
-                  : "Henüz güncellenmedi"}
-                {staleStats && (
-                  <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                    tazelenmeli
-                  </span>
-                )}
-              </span>
-            </div>
-          )}
+              </>
+            ) : (
+              <span className="text-xs text-muted">Takip hesabı bağlanmamış</span>
+            )}
+          </div>
+        </div>
 
-          {brand.key_finding && (
-            <p className="whitespace-pre-line border-t border-black/10 pt-3 text-sm text-zinc-700 dark:border-white/10 dark:text-zinc-300">
-              {brand.key_finding}
+        <div className="min-w-0 border-t border-border-subtle px-4 py-3.5 lg:border-l lg:border-t-0">
+          <BrandContentTargetsSection
+            brandId={brand.id}
+            brandName={brand.name}
+            targets={contentTargets}
+            compact
+          />
+        </div>
+
+        <div className="min-w-0 border-t border-border-subtle px-4 py-3.5 lg:border-l lg:border-t-0">
+          <p className="text-[10px] font-semibold tracking-[0.09em] text-faint">MARKA ÖZETİ</p>
+          <div className="mt-2.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <p className="text-sm font-semibold tabular-nums text-foreground">
+              {brand.follower_count != null
+                ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi`
+                : "Takipçi verisi yok"}
             </p>
-          )}
-        </section>
-      )}
-
-      <section className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900">
-        <h2 className="mb-3 text-sm font-semibold">Yeni içerik / proje</h2>
-        <NewContentForm
-          brandId={brand.id}
-          people={people}
-          templates={templates}
-          defaultAssigneeId={me?.id ?? null}
-        />
+            {brand.post_count != null && (
+              <p className="text-sm font-semibold tabular-nums text-foreground">
+                {brand.post_count.toLocaleString("tr-TR")} gönderi
+              </p>
+            )}
+            {staleStats && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                Tazelenmeli
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-muted" title={brand.key_finding ?? undefined}>
+            {brand.key_finding?.split("\n")[0] ?? "Kısa marka notu eklenmemiş"}
+          </p>
+        </div>
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          İçerikler ({items.length})
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Projeler ve içerikler ({items.length})
+          </h2>
+          <details className="group relative">
+            <summary className="ui-press flex min-h-9 cursor-pointer list-none items-center rounded-[9px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover hover:text-foreground [&::-webkit-details-marker]:hidden">
+              Yeni proje oluştur
+            </summary>
+            <div className="ui-enter absolute right-0 top-[calc(100%+0.5rem)] z-20 w-[min(62rem,calc(100vw-2rem))] rounded-xl border border-border-default bg-surface p-4 shadow-lg">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold text-foreground">Yeni proje / içerik</h3>
+                <p className="mt-1 text-xs text-muted">Birden fazla görevi aynı akışta yöneteceksen proje oluştur. Tek görev için üstteki “Görev oluştur” daha hızlıdır.</p>
+              </div>
+              <NewContentForm
+                brandId={brand.id}
+                people={people}
+                defaultAssigneeId={me?.id ?? null}
+              />
+            </div>
+          </details>
+        </div>
         {items.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Bu markada henüz içerik yok. Yukarıdan ekle.
-          </p>
+          <div className="rounded-xl border border-dashed border-border-default bg-surface-subtle px-5 py-8 text-center">
+            <p className="text-sm font-semibold text-foreground">Bu markada henüz proje yok</p>
+            <p className="mt-1 text-xs text-muted">Tek bir iş açacaksan “Görev oluştur”; çok adımlı bir iş akışı için “Yeni proje oluştur”u kullan.</p>
+          </div>
         ) : (
           <ul className="grid gap-2">
             {items.map((item) => (
@@ -230,7 +208,7 @@ export default async function BrandPage({
                     )}
                     {item.target_date && (
                       <span className="tabular-nums">
-                        📅 {formatDateShort(item.target_date)}
+                        Hedef {formatDateShort(item.target_date)}
                       </span>
                     )}
                   </span>

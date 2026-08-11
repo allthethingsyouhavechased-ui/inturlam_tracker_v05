@@ -37,6 +37,7 @@ export function TrendChart({ report }: { report: TrendReport }) {
       panelKey="trend"
       title="İş akış trendi"
       description="Dönemde açılan işlerle tamamlanan işlerin zamana göre karşılaştırması"
+      defaultOpen={false}
       bodyClassName="px-4 pb-5 sm:px-5"
     >
       {report.points.length === 0 ? (
@@ -89,7 +90,7 @@ export function CycleTimePanel({ report }: { report: CycleTimeReport }) {
     <CollapsiblePanel
       panelKey="cycle-time"
       title="Tamamlanma süresi"
-      description="Görevin açılışından tamamlanmasına kadar geçen süre"
+      description="Yalnızca seçili dönemde tamamlanan görevler; açılış ile tamamlanma arasındaki takvim günü"
       meta={
         <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
           {report.sample_size} görev
@@ -132,7 +133,7 @@ export function DueHealthPanel({ rows }: { rows: DueHealthRow[] }) {
     <CollapsiblePanel
       panelKey="due-health"
       title="Teslim sağlığı"
-      description="Açık işlerin teslim tarihine göre güncel risk dağılımı"
+      description="Dönemden bağımsız güncel açık işler; geciken, yaklaşan ve tarihi girilmemiş görev dağılımı"
       meta={
         <span className="block text-right">
           <span className="block text-lg font-semibold tabular-nums">{coverage == null ? "—" : `%${coverage}`}</span>

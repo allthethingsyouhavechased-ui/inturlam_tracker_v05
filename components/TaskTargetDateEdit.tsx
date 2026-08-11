@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import Icon from "@/components/ui/Icon";
 import { setPersonalTaskTargetAction } from "@/lib/actions/tasks";
 import { formatDateShort, todayISO } from "@/lib/date";
 import { getActionErrorMessage } from "@/lib/errorMessage";
@@ -68,13 +69,13 @@ export default function TaskTargetDateEdit({
               ? "Kişisel hedef tarihini değiştir"
               : "Kişisel hedef tarihi belirle (yalnızca sana görünür)"
           }
-          className={`ui-press inline-flex min-h-11 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs tabular-nums underline decoration-dotted underline-offset-2 hover:bg-black/5 hover:decoration-solid disabled:opacity-50 dark:hover:bg-white/10 ${
+          className={`ui-press inline-flex min-h-8 items-center gap-1 whitespace-nowrap rounded-lg px-1.5 text-[11px] tabular-nums hover:bg-surface-hover disabled:opacity-50 ${
             targetDate
               ? "font-medium text-brand-600 dark:text-brand-400"
               : "text-zinc-500 dark:text-zinc-400"
           }`}
         >
-          <span aria-hidden="true">🎯</span>
+          <Icon name="clock" className="size-3.5" />
           {pending ? "…" : targetDate ? formatDateShort(targetDate) : "Hedef ekle"}
         </button>
 
@@ -85,9 +86,9 @@ export default function TaskTargetDateEdit({
             disabled={pending}
             title="Kişisel hedefi kaldır"
             aria-label="Kişisel hedefi kaldır"
-            className="touch-target inline-flex size-6 items-center justify-center rounded-lg text-sm text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 dark:text-zinc-500 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+            className="touch-target inline-flex size-7 items-center justify-center rounded-lg text-faint hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
           >
-            ×
+            <Icon name="close" className="size-3" />
           </button>
         )}
 

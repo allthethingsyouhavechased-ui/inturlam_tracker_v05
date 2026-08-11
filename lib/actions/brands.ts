@@ -38,6 +38,7 @@ export async function createBrandAction(formData: FormData) {
   await requireSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Marka adı zorunlu.");
+  if (name.length > 120) throw new Error("Marka adı en fazla 120 karakter olabilir.");
   const cluster = await resolveClusterFromForm(formData);
 
   const id = createBrand({
@@ -70,6 +71,9 @@ export async function updateBrandAction(formData: FormData) {
 
   if (!id) throw new Error("Marka bulunamadı.");
   if (!name) throw new Error("Marka adı zorunlu.");
+  if (name.length > 120) throw new Error("Marka adı en fazla 120 karakter olabilir.");
+  const keyFinding = cleanValue(formData.get("keyFinding"));
+  if ((keyFinding?.length ?? 0) > 1000) throw new Error("Marka özeti en fazla 1000 karakter olabilir.");
   const cluster = await resolveClusterFromForm(formData);
 
   updateBrand({
@@ -79,7 +83,7 @@ export async function updateBrandAction(formData: FormData) {
     instagramHandle: cleanValue(formData.get("instagramHandle")),
     followerCount: cleanInt(formData.get("followerCount")),
     postCount: cleanInt(formData.get("postCount")),
-    keyFinding: cleanValue(formData.get("keyFinding")),
+    keyFinding,
     tier: cleanValue(formData.get("tier")),
     today: todayISO(),
   });

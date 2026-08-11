@@ -1,81 +1,143 @@
 @import "tailwindcss";
 
-/* Karanlık mod artık OS tercihine değil, <html>'deki `.dark` class'ına bağlı.
-   Class'ı layout'taki no-FOUC script'i (localStorage → yoksa OS tercihi) ve
-   ThemeToggle bileşeni yönetiyor. Böylece elle açık/koyu geçişi mümkün. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f5f5f2;
+  --foreground: #1a1a1e;
+  --surface: #ffffff;
+  --surface-subtle: #fafaf8;
+  --surface-muted: #efefeb;
+  --surface-elevated: #ffffff;
+  --surface-inverse: #1a1a1e;
+  --surface-hover: rgb(26 26 30 / 0.045);
+  --text-secondary: #55545d;
+  --text-muted: #74737d;
+  --text-faint: #9a98a1;
+  --border-subtle: #e9e8e3;
+  --border-default: #dcdad4;
+  --border-strong: #c8c5bd;
+  --scrollbar-thumb: rgb(85 84 93 / 0.36);
+  --scrollbar-thumb-hover: rgb(85 84 93 / 0.6);
+  --header-h: 4rem;
+  --sidebar-expanded: 14.25rem;
+  --sidebar-collapsed: 4.75rem;
+  --page-max: 85rem;
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --motion-quick: 140ms;
-  --motion-standard: 240ms;
-  --motion-slow: 360ms;
-  --scrollbar-thumb: rgb(113 113 122 / 0.52);
-  --scrollbar-thumb-hover: rgb(82 82 91 / 0.75);
-  /* Sticky header'ın yüksekliği (py-3 + 32px içerik + 1px alt çizgi).
-     Sidebar ve toplu işlem çubuğu gibi header'ın altına yapışan her şey bunu
-     kullanır — üç ayrı dosyaya 57px yazıp birinin unutulmasını önler. */
-  --header-h: 57px;
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-quick: 100ms;
+  --motion-standard: 160ms;
+  --motion-deliberate: 220ms;
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --scrollbar-thumb: rgb(161 161 170 / 0.42);
-  --scrollbar-thumb-hover: rgb(212 212 216 / 0.62);
+  color-scheme: dark;
+  --background: #0c0c0e;
+  --foreground: #f3f2f7;
+  --surface: #141417;
+  --surface-subtle: #18181c;
+  --surface-muted: #202026;
+  --surface-elevated: #25252b;
+  --surface-inverse: #f3f2f7;
+  --surface-hover: rgb(255 255 255 / 0.055);
+  --text-secondary: #c2c0ca;
+  --text-muted: #96949f;
+  --text-faint: #74727d;
+  --border-subtle: #232329;
+  --border-default: #303038;
+  --border-strong: #464650;
+  --scrollbar-thumb: rgb(150 148 159 / 0.34);
+  --scrollbar-thumb-hover: rgb(194 192 202 / 0.54);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-hover: var(--surface-hover);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Marka aksan rengi. Soğuk mavi skala, yoğun veri ekranlarında durum
-     renkleriyle yarışmadan gezinme ve birincil eylemleri öne çıkarır. */
-  --color-brand-50: oklch(97% 0.01 260);
-  --color-brand-100: oklch(94% 0.02 260);
-  --color-brand-200: oklch(88% 0.04 260);
-  --color-brand-300: oklch(80% 0.08 260);
-  --color-brand-400: oklch(70% 0.12 260);
-  --color-brand-500: oklch(60% 0.16 260);
-  --color-brand-600: oklch(52% 0.18 260);
-  --color-brand-700: oklch(44% 0.16 260);
-  --color-brand-800: oklch(36% 0.12 260);
-  --color-brand-900: oklch(28% 0.08 260);
-  --color-brand-950: oklch(20% 0.04 260);
+  --color-brand-50: #f2f1ff;
+  --color-brand-100: #e5e3ff;
+  --color-brand-200: #cac5ff;
+  --color-brand-300: #aaa2ff;
+  --color-brand-400: #8e86f7;
+  --color-brand-500: #675ce7;
+  --color-brand-600: #5649d8;
+  --color-brand-700: #463ab7;
+  --color-brand-800: #382f91;
+  --color-brand-900: #2f2874;
+  --color-brand-950: #1c1845;
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-md: 0 8px 24px -12px rgb(15 23 42 / 0.28);
-  --shadow-lg: 0 18px 44px -20px rgb(15 23 42 / 0.38);
+  --color-success: #177a55;
+  --color-warning: #a15c00;
+  --color-danger: #c43652;
+  --color-info: #2965c7;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-sm: 0 1px 2px rgb(16 16 20 / 0.04);
+  --shadow-md: 0 16px 40px -24px rgb(16 16 20 / 0.32);
+  --shadow-lg: 0 28px 70px -30px rgb(8 8 12 / 0.55);
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+  scroll-behavior: smooth;
 }
 
 body {
+  min-height: 100%;
+  overflow-x: clip;
   background: var(--background);
   color: var(--foreground);
-  /* DİKKAT: buraya `font-family` YAZMA. create-next-app'ten kalan
-     `font-family: Arial, Helvetica, sans-serif` satırı, layout'un next/font ile
-     yüklediği Geist'i eziyordu ve uygulama uzun süre Arial ile render edildi.
-     Font artık <body class="font-sans"> üzerinden `--font-sans` → Geist. */
-  overflow-x: clip;
-  background-image:
-    radial-gradient(circle at 50% 0%, rgb(37 99 235 / 0.055), transparent 34rem),
-    radial-gradient(circle at 100% 0%, rgb(168 85 247 / 0.035), transparent 28rem);
-  background-attachment: fixed;
+  text-rendering: optimizeLegibility;
 }
 
-/* Veri yoğun panolar standart sayfaların okuma genişliğini bozmadan daha geniş
-   bir kabuk kullanır; 1920px ekranda kalan sağ-sol boşluk kartlara kazandırılır. */
+::selection {
+  background: color-mix(in srgb, var(--color-brand-500) 26%, transparent);
+  color: var(--foreground);
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 60;
+  transform: translateY(-160%);
+  border-radius: 0.625rem;
+  background: var(--surface-inverse);
+  color: var(--background);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: transform var(--motion-standard) var(--motion-ease-standard);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 .page-shell:has(> .team-page-wide),
 .page-shell:has(> .workspace-page-wide) {
-  max-width: 1600px;
+  max-width: 100rem;
 }
 
-/* Windows'un açık renkli sistem scrollbar'ı koyu arayüzde parlak bir şerit
-   oluşturuyordu. Tüm kaydırma bağlamları aynı ince, nötr ve yuvarlak dili
-   kullanır; track şeffaf kaldığı için sidebar zemini bölünmez. */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
@@ -116,33 +178,31 @@ body {
 }
 
 .ui-enter {
-  animation: ui-enter var(--motion-slow) var(--motion-ease-standard) both;
+  animation: ui-enter var(--motion-deliberate) var(--motion-ease-standard) both;
 }
 
 @keyframes ui-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .ui-surface:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
   }
 }
 
 .ui-surface[data-dragging="true"] {
-  transform: scale(0.98);
+  transform: scale(0.985);
 }
 
 .ui-press:active {
-  transform: scale(0.98);
+  transform: translateY(1px);
   transition-duration: var(--motion-quick);
 }
 
-/* Tarih alanlarında kutunun tamamı ve tarayıcının takvim ikonu rahatça
-   tıklanabilir. Formlar için ortak alt sınır 44px'tir. */
 input[type="date"] {
   min-height: 44px;
   cursor: pointer;
@@ -154,66 +214,61 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   margin: -8px -4px -8px 0;
 }
 
-.dark body {
-  background-image:
-    radial-gradient(circle at 50% 0%, rgb(37 99 235 / 0.14), transparent 34rem),
-    radial-gradient(circle at 100% 0%, rgb(168 85 247 / 0.08), transparent 28rem);
-}
-
-/* --- Klavye odağı ---------------------------------------------------------
-   Form elemanlarında `outline-none focus:border-brand-500` deseni 22 dosyada
-   kullanılıyor; bu sadece kenarlık rengini değiştiriyor (bazı temalarda fark
-   edilmiyor) ve buton/link gibi kenarlığı olmayan öğelerde HİÇBİR odak
-   göstergesi bırakmıyordu — klavyeyle gezen kullanıcı nerede olduğunu göremez.
-
-   Çözüm tek yerden: aşağıdaki kural `@layer` DIŞINDA olduğu için Tailwind'in
-   `outline-none` utility'sini (o `@layer utilities` içinde) her zaman ezer —
-   22 dosyaya tek tek `focus-visible:ring-2` yazmaya gerek kalmaz.
-
-   `:focus-visible` (`:focus` değil): fareyle tıklamada halka çıkmaz, yalnızca
-   klavye/erişilebilirlik odağında çıkar. */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* Koyu temada brand-500 arka planla yeterince ayrışmıyor; bir ton açığı. */
 .dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline-color: var(--color-brand-400);
 }
 
-/* --- Sidebar daraltma -----------------------------------------------------
-   Masaüstü genişliği Tailwind sınıfıyla değil buradan veriliyor: daraltılmış
-   tercih localStorage'da ve layout'taki no-FOUC script'i <html data-sidebar>'ı
-   React çalışmadan ÖNCE yazıyor. Genişlik React state'ine bağlı olsaydı sayfa
-   bir kare açık sidebar'la boyanıp sonra kapanırdı.
-
-   `width: 0` + `overflow: hidden` (display:none değil): panel DOM'da kalır,
-   marka ağacının açık/kapalı durumu geri açıldığında korunur. */
 @media (min-width: 768px) {
   .sidebar-panel {
-    width: 15rem;
-    overflow: visible;
-  }
-  html[data-sidebar="collapsed"] .sidebar-panel {
-    width: 0;
+    width: var(--sidebar-expanded);
     overflow: hidden;
+    transition: width var(--motion-deliberate) var(--motion-ease-standard);
+  }
+
+  html[data-sidebar="collapsed"] .sidebar-panel {
+    width: var(--sidebar-collapsed);
+  }
+
+  html[data-sidebar="collapsed"] .sidebar-copy,
+  html[data-sidebar="collapsed"] .sidebar-group-label,
+  html[data-sidebar="collapsed"] .sidebar-wordmark {
+    width: 0;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  html[data-sidebar="collapsed"] .sidebar-nav-item {
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0;
+  }
+
+  html[data-sidebar="collapsed"] .sidebar-nav-group {
+    padding-inline: 0.625rem;
+  }
+
+  html[data-sidebar="collapsed"] .sidebar-footer {
+    flex-direction: column;
+  }
+
+  html[data-sidebar="collapsed"] .sidebar-accounting {
+    justify-content: center;
   }
 }
 
-/* --- Dokunma hedefi -------------------------------------------------------
-   Yoğun listelerdeki minik butonlar (sidebar aç/kapa oku, şablon satırı silme
-   ×) görsel olarak küçük kalmalı ama parmakla ıskalanmamalı. Bu sınıf butonun
-   GÖRÜNÜMÜNÜ hiç değiştirmeden, ortalanmış görünmez bir ::after ile tıklama
-   alanını 44×44'e çıkarır — `min-h-11` vermek satır yüksekliğini şişirirdi.
-
-   Yalnızca dokunmatik/dar ekranda devrede; masaüstünde fare zaten isabetli ve
-   44px'lik görünmez alanlar komşu öğelerin üstüne taşabilir. */
 @media (max-width: 768px) {
   .touch-target {
     position: relative;
   }
+
   .touch-target::after {
     content: "";
     position: absolute;
@@ -225,11 +280,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* --- Hareket duyarlılığı --------------------------------------------------
-   İşletim sisteminde "hareketi azalt" seçili kullanıcılar için animasyonları
-   pratikte kapatır (tamamen 0 yapmak yerine 1ms — bazı tarayıcılarda
-   `transitionend`/`animationend` beklenen kodu kırmamak için). */
+@media (max-width: 430px) {
+  .header-quick-add {
+    width: 2.5rem;
+    padding-inline: 0;
+  }
+
+  .header-quick-add .quick-add-label {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
@@ -240,9 +306,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* --- Profesyonel rapor çıktısı -------------------------------------------
-   Rapor ekranı yazdırıldığında uygulama kabuğu, filtreler ve dekoratif arka
-   plan kalkar; içerik A4 yatay sayfada okunabilir bir yönetim raporuna dönüşür. */
 @media print {
   @page {
     size: A4 landscape;
@@ -255,12 +318,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     color: #18181b !important;
   }
 
-  body {
-    background-image: none !important;
-  }
-
-  body > header,
-  .sidebar-panel {
+  .app-sidebar,
+  .app-topbar,
+  .skip-link {
     display: none !important;
   }
 
@@ -287,13 +347,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     box-shadow: none !important;
   }
 
-  .report-page .report-surface p,
-  .report-page .report-surface span,
-  .report-page .report-surface dt,
-  .report-page .report-surface dd,
-  .report-page .report-surface th,
-  .report-page .report-surface td,
-  .report-page .report-surface h2 {
+  .report-page .report-surface :where(p, span, dt, dd, th, td, h2) {
     color: #18181b !important;
   }
 

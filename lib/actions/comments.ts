@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
-import { getCurrentPerson } from "@/lib/identity";
+import { requireSession } from "@/lib/identity";
 import { notifyMentions, notifyTaskUpdate } from "@/lib/notifications";
 import {
   addCommentAttachment,
@@ -18,19 +18,19 @@ import { getTask } from "@/lib/repositories/tasks";
 import { deleteUploadedFile, extractImageFiles, saveImageFiles, validateImageFiles } from "@/lib/uploads";
 
 export async function getTaskCommentsAction(taskId: string): Promise<CommentWithAuthor[]> {
+  await requireSession();
   return listCommentsByTask(taskId);
 }
 
 export async function addCommentAction(formData: FormData) {
+  const person = await requireSession();
   const taskId = String(formData.get("taskId") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const images = extractImageFiles(formData);
 
   if (!taskId) throw new Error("Görev bulunamadı.");
   if (!body && images.length === 0) return; // boş yorum gönderme
-
-  const person = await getCurrentPerson();
-  if (!person) throw new Error("Yorum yazmak için önce kim olduğunu seç.");
+  if (body.length > 5000) throw new Error("Yorum en fazla 5000 karakter olabilir.");
 
   validateImageFiles(images);
 
@@ -81,15 +81,16 @@ export async function addCommentAction(formData: FormData) {
 }
 
 export async function updateCommentAction(formData: FormData) {
+  const person = await requireSession();
   const commentId = String(formData.get("commentId") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
 
   if (!commentId) throw new Error("Yorum bulunamadı.");
   if (!body) throw new Error("Yorum boş olamaz.");
+  if (body.length > 5000) throw new Error("Yorum en fazla 5000 karakter olabilir.");
 
-  const person = await getCurrentPerson();
   const authorId = getCommentAuthorId(commentId);
-  if (!person || person.id !== authorId) {
+  if (person.id !== authorId) {
     throw new Error("Sadece kendi yorumunu düzenleyebilirsin.");
   }
 
@@ -98,9 +99,9 @@ export async function updateCommentAction(formData: FormData) {
 }
 
 export async function deleteCommentAction(commentId: string) {
-  const person = await getCurrentPerson();
+  const person = await requireSession();
   const authorId = getCommentAuthorId(commentId);
-  if (!person || person.id !== authorId) {
+  if (person.id !== authorId) {
     throw new Error("Sadece kendi yorumunu silebilirsin.");
   }
 

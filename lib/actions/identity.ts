@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { hashPassword, validatePassword, verifyPassword } from "@/lib/auth/password";
+import { LoginThrottle } from "@/lib/auth/loginThrottle";
 import { IDENTITY_COOKIE, getCurrentPerson } from "@/lib/identity";
 import {
   createAuthSession,
@@ -12,11 +13,13 @@ import {
 } from "@/lib/repositories/authSessions";
 import {
   getPersonCredentials,
-  setInitialPassword,
   updatePersonPassword,
 } from "@/lib/repositories/people";
 
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const MAX_LOGIN_FAILURES = 5;
+const loginThrottle = new LoginThrottle(MAX_LOGIN_FAILURES, LOGIN_WINDOW_MS);
 
 export interface IdentityActionState {
   error?: string;
@@ -45,19 +48,18 @@ export async function loginPerson(
   const password = String(formData.get("password") ?? "");
   const credentials = getPersonCredentials(personId);
   if (!credentials || credentials.active !== 1) return { error: "Hesap bulunamadı." };
+  if (loginThrottle.isBlocked(personId)) {
+    return { error: "Çok fazla hatalı deneme yapıldı. 15 dakika sonra tekrar dene." };
+  }
 
   if (!credentials.password_hash) {
-    const confirmPassword = String(formData.get("confirmPassword") ?? "");
-    const passwordError = validatePassword(password);
-    if (passwordError) return { error: passwordError };
-    if (password !== confirmPassword) return { error: "Şifreler eşleşmiyor." };
-    if (!setInitialPassword(personId, hashPassword(password))) {
-      return { error: "Bu hesap için şifre az önce belirlendi. Yeni şifreyle tekrar giriş yap." };
-    }
+    return { error: "Bu hesabın şifresi henüz etkin değil. Bir yöneticiden şifre belirlemesini iste." };
   } else if (!verifyPassword(password, credentials.password_hash)) {
+    loginThrottle.recordFailure(personId);
     return { error: "Şifre hatalı." };
   }
 
+  loginThrottle.reset(personId);
   await replaceSession(personId);
   revalidatePath("/", "layout");
   redirect("/");

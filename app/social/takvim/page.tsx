@@ -3,6 +3,8 @@ import { Fragment } from "react";
 import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
 import PlanCellSelect from "@/components/PlanCellSelect";
+import Icon from "@/components/ui/Icon";
+import { requirePageSession } from "@/lib/identity";
 import {
   formatMonthLabel,
   monthParamISO,
@@ -33,6 +35,7 @@ export default async function SocialTakvimPage({
 }: {
   searchParams: Promise<{ month?: string; hafta?: string }>;
 }) {
+  await requirePageSession();
   const sp = await searchParams;
   const monthDate = monthParamToDate(sp.month);
   const monthParam = monthParamISO(monthDate);
@@ -90,20 +93,18 @@ export default async function SocialTakvimPage({
     // `overflow-x-auto` sarmalayıcısıyla yatay kaydırıyor, standart genişlik
     // yeterli — global CSS'i tek sayfa için karmaşıklaştırmaya değmez.
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Paylaşım Takvimi</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Marka başına haftalık paylaşım planı. Hücreye tıklayıp o gün planlanan türü seç.
-          </p>
+          <h2 className="text-base font-semibold text-foreground">Haftalık paylaşım planı</h2>
+          <p className="mt-1 text-xs text-muted">Bir hücre seçerek marka ve gün için planlanan içerik türünü değiştir.</p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900">
+        <div className="inline-flex items-center gap-1 rounded-[10px] border border-border-default bg-surface p-0.5 text-sm">
           <Link
             href={monthHref(-1)}
             aria-label="Önceki ay"
-            className="ui-press touch-target grid size-8 place-items-center rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
+            className="ui-press touch-target grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
           >
-            ‹
+            <Icon name="chevron-left" className="size-4" />
           </Link>
           <span className="min-w-28 text-center font-medium tabular-nums">
             {formatMonthLabel(monthDate)}
@@ -111,9 +112,9 @@ export default async function SocialTakvimPage({
           <Link
             href={monthHref(1)}
             aria-label="Sonraki ay"
-            className="ui-press touch-target grid size-8 place-items-center rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
+            className="ui-press touch-target grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
           >
-            ›
+            <Icon name="chevron-right" className="size-4" />
           </Link>
         </div>
       </div>
@@ -127,7 +128,7 @@ export default async function SocialTakvimPage({
             className={`ui-press inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium ${
               week.index === selectedIndex
                 ? "border-brand-600 bg-brand-600 text-white"
-                : "border-black/10 bg-white text-zinc-600 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10"
+                : "border-border-default bg-surface text-muted hover:bg-surface-hover"
             }`}
           >
             {week.index}. Hafta

@@ -3,161 +3,138 @@ import CommentIcon from "@/components/CommentIcon";
 import PersonAvatar from "@/components/PersonAvatar";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
-import { hashColor } from "@/lib/colorHash";
+import Icon from "@/components/ui/Icon";
 import {
   CONTENT_TYPE_LABEL,
   TASK_PRIORITY_BADGE,
-  TASK_PRIORITY_BORDER,
-  TASK_PRIORITY_ICON,
   TASK_PRIORITY_LABEL,
 } from "@/lib/constants";
 import { formatDateShort, isOverdue } from "@/lib/date";
-import type { TaskCardBadge, TaskWithContext } from "@/lib/types";
+import type { TaskCardBadge, TaskPriority, TaskWithContext } from "@/lib/types";
 
 export type { TaskCardBadge };
 
-// Jira'daki "epic" etiketi gibi — görevin bağlı olduğu içerik/projenin adı,
-// içeriğe göre sabit renkte küçük bir rozet olarak gösterilir.
+const PRIORITY_LINE: Record<TaskPriority, string> = {
+  Dusuk: "border-l-sky-400",
+  Normal: "border-l-border-strong",
+  Yuksek: "border-l-amber-500",
+  Acil: "border-l-rose-500",
+};
+
 export default function TaskGridCard({
   task,
   showStatus = true,
   badges,
 }: {
   task: TaskWithContext;
-  // Durum sütunlarına göre gruplanmış görünümlerde (Görevler board'u) durum
-  // zaten kolon başlığından belli olduğu için seçici tekrar gösterilmez —
-  // dar kolonlarda seçiciyle yer çakışıp etiketin "D.." diye kısalmasını önler.
   showStatus?: boolean;
-  // Panom'un birleşik board'unda bir kartın "neden burada" olduğunu gösteren
-  // küçük rozetler (Benim/Gecikmiş/Bu hafta gibi) — başka bağlamlarda kullanılmaz.
   badges?: TaskCardBadge[];
 }) {
-  // `min-w-0`: kart bir grid hücresinde duruyor ve grid çocuklarının varsayılan
-  // `min-width: auto` değeri, içindeki <select>'in en uzun seçeneği
-  // ("Devam Ediyor") kadar genişlemesine yol açıyor — telefonda sayfa yatay
-  // kayıyordu.
   return (
-    <div
-      className={`flex min-w-0 flex-col gap-2.5 rounded-xl border-2 bg-white p-3 shadow-sm transition-[box-shadow,transform] duration-200 hover:shadow-md dark:bg-zinc-900 ${TASK_PRIORITY_BORDER[task.priority]}`}
+    <article
+      className={`flex h-[210px] min-w-0 flex-col rounded-xl border border-border-default border-l-[3px] bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-hover ${PRIORITY_LINE[task.priority]}`}
     >
-      {/* Tür AYRI bir rozet: içerik adıyla tek etiketde birleşikken uzun
-          başlıklarda `truncate` onu da kesip götürüyordu. `shrink-0` sayesinde
-          kart ne kadar dararsa daralsın görev türü hep okunur kalır. */}
-      <div className="flex items-start justify-between gap-2">
-        <span className="flex min-w-0 flex-1 items-center gap-1">
-          <span
-            className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
-            title={`Tür: ${CONTENT_TYPE_LABEL[task.content_type]}`}
-          >
-            {CONTENT_TYPE_LABEL[task.content_type]}
+      <div className="flex min-h-8 min-w-0 items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5 pt-0.5">
+          <span className="shrink-0 rounded-md bg-brand-50 px-1.5 py-1 text-[9px] font-bold tracking-[0.055em] text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
+            {CONTENT_TYPE_LABEL[task.content_type].toLocaleUpperCase("tr-TR")}
           </span>
           <span
-            className={`min-w-0 flex-1 truncate rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${hashColor(task.content_title)}`}
             title={task.content_title}
+            className="min-w-0 truncate text-[10px] font-medium text-muted"
           >
             {task.content_title}
           </span>
-        </span>
+        </div>
         {showStatus && <TaskStatusSelect taskId={task.id} status={task.status} />}
       </div>
 
-      {/* Arşiv rozeti her yerde çıkar (rozet listesi verilmese bile): arşivi
-          gösteren bir filtrede kartın neden orada olduğu belli olsun. */}
-      {(task.archived_at !== null || (badges && badges.length > 0)) && (
-        <div className="flex flex-wrap gap-1">
+      <div className="mt-1 flex min-h-5 flex-wrap gap-1">
+        {(task.archived_at !== null || (badges && badges.length > 0)) && (
+          <>
           {task.archived_at !== null && (
-            <span className="rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-              Arşiv
+            <span className="rounded-md bg-surface-muted px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-secondary">
+              ARŞİV
             </span>
           )}
-          {badges?.map((b) => (
+          {badges?.map((badge) => (
             <span
-              key={b.label}
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${b.className}`}
+              key={badge.label}
+              className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold tracking-wide ${badge.className}`}
             >
-              {b.label}
+              {badge.label.toLocaleUpperCase("tr-TR")}
             </span>
           ))}
-        </div>
-      )}
-
-      <Link
-        href={`/tasks/${task.id}`}
-        className="text-sm font-semibold leading-snug text-zinc-900 hover:text-brand-600 dark:text-zinc-100 dark:hover:text-brand-400"
-      >
-        {task.title}
-      </Link>
-
-      <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-        {task.brand_name}
+          </>
+        )}
       </div>
 
-      <div className="mt-auto flex flex-wrap items-end justify-between gap-2 border-t border-black/[0.06] pt-2 dark:border-white/[0.08]">
-        <span className="grid gap-0.5">
+      <div className="mt-1 min-h-[52px] min-w-0">
+        <Link
+          href={`/tasks/${task.id}`}
+          className="line-clamp-2 text-[13px] font-semibold leading-[1.35] text-foreground hover:text-brand-600 dark:hover:text-brand-300"
+        >
+          {task.title}
+        </Link>
+        <p className="mt-1 truncate text-[11px] text-muted">{task.brand_name}</p>
+      </div>
+
+      <div className="mt-auto border-t border-border-subtle pt-2.5">
+        <div className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <span className="inline-flex min-w-0 items-center gap-1 text-[11px]">
           {task.due_date ? (
             <span
-              className={`text-xs ${isOverdue(task.due_date) ? "font-medium text-rose-600 dark:text-rose-400" : "text-zinc-500 dark:text-zinc-400"}`}
+              className={`inline-flex min-h-8 items-center gap-1 whitespace-nowrap tabular-nums ${
+                isOverdue(task.due_date)
+                  ? "font-semibold text-danger dark:text-rose-400"
+                  : "text-muted"
+              }`}
             >
-              📅 {formatDateShort(task.due_date)}
+              <Icon name="calendar" className="size-3.5" />
+              {formatDateShort(task.due_date)}
             </span>
           ) : (
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">Tarih yok</span>
+            <span className="inline-flex min-h-8 items-center gap-1 whitespace-nowrap text-faint">
+              <Icon name="calendar" className="size-3.5" />
+              Tarih yok
+            </span>
           )}
-          {/* Alanın hiç taşınmaması ("undefined") "bu görev benim değil"
-              demek; o zaman kişisel hedef satırı hiç çizilmez. Taşınıyorsa
-              (null olsa bile) kart üzerinden tarih verilebilir — yayınlanmış
-              görev hariç: sunucu ona yeni hedef yazmayı reddediyor, o yüzden
-              düzenleme yerine varsa yalnızca mevcut hedef gösterilir. */}
-          {task.personal_target_date !== undefined &&
+          </span>
+          <span className="flex min-w-0 justify-end">
+            {task.personal_target_date !== undefined &&
             (task.status === "Yayinlandi" ? (
               task.personal_target_date && (
-                <span className="text-[11px] font-medium text-brand-600 dark:text-brand-400">
-                  🎯 Hedef {formatDateShort(task.personal_target_date)}
+                <span className="inline-flex min-h-8 items-center gap-1 whitespace-nowrap text-[11px] font-medium text-brand-600 dark:text-brand-300">
+                  <Icon name="clock" className="size-3.5" />
+                  Hedef {formatDateShort(task.personal_target_date)}
                 </span>
               )
             ) : (
               <TaskTargetDateEdit taskId={task.id} targetDate={task.personal_target_date} />
             ))}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${TASK_PRIORITY_BADGE[task.priority]}`}
-          >
-            <span aria-hidden="true">{TASK_PRIORITY_ICON[task.priority]}</span>
-            {TASK_PRIORITY_LABEL[task.priority]}
           </span>
-          {task.assignee_name && (
-            <PersonAvatar
-              name={task.assignee_name}
-              avatarPath={task.assignee_avatar_path}
-              size="xs"
-            />
+        </div>
+        <div className="mt-1 flex min-h-6 items-center justify-end gap-1.5">
+          {task.comment_count > 0 && (
+            <Link
+              href={`/tasks/${task.id}`}
+              title={task.last_comment_body ?? `${task.comment_count} yorum`}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+            >
+              <CommentIcon />
+              {task.comment_count}
+            </Link>
           )}
-        </span>
-      </div>
-
-      {/* Son yorum. Kartı açmadan "burada bir konuşma dönüyor mu, ne konuşuldu"
-          sorusuna cevap verir; tamamı görev detayında. Yorum yoksa hiç yer
-          kaplamaz — kartların yüksekliği gereksiz yere şişmesin. */}
-      {task.comment_count > 0 && (
-        <Link
-          href={`/tasks/${task.id}`}
-          className="-mx-1 -mb-1 block rounded-md border-t border-black/10 px-1 pt-2 transition-colors hover:bg-black/[0.03] dark:border-white/10 dark:hover:bg-white/5"
-        >
-          <span className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-            <CommentIcon />
-            {task.comment_count}
-            {task.last_comment_author && (
-              <span className="truncate font-normal">· {task.last_comment_author}</span>
-            )}
-          </span>
-          {task.last_comment_body && (
-            <span className="mt-0.5 line-clamp-2 block text-xs text-zinc-600 dark:text-zinc-300">
-              {task.last_comment_body}
+          {task.priority !== "Normal" && (
+            <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold tracking-wide ${TASK_PRIORITY_BADGE[task.priority]}`}>
+              {TASK_PRIORITY_LABEL[task.priority].toLocaleUpperCase("tr-TR")}
             </span>
           )}
-        </Link>
-      )}
-    </div>
+          {task.assignee_name && (
+            <PersonAvatar name={task.assignee_name} avatarPath={task.assignee_avatar_path} size="xs" />
+          )}
+        </div>
+      </div>
+    </article>
   );
 }

@@ -1,0 +1,203 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { recordActivity } from "@/lib/activity";
+import { CONTENT_TYPES, TASK_PRIORITIES } from "@/lib/constants";
+import { normalizeDepartment } from "@/lib/departments";
+import { requireSession } from "@/lib/identity";
+import { notifyTaskUpdate } from "@/lib/notifications";
+import { canReviewClientRequests } from "@/lib/requestAccess";
+import {
+  addClientRequestComment,
+  approveClientRequest,
+  createClientRequest,
+  getClientRequest,
+  rejectClientRequest,
+  updateClientRequestReview,
+  type ClientRequestReviewInput,
+} from "@/lib/repositories/clientRequests";
+import type { ContentType, Person, TaskPriority } from "@/lib/types";
+
+function clean(value: FormDataEntryValue | null): string | null {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
+function cleanDate(value: FormDataEntryValue | null): string | null {
+  const date = clean(value);
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("Geçersiz tarih.");
+  }
+  if (date) {
+    const parsed = new Date(`${date}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+      throw new Error("Geçersiz tarih.");
+    }
+  }
+  return date;
+}
+
+function cleanReferenceUrl(value: FormDataEntryValue | null): string | null {
+  const referenceUrl = clean(value);
+  if (!referenceUrl) return null;
+  try {
+    const parsed = new URL(referenceUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
+    return parsed.toString();
+  } catch {
+    throw new Error("Referans bağlantısı http veya https ile başlamalı.");
+  }
+}
+
+function assertReviewer(person: Person): void {
+  if (!canReviewClientRequests(person)) {
+    throw new Error("Bu işlem yalnızca talep değerlendirme sorumlularına açık.");
+  }
+}
+
+function reviewInput(formData: FormData, reviewerId: string): ClientRequestReviewInput {
+  const id = String(formData.get("requestId") ?? "").trim();
+  const department = normalizeDepartment(formData.get("department"));
+  const assigneeId = String(formData.get("assigneeId") ?? "").trim();
+  const priority = String(formData.get("priority") ?? "Normal") as TaskPriority;
+  if (!id) throw new Error("Talep bulunamadı.");
+  if (!department) throw new Error("Hedef departman zorunlu.");
+  if (!assigneeId) throw new Error("Onay öncesinde görev sahibi seçilmeli.");
+  if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
+  return {
+    id,
+    reviewerId,
+    department,
+    assigneeId,
+    priority,
+    dueDate: cleanDate(formData.get("dueDate")),
+  };
+}
+
+export async function createClientRequestAction(formData: FormData) {
+  const actor = await requireSession();
+  const brandId = String(formData.get("brandId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const department = normalizeDepartment(formData.get("department"));
+  const contentType = String(formData.get("contentType") ?? "Diger") as ContentType;
+
+  if (!brandId) throw new Error("Marka zorunlu.");
+  if (!title) throw new Error("Talep başlığı zorunlu.");
+  if (title.length > 180) throw new Error("Talep başlığı en fazla 180 karakter olabilir.");
+  if (!description) throw new Error("Müşteri talebinin ayrıntısı zorunlu.");
+  if (description.length > 5000) throw new Error("Talep ayrıntısı en fazla 5000 karakter olabilir.");
+  if (!department) throw new Error("Hedef departman zorunlu.");
+  if (!CONTENT_TYPES.includes(contentType)) throw new Error("Geçersiz iş türü.");
+
+  const id = createClientRequest({
+    brandId,
+    title,
+    description,
+    requestedByName: clean(formData.get("requestedByName")),
+    source: clean(formData.get("source")),
+    referenceUrl: cleanReferenceUrl(formData.get("referenceUrl")),
+    department,
+    contentType,
+    dueDate: cleanDate(formData.get("dueDate")),
+    createdById: actor.id,
+  });
+  await recordActivity({
+    action: "request.create",
+    entityType: "request",
+    entityId: id,
+    brandId,
+    summary: `“${title}” müşteri talebini kaydetti`,
+  });
+  revalidatePath("/requests");
+  redirect(`/requests/${id}`);
+}
+
+export async function updateClientRequestReviewAction(formData: FormData) {
+  const reviewer = await requireSession();
+  assertReviewer(reviewer);
+  const input = reviewInput(formData, reviewer.id);
+  const request = getClientRequest(input.id);
+  updateClientRequestReview(input);
+  await recordActivity({
+    action: "request.review",
+    entityType: "request",
+    entityId: input.id,
+    brandId: request?.brand_id ?? null,
+    summary: `“${request?.title ?? "Talep"}” talebini incelemeye aldı`,
+  });
+  revalidatePath("/requests", "layout");
+}
+
+export async function addClientRequestCommentAction(formData: FormData) {
+  const reviewer = await requireSession();
+  assertReviewer(reviewer);
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  if (!requestId) throw new Error("Talep bulunamadı.");
+  if (!body) throw new Error("Yorum boş olamaz.");
+  if (body.length > 2000) throw new Error("Yorum en fazla 2000 karakter olabilir.");
+  const request = getClientRequest(requestId);
+  if (!request) throw new Error("Talep bulunamadı.");
+  addClientRequestComment({ requestId, authorId: reviewer.id, body });
+  await recordActivity({
+    action: "request.comment",
+    entityType: "request",
+    entityId: requestId,
+    brandId: request.brand_id,
+    summary: `“${request.title}” talebine değerlendirme notu ekledi`,
+  });
+  revalidatePath(`/requests/${requestId}`);
+}
+
+export async function approveClientRequestAction(formData: FormData) {
+  const reviewer = await requireSession();
+  assertReviewer(reviewer);
+  const input = reviewInput(formData, reviewer.id);
+  const request = getClientRequest(input.id);
+  if (!request) throw new Error("Talep bulunamadı.");
+  const converted = approveClientRequest(input);
+  await recordActivity({
+    action: "request.approve",
+    entityType: "request",
+    entityId: input.id,
+    brandId: request.brand_id,
+    summary: `“${request.title}” talebini onaylayıp göreve dönüştürdü`,
+  });
+  await recordActivity({
+    action: "task.create.from-request",
+    entityType: "task",
+    entityId: converted.taskId,
+    brandId: request.brand_id,
+    summary: `“${request.title}” görevini müşteri talebinden oluşturdu`,
+  });
+  notifyTaskUpdate({
+    actor: reviewer,
+    taskId: converted.taskId,
+    taskTitle: request.title,
+    brandId: request.brand_id,
+    assigneeId: input.assigneeId,
+    message: "Müşteri talebi onaylandı ve görev sana atandı.",
+  });
+  revalidatePath("/", "layout");
+  redirect(`/tasks/${converted.taskId}`);
+}
+
+export async function rejectClientRequestAction(formData: FormData) {
+  const reviewer = await requireSession();
+  assertReviewer(reviewer);
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const request = getClientRequest(requestId);
+  if (!request) throw new Error("Talep bulunamadı.");
+  rejectClientRequest({ id: requestId, reviewerId: reviewer.id, reason });
+  await recordActivity({
+    action: "request.reject",
+    entityType: "request",
+    entityId: requestId,
+    brandId: request.brand_id,
+    summary: `“${request.title}” talebini reddetti`,
+  });
+  revalidatePath("/requests", "layout");
+}

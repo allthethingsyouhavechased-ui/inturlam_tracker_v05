@@ -22,7 +22,7 @@ export default function TaskStatusSelect({
         const next = e.target.value as TaskStatus;
         startTransition(() => setTaskStatusAction(taskId, next));
       }}
-      className={`cursor-pointer rounded-full border-0 px-2.5 py-1 text-xs font-semibold outline-none ${TASK_STATUS_BADGE[status]} ${pending ? "opacity-50" : ""}`}
+      className={`min-h-8 cursor-pointer rounded-md border-0 px-2 py-1 text-[10px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${TASK_STATUS_BADGE[status]} ${pending ? "opacity-50" : ""}`}
     >
       {TASK_STATUSES.map((s) => (
         <option key={s} value={s}>

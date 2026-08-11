@@ -280,6 +280,48 @@ export default function ReportsClient({
         <PrintButton />
       </RangeFilterBar>
 
+      <nav
+        aria-label="Rapor kırılımları"
+        className="grid overflow-hidden rounded-xl border border-border-default bg-surface sm:grid-cols-3"
+      >
+        {[
+          {
+            href: "#departman-raporu",
+            eyebrow: "DEPARTMAN",
+            title: `${departments.length} çalışma alanı`,
+            description: "Üretim, açık yük ve teslim performansı",
+          },
+          {
+            href: "#kisi-raporu",
+            eyebrow: "EKİP",
+            title: `${people.length} kişi`,
+            description: "Kişi bazında iş yükü ve tamamlanma",
+          },
+          {
+            href: "#marka-raporu",
+            eyebrow: "PORTFÖY",
+            title: `${visibleBrands.length} marka`,
+            description: "Marka bazında üretim ve teslim sağlığı",
+          },
+        ].map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            className="group min-w-0 border-b border-border-subtle px-4 py-3 transition-colors hover:bg-surface-hover last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"
+          >
+            <span className="block text-[10px] font-semibold tracking-[0.08em] text-brand-600 dark:text-brand-300">
+              {item.eyebrow}
+            </span>
+            <span className="mt-1 block text-sm font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">
+              {item.title} →
+            </span>
+            <span className="mt-0.5 block truncate text-[11px] text-muted">
+              {item.description}
+            </span>
+          </a>
+        ))}
+      </nav>
+
       <section aria-labelledby="report-summary-title" className="space-y-3">
         <div>
           <h2 id="report-summary-title" className="text-lg font-semibold">
@@ -383,8 +425,6 @@ export default function ReportsClient({
         </div>
       </section>
 
-      <TrendChart report={trend} />
-
       <section aria-label="Süre ve teslim analizi" className="grid gap-4 xl:grid-cols-2">
         <CycleTimePanel report={cycleTime} />
         <DueHealthPanel rows={dueHealth} />
@@ -436,7 +476,7 @@ export default function ReportsClient({
         )}
       </CollapsiblePanel>
 
-      <section className="space-y-3">
+      <section id="departman-raporu" className="scroll-mt-24 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Departman görünümü</h2>
@@ -575,7 +615,7 @@ export default function ReportsClient({
         )}
       </section>
 
-      <section className="space-y-3">
+      <section id="kisi-raporu" className="scroll-mt-24 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Ekip görünümü</h2>
@@ -773,7 +813,7 @@ export default function ReportsClient({
           ))}
       </section>
 
-      <section className="space-y-3">
+      <section id="marka-raporu" className="scroll-mt-24 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Marka görünümü</h2>
@@ -907,6 +947,13 @@ export default function ReportsClient({
             />
           ))}
       </section>
+
+      <div className="border-t border-border-subtle pt-6">
+        <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted">
+          İLERİ ANALİZ
+        </p>
+        <TrendChart report={trend} />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# İNTURLAM · İş Takip
+# İNTURLAM Tracker v02
 
 İNTURLAM'ın 19 markası için içerik & görev takip aracı + marka araştırma paneli —
 ftrack mantığında ("Marka → İçerik/Proje → Görev") ama İNTURLAM'a özel, tek dosyalık,
@@ -18,6 +18,11 @@ kurulumu basit bir iç araç.
 - **Departman bazlı görünüm:** Her kişinin bir departmanı var (Video / Tasarım / Sosyal
   Medya / Yönetim). Görevler sayfasındaki ekip sekmeleriyle tek tıkla "sadece video
   ekibinin işleri"ne inilir; ekip kanbanı ve raporlar da aynı ayrımı kullanır.
+- **Müşteri talepleri:** Briefler önce talep kuyruğuna girer. Yunus, Sıla, Erhan ve
+  Sosyal Medya ekibi talebi değerlendirir, hedef departmandaki kişiye atar, yorum ekler
+  ve onayladığında içerik ile görevi tek işlemde oluşturur.
+- **Kişisel görünüm tercihleri:** Panom ve Görevler için seçilen Pano/Liste görünümü
+  tarayıcıda ayrı ayrı hatırlanır.
 - **Yayın → arşiv akışı:** "Yayınlandı" işaretlenen görev panodan anında kaybolmaz;
   7 gün daha durup arşive düşer. Yanlışlıkla işaretlemek geri alınabilir bir hata olur,
   arşivdeki iş de silinmez — tek tıkla panoya döner.
@@ -37,7 +42,8 @@ kurulumu basit bir iç araç.
   görev listeleri. Departman kişinin alanı olduğu için atanmamış görevler bu sayılara
   girmez; departmanı boş olan kişiler "Diğer" satırında toplanır.
 
-Şifre/hesap sistemi yok — açılışta "Sen kimsin?" ile isim seçilir, cookie'de hatırlanır.
+Her ekip üyesi kendi hesabını seçip şifresiyle giriş yapar. Oturumlar sunucuda özetlenmiş
+token olarak tutulur; rapor ekranları ve dışa aktarımlar yalnızca yönetici rolüne açıktır.
 Veri tek bir yerel dosyada tutulur (`data/inturlam.db`, SQLite) — ayrı bir veritabanı
 sunucusu kurmaya gerek yok.
 
@@ -84,8 +90,8 @@ veritabanını güncellerken çalıştırma; ofisteki kullanıcı verisini korum
 Kod GitHub'daki private depoda tutulur. Yeni bir ofis bilgisayarına ilk kez kurarken:
 
 ```powershell
-git clone https://github.com/allthethingsyouhavechased-ui/inturlam-tracker.git
-cd inturlam-tracker
+git clone https://github.com/allthethingsyouhavechased-ui/inturlam_tracker_v02.git
+cd inturlam_tracker_v02
 npm install
 npm run db:seed
 npm run build
@@ -155,38 +161,21 @@ npm run start     # 0.0.0.0:3000 — ağdaki diğer bilgisayarlar erişebilir
 - **Herkes kendi bilgisayarından/telefonundan** (aynı ofis Wi-Fi'ında) tarayıcıdan
   `http://<sunucu-IP>:3000` adresine girer. Bu adresi herkesin tarayıcısına
   yer imi (bookmark) olarak eklemesi işi kolaylaştırır.
-- **İlk girişte** herkes sağ üstten "Sen kimsin?" deyip kendi adını seçer —
-  bu seçim o tarayıcıda ~1 yıl hatırlanır (cookie), tekrar sormaz. Farklı bir
-  cihaz/tarayıcıdan girerse tekrar seçmesi gerekir.
-  Ekipteki 10 kişi (`db/seed.mts`'teki `PEOPLE` listesi) zaten seed'lenmiş durumda.
-  Yeni biri katılırsa listeye ekleyip `npm run db:seed` çalıştırman yeterli.
+- **İlk girişte** herkes kendi hesabını seçip şifresini girer. Yeni hesap ve ilk şifre
+  yöneticiler tarafından **Ekip → Hesap yönetimi** ekranından oluşturulur. Şifresi olmayan
+  eski hesaplar dışarıdan sahiplenilemez; yöneticinin ilk şifreyi belirlemesi gerekir.
 - **Günlük akış:** ana sayfadan marka seç → içerik/proje seç → görev panosunda
   kendi görevini bul, durumunu ilerlet (Beklemede → Devam Ediyor → İncelemede →
   Onaylandı → Yayınlandı), gerekirse yorum/not bırak. "Panom" sekmesi herkese
   kendi açık görevlerini ve o hafta teslim olacakları özetler.
-- **Yeni içerik/görev eklemek** için özel bir yetki yok — marka sayfasında
-  "yeni içerik", içerik sayfasında "yeni görev" formu herkese açık.
+- **Yeni görev eklemek** için üst çubuktaki veya marka sayfasındaki **Görev oluştur**
+  düğmesini kullan. Yeni çalışma ve görev türü aynı akışta seçilir; istenirse görev mevcut
+  bir çalışmaya bağlanır.
 
-Bu ilk sürüm; yarın birlikte denerken neyin eksik/yanlış geldiğini not al,
-sonraki oturumda üzerine ekleriz.
+## Tekrar eden görevler
 
-## Görev şablonları ve tekrar eden görevler
-
-**Şablonlar** (`/templates` — nav'daki "Şablonlar"): her içerikte tekrarlayan iş
-akışını bir kere tanımlarsın, her yeni içerikte elle 5 görev yazmazsın.
-
-- Her şablon satırı bir görev: başlık + öncelik + **gün kayması** + (isteğe bağlı)
-  sabit atanan.
-- **Gün kayması**, içeriğin *hedef tarihine* göre hesaplanır: `-6` → teslimden
-  6 gün önce, `0` → teslim günü, `+7` → teslimden bir hafta sonra. İçeriğin hedef
-  tarihi yoksa görevler tarihsiz açılır.
-- Bir şablonu tek bir içerik türüne bağlayabilirsin (ör. "Reel akışı" → Reel);
-  yeni içerik formundaki şablon listesi seçilen türe göre filtrelenir.
-- Kurulumda üç şablon hazır gelir: **Reel akışı**, **Foto çekimi**, **Kampanya**.
-  Silersen geri gelmez.
-- Uygulama iki yerden: marka sayfasındaki "yeni içerik" formunun **Şablon**
-  alanından (içerik açılır açılmaz görevler de açılır), ya da mevcut bir içeriğin
-  sayfasındaki **"Şablondan görev ekle…"** kutusundan.
+Şablon arayüzü v02'de geçici olarak menüden ve görev oluşturma akışından kaldırıldı.
+Eski şablon verileri silinmedi; ileride tekrar etkinleştirilebilmesi için korunuyor.
 
 **Tekrar eden görevler:** görev detayında **Tekrar** seçimi (Yok / Haftalık /
 2 haftada bir / Aylık). Görevi *Yayınlandı* yaptığında bir sonraki örneği otomatik

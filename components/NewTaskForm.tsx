@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { createTaskAction } from "@/lib/actions/tasks";
-import { TASK_PRIORITIES, TASK_PRIORITY_ICON, TASK_PRIORITY_LABEL } from "@/lib/constants";
+import { TASK_PRIORITIES, TASK_PRIORITY_LABEL } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { Person } from "@/lib/types";
 import SubmitButton from "./SubmitButton";
@@ -50,7 +50,7 @@ export default function NewTaskForm({
         <select name="priority" className={inputClass} defaultValue="Normal">
           {TASK_PRIORITIES.map((p) => (
             <option key={p} value={p}>
-              {TASK_PRIORITY_ICON[p]} {TASK_PRIORITY_LABEL[p]}
+              {TASK_PRIORITY_LABEL[p]}
             </option>
           ))}
         </select>

@@ -3,8 +3,8 @@ import { TASK_PRIORITY_BADGE, TASK_PRIORITY_DOT } from "@/lib/constants";
 import { formatDateLong, WEEKDAY_LABELS, type CalendarGridDay } from "@/lib/date";
 import type { TaskWithContext } from "@/lib/types";
 
-// sm+ ekranda hücre başına gösterilecek pill sayısı; mobilde nokta sayısı.
-const MAX_PILLS = 2;
+// Mobilde hücre başına gösterilecek nokta sayısı. Masaüstünde hücre kendi
+// içinde kayar; böylece tüm ay tek ekrana sığarken yoğun günlerin verisi kaybolmaz.
 const MAX_DOTS = 6;
 
 function cellToneClass(inMonth: boolean, isSelected: boolean): string {
@@ -45,7 +45,7 @@ export default function CalendarGrid({
   selectedDay: string | null;
 }) {
   return (
-    <div className="grid grid-cols-7 gap-1 sm:gap-2">
+    <div className="grid grid-cols-7 gap-1 sm:gap-2 lg:h-[calc(100dvh-14.5rem)] lg:min-h-[31rem] lg:grid-rows-[auto_repeat(6,minmax(0,1fr))]">
       {WEEKDAY_LABELS.map((label, i) => (
         <div
           key={`${label}-${i}`}
@@ -69,7 +69,7 @@ export default function CalendarGrid({
         return (
           <div
             key={day.date}
-            className={`ui-surface group relative flex min-h-20 min-w-0 flex-col gap-0.5 rounded-xl border p-1 sm:min-h-[104px] sm:p-1.5 ${cellToneClass(day.inMonth, isSelected)} ${
+            className={`ui-surface group relative flex min-h-20 min-w-0 flex-col gap-0.5 overflow-hidden rounded-xl border p-1 sm:min-h-[92px] sm:p-1.5 lg:min-h-0 ${cellToneClass(day.inMonth, isSelected)} ${
               isSelected ? "shadow-md" : "hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800"
             }`}
           >
@@ -100,8 +100,8 @@ export default function CalendarGrid({
             </Link>
 
             {/* sm+: öncelik renkli, başlığı okunabilir pill'ler */}
-            <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
-              {dayTasks.slice(0, MAX_PILLS).map((t) => (
+            <div className="hidden min-h-0 min-w-0 flex-col gap-0.5 overflow-y-auto overscroll-contain sm:flex">
+              {dayTasks.map((t) => (
                 <Link
                   key={t.id}
                   href={`/tasks/${t.id}`}
@@ -111,14 +111,6 @@ export default function CalendarGrid({
                   {t.title}
                 </Link>
               ))}
-              {dayTasks.length > MAX_PILLS && (
-                <Link
-                  href={dayHref}
-                  className="ui-press flex min-h-5 items-center truncate rounded-md px-2 text-[10px] font-medium text-zinc-500 hover:bg-black/[0.035] hover:text-brand-600 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-brand-400"
-                >
-                  +{dayTasks.length - MAX_PILLS} daha
-                </Link>
-              )}
             </div>
 
             {/* Mobil: pill metni bir 7 sütunlu hücreye sığmıyor, yalnızca

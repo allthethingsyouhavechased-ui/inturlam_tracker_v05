@@ -4,39 +4,11 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import ts from "typescript";
 
-const ACTION_FILES = [
-  "brands.ts",
-  "clusters.ts",
-  "content.ts",
-  "templates.ts",
-  "socialPlan.ts",
-] as const;
-
-const EXPECTED_ACTIONS = [
-  "createBrandAction",
-  "updateBrandAction",
-  "archiveBrandAction",
-  "deleteBrandAction",
-  "unarchiveBrandAction",
-  "createClusterAction",
-  "renameClusterAction",
-  "deleteClusterAction",
-  "createContentItemAction",
-  "setContentStatusAction",
-  "updateContentItemAction",
-  "archiveContentItemAction",
-  "unarchiveContentItemAction",
-  "deleteContentItemAction",
-  "createTemplateAction",
-  "renameTemplateAction",
-  "deleteTemplateAction",
-  "addTemplateItemAction",
-  "deleteTemplateItemAction",
-  "applyTemplateAction",
-  "setBrandContentTargetAction",
-  "setBrandAssetCountAction",
-  "setBrandPlanEntryAction",
-].sort();
+const ACTION_DIRECTORY = path.join(process.cwd(), "lib", "actions");
+const ACTION_FILES = fs
+  .readdirSync(ACTION_DIRECTORY)
+  .filter((fileName) => fileName.endsWith(".ts") && fileName !== "identity.ts")
+  .sort();
 
 function isExportedAsyncFunction(
   node: ts.Node,
@@ -49,19 +21,22 @@ function isExportedAsyncFunction(
   );
 }
 
+function awaitedCallName(expression: ts.Expression | undefined): string | null {
+  if (!expression || !ts.isAwaitExpression(expression)) return null;
+  const call = expression.expression;
+  if (!ts.isCallExpression(call) || !ts.isIdentifier(call.expression)) return null;
+  return call.expression.text;
+}
+
 function startsWithSessionGuard(node: ts.FunctionDeclaration & { body: ts.Block }): boolean {
   const [firstStatement] = node.body.statements;
-  if (!firstStatement || !ts.isExpressionStatement(firstStatement)) return false;
-  const expression = firstStatement.expression;
-  if (!ts.isAwaitExpression(expression) || !ts.isCallExpression(expression.expression)) {
-    return false;
+  if (!firstStatement) return false;
+  if (ts.isExpressionStatement(firstStatement)) {
+    return awaitedCallName(firstStatement.expression) === "requireSession";
   }
-  const call = expression.expression;
-  return (
-    ts.isIdentifier(call.expression) &&
-    call.expression.text === "requireSession" &&
-    call.arguments.length === 0
-  );
+  if (!ts.isVariableStatement(firstStatement)) return false;
+  const [declaration] = firstStatement.declarationList.declarations;
+  return awaitedCallName(declaration?.initializer) === "requireSession";
 }
 
 describe("mutasyon Server Action oturum koruması", () => {
@@ -89,7 +64,7 @@ describe("mutasyon Server Action oturum koruması", () => {
       }
     }
 
-    assert.deepEqual(foundActions.sort(), EXPECTED_ACTIONS);
+    assert.ok(foundActions.length > 0, "Hiç Server Action bulunamadı.");
     assert.deepEqual(unguardedActions, []);
   });
 });

@@ -1,12 +1,15 @@
 import AutoRefresh from "@/components/AutoRefresh";
+import { cookies } from "next/headers";
 import TaskExplorer from "@/components/TaskExplorer";
+import PageHeader from "@/components/ui/PageHeader";
 import { isDepartmentId, NO_DEPARTMENT } from "@/lib/departments";
-import { getCurrentPerson } from "@/lib/identity";
+import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
 import { listPersonalTaskTargets } from "@/lib/repositories/personalTargets";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listAllTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
 import { archiveCountdownBadge } from "@/lib/taskArchive";
+import { TASKS_VIEW_PREFERENCE, parseWorkspaceView } from "@/lib/uiPreferences";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +22,12 @@ export default async function AllTasksPage({
 }: {
   searchParams: Promise<{ assignee?: string; department?: string }>;
 }) {
+  const me = await requirePageSession();
   const sp = await searchParams;
+  const cookieStore = await cookies();
+  const initialView = parseWorkspaceView(
+    cookieStore.get(TASKS_VIEW_PREFERENCE.cookie)?.value,
+  );
   // Okumadan ÖNCE süpür, yoksa süresi dolmuş işler bu render'da bir kez daha
   // arşivlenmemiş görünürdü.
   sweepArchivablePublishedTasks();
@@ -29,9 +37,8 @@ export default async function AllTasksPage({
   // Geri sayım rozeti SUNUCUDA iliştiriliyor (bkz. `archiveCountdownBadge`):
   // kart bileşeni istemci tarafında, orada `new Date()` çağırmak gün sınırında
   // hydration uyuşmazlığı üretebilirdi.
-  const me = await getCurrentPerson();
   const targetByTask = new Map(
-    (me ? listPersonalTaskTargets(me.id) : []).map((target) => [
+    listPersonalTaskTargets(me.id).map((target) => [
       target.task_id,
       target.target_date,
     ]),
@@ -41,7 +48,7 @@ export default async function AllTasksPage({
     return {
       ...task,
       ...(countdown ? { badges: [countdown] } : {}),
-      ...(me && task.assignee_id === me.id
+      ...(task.assignee_id === me.id
         ? { personal_target_date: targetByTask.get(task.id) ?? null }
         : {}),
     };
@@ -60,15 +67,20 @@ export default async function AllTasksPage({
     // Panom ile AYNI genişlik (layout'un max-w-7xl kabuğu). Bir dönem
     // `workspace-page-wide` (1600px) kullanıyordu; iki sayfa arasında gidip
     // gelirken pano gözle görülür şekilde sıçrıyordu.
-    <div className="space-y-6">
+    <div>
       <AutoRefresh />
-      <h1 className="text-2xl font-semibold tracking-tight">Görevler</h1>
+      <PageHeader
+        eyebrow="ÇALIŞMA ALANI"
+        title="Görevler"
+        description="Portföydeki tüm işleri ara, filtrele ve ekip ya da süreç bazında incele."
+      />
       <TaskExplorer
         tasks={tasks}
         brands={brands}
         people={people}
         initialAssigneeId={initialAssigneeId}
         initialDepartment={initialDepartment}
+        initialView={initialView}
       />
     </div>
   );
