@@ -19,7 +19,8 @@
     "calendar:sync": "node --import ./scripts/register.mjs db/sync-calendar.mts",
     "smoke:local": "node --import ./scripts/register.mjs scripts/smoke-local.mts",
     "db:backup": "node db/backup.mts",
-    "db:restore": "node db/restore.mts"
+    "db:restore": "node db/restore.mts",
+    "uploads:audit": "node db/audit-uploads.mts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

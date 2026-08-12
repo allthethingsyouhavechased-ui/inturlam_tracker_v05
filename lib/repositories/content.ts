@@ -1,5 +1,6 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import type { ContentItem, ContentStatus, ContentType } from "@/lib/types";
+import { plannedTaskCondition, visibleContentCondition } from "@/lib/taskPlanning";
 
 export interface ContentItemWithCounts extends ContentItem {
   task_total: number;
@@ -16,8 +17,8 @@ export function listContentByBrand(brandId: string): ContentItemWithCounts[] {
                 COALESCE(SUM(CASE WHEN t.status != 'Yayinlandi' THEN 1 ELSE 0 END), 0) AS task_open
          FROM content_items ci
          LEFT JOIN people p ON p.id = ci.assignee_id
-         LEFT JOIN tasks t ON t.content_item_id = ci.id
-         WHERE ci.brand_id = ? AND ci.archived = 0
+         LEFT JOIN tasks t ON t.content_item_id = ci.id AND ${plannedTaskCondition("t")}
+         WHERE ci.brand_id = ? AND ci.archived = 0 AND ${visibleContentCondition("ci")}
          GROUP BY ci.id
          ORDER BY (ci.target_date IS NULL), ci.target_date, ci.created_at DESC`,
       )
@@ -62,7 +63,9 @@ export function listAllContentSummaries(): ContentSummary[] {
   return plainList<ContentSummary>(
     getDb()
       .prepare(
-        "SELECT id, brand_id, title, status FROM content_items WHERE archived = 0 ORDER BY created_at DESC",
+        `SELECT ci.id, ci.brand_id, ci.title, ci.status FROM content_items ci
+          WHERE ci.archived = 0 AND ${visibleContentCondition("ci")}
+          ORDER BY ci.created_at DESC`,
       )
       .all(),
   );

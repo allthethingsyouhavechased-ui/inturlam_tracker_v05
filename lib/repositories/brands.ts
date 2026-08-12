@@ -1,5 +1,6 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import type { Brand, BrandWithCount, Cluster } from "@/lib/types";
+import { plannedTaskCondition } from "@/lib/taskPlanning";
 
 export function listBrands(): Brand[] {
   return plainList<Brand>(
@@ -112,6 +113,7 @@ export function listBrandsWithOpenCounts(): BrandWithCount[] {
          FROM brands b
          LEFT JOIN content_items ci ON ci.brand_id = b.id
          LEFT JOIN tasks t ON t.content_item_id = ci.id AND t.status != 'Yayinlandi'
+          AND ${plannedTaskCondition("t")}
          WHERE b.archived = 0
          GROUP BY b.id
          ORDER BY b.sort_order, b.name`,

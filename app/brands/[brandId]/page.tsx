@@ -76,7 +76,7 @@ export default async function BrandPage({
   });
   const upcomingEvents = listCalendarEvents({
     rangeStart: today,
-    rangeEnd: `${shiftISODate(today, 90)}T23:59:59Z`,
+    rangeEnd: shiftISODate(today, 91),
     brandId,
   });
   // Sayılar haftalık tazeleniyor; 7 günden eskiyse (ya da hiç girilmemişse)

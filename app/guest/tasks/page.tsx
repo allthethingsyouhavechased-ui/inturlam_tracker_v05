@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function GuestTasksPage() {
   const actor = await requireGuestSession();
-  const tasks = listGuestTasks(actor.brand.id);
+  const tasks = listGuestTasks(actor.brand.id, actor.account_id);
   return (
     <div>
       <PageHeader eyebrow="MARKA PORTALI" title="Görevler" description="Yeni bir iş talebi açın ve ekibin ilerleyişini takip edin." breadcrumb={[{ label: actor.brand.name, href: "/guest" }, { label: "Görevler" }]} />

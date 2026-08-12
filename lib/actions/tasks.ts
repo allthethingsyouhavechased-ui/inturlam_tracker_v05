@@ -16,11 +16,7 @@ import { requireSession } from "@/lib/identity";
 import { notifyTaskUpdate } from "@/lib/notifications";
 import { setPersonalTaskTarget } from "@/lib/repositories/personalTargets";
 import { getPerson } from "@/lib/repositories/people";
-import {
-  addTaskAttachment,
-  deleteTaskAttachment,
-  getTaskAttachment,
-} from "@/lib/repositories/taskAttachments";
+import { deleteTaskAttachment, getTaskAttachment } from "@/lib/repositories/taskAttachments";
 import {
   bulkDeleteTasks,
   bulkUpdateTaskAssignee,
@@ -40,11 +36,13 @@ import {
   updateTaskWeight,
 } from "@/lib/repositories/tasks";
 import type { TaskPriority, TaskStatus } from "@/lib/types";
+import { listUploadPathsForTaskIds } from "@/lib/repositories/uploadReferences";
 import {
   deleteUploadedFile,
+  deleteUploadedFiles,
   extractImageFiles,
-  saveImageFiles,
   validateImageFiles,
+  withSavedImageFiles,
 } from "@/lib/uploads";
 
 function cleanText(value: FormDataEntryValue | null): string | null {
@@ -236,17 +234,10 @@ export async function updateTaskDetailsAction(formData: FormData) {
   const images = extractImageFiles(formData);
   validateImageFiles(images);
 
-  updateTaskDetails({
-    id,
-    title,
-    dueDate: requiredDate(formData.get("dueDate")),
-    notes,
-  });
-
-  const saved = await saveImageFiles(images, "tasks");
-  for (const { filePath, originalName } of saved) {
-    addTaskAttachment({ taskId: id, filePath, originalName });
-  }
+  const dueDate = requiredDate(formData.get("dueDate"));
+  await withSavedImageFiles(images, "tasks", (saved) =>
+    updateTaskDetails({ id, title, dueDate, notes }, saved),
+  );
 
   await recordActivity({
     action: "task.details",
@@ -318,7 +309,9 @@ export async function deleteTaskAttachmentAction(attachmentId: string) {
 export async function deleteTaskAction(taskId: string) {
   await requireSession();
   const task = getTask(taskId);
+  const uploadPaths = listUploadPathsForTaskIds([taskId]);
   deleteTask(taskId);
+  await deleteUploadedFiles(uploadPaths);
   await recordActivity({
     action: "task.delete",
     entityType: "task",
@@ -406,7 +399,9 @@ export async function bulkSetTaskAssigneeAction(
 export async function bulkDeleteTasksAction(ids: string[]) {
   await requireSession();
   const clean = cleanIds(ids);
+  const uploadPaths = listUploadPathsForTaskIds(clean);
   bulkDeleteTasks(clean);
+  await deleteUploadedFiles(uploadPaths);
   if (clean.length > 0) {
     await recordActivity({
       action: "task.bulk.delete",

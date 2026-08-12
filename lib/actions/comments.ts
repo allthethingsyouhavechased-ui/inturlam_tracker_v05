@@ -5,7 +5,6 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/identity";
 import { notifyMentions, notifyTaskUpdate } from "@/lib/notifications";
 import {
-  addCommentAttachment,
   createComment,
   deleteComment,
   getCommentAuthorId,
@@ -15,7 +14,7 @@ import {
   type CommentWithAuthor,
 } from "@/lib/repositories/comments";
 import { getTask } from "@/lib/repositories/tasks";
-import { deleteUploadedFile, extractImageFiles, saveImageFiles, validateImageFiles } from "@/lib/uploads";
+import { deleteUploadedFile, extractImageFiles, validateImageFiles, withSavedImageFiles } from "@/lib/uploads";
 
 export async function getTaskCommentsAction(taskId: string): Promise<CommentWithAuthor[]> {
   await requireSession();
@@ -34,12 +33,10 @@ export async function addCommentAction(formData: FormData) {
 
   validateImageFiles(images);
 
-  const commentId = createComment({ taskId, authorId: person.id, body });
-
-  const saved = await saveImageFiles(images, "comments");
-  for (const { filePath, originalName } of saved) {
-    addCommentAttachment({ commentId, filePath, originalName });
-  }
+  const saved = await withSavedImageFiles(images, "comments", (attachments) => {
+    createComment({ taskId, authorId: person.id, body }, attachments);
+    return attachments;
+  });
 
   const task = getTask(taskId);
   await recordActivity({

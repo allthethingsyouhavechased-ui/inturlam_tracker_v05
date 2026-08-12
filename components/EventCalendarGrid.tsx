@@ -1,12 +1,8 @@
 import Link from "next/link";
 import { todayISO, WEEKDAY_LABELS, type CalendarGridDay } from "@/lib/date";
+import { calendarEventTone } from "@/lib/calendar/colors";
+import { eventOccursOnDate } from "@/lib/calendar/time";
 import type { CalendarEvent } from "@/lib/types";
-
-const TYPE_TONE = {
-  Toplanti: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  Cekim: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
-  Diger: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-} as const;
 
 function eventTime(event: CalendarEvent): string {
   if (event.all_day === 1) return "";
@@ -34,8 +30,11 @@ export default function EventCalendarGrid({
 }) {
   const byDay = new Map<string, CalendarEvent[]>();
   for (const event of events) {
-    const date = event.start_at.slice(0, 10);
-    byDay.set(date, [...(byDay.get(date) ?? []), event]);
+    for (const day of gridDays) {
+      if (eventOccursOnDate(event, day.date)) {
+        byDay.set(day.date, [...(byDay.get(day.date) ?? []), event]);
+      }
+    }
   }
   const today = todayISO();
 
@@ -85,20 +84,20 @@ export default function EventCalendarGrid({
               {dayEvents.slice(0, 4).map((event) => {
                 if (!editable) {
                   return (
-                    <div key={event.id} className={`truncate rounded-md px-1.5 py-1 text-[10px] font-semibold ${TYPE_TONE[event.type]}`}>
+                    <div key={event.id} className={`truncate rounded-md px-1.5 py-1 text-[10px] font-semibold ${calendarEventTone(event)}`}>
                       {eventTime(event)}{event.title}
                     </div>
                   );
                 }
                 const eventQuery = new URLSearchParams(preservedQuery);
-                eventQuery.set("month", event.start_at.slice(0, 7));
-                eventQuery.set("day", event.start_at.slice(0, 10));
+                eventQuery.set("month", day.date.slice(0, 7));
+                eventQuery.set("day", day.date);
                 eventQuery.set("event", event.id);
                 return (
                   <Link
                     key={event.id}
                     href={`${basePath}?${eventQuery}`}
-                    className={`pointer-events-auto block truncate rounded-md px-1.5 py-1 text-[10px] font-semibold ${TYPE_TONE[event.type]}`}
+                    className={`pointer-events-auto block truncate rounded-md px-1.5 py-1 text-[10px] font-semibold ${calendarEventTone(event)}`}
                   >
                     {eventTime(event)}{event.title}
                   </Link>

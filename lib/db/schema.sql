@@ -309,6 +309,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
   id                TEXT PRIMARY KEY,
   brand_id          TEXT REFERENCES brands(id) ON DELETE SET NULL,
   type              TEXT NOT NULL DEFAULT 'Toplanti' CHECK (type IN ('Toplanti','Cekim','Diger')),
+  color_key         TEXT NOT NULL DEFAULT 'auto' CHECK (color_key IN ('auto','purple','blue','cyan','green','amber','rose','slate')),
   title             TEXT NOT NULL,
   description       TEXT,
   start_at          TEXT NOT NULL,

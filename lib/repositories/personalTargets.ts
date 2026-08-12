@@ -4,6 +4,8 @@ import type { PersonalTaskTarget } from "@/lib/types";
 interface TargetableTask {
   assignee_id: string | null;
   status: string;
+  origin: "team" | "guest";
+  due_date: string | null;
 }
 
 function isValidISODate(value: string): boolean {
@@ -33,12 +35,15 @@ export function setPersonalTaskTarget(
 ): void {
   const db = getDb();
   const task = db
-    .prepare("SELECT assignee_id, status FROM tasks WHERE id = ?")
+    .prepare("SELECT assignee_id, status, origin, due_date FROM tasks WHERE id = ?")
     .get(taskId) as TargetableTask | undefined;
 
   if (!task) throw new Error("Görev bulunamadı.");
   if (task.assignee_id !== personId) {
     throw new Error("Kişisel hedefi yalnızca sana atanmış bir görev için değiştirebilirsin.");
+  }
+  if (task.origin === "guest" && task.due_date === null && targetDate !== null) {
+    throw new Error("Kişisel hedeften önce iç teslim tarihi atanmalı.");
   }
 
   if (targetDate === null) {

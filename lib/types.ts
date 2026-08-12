@@ -30,6 +30,7 @@ export type TaskStatus =
 export type TaskPriority = "Dusuk" | "Normal" | "Yuksek" | "Acil";
 export type AccountKind = "team" | "guest";
 export type CalendarEventType = "Toplanti" | "Cekim" | "Diger";
+export type CalendarEventColor = "auto" | "purple" | "blue" | "cyan" | "green" | "amber" | "rose" | "slate";
 
 export type ClientRequestStatus =
   | "Beklemede"
@@ -226,6 +227,22 @@ export interface SharedTaskAttachment {
   created_at: string;
 }
 
+export interface GuestSharedTaskComment {
+  id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GuestSharedTaskAttachment {
+  id: string;
+  file_path: string;
+  original_name: string | null;
+  created_at: string;
+  can_delete: boolean;
+}
+
 export interface GuestTaskDTO {
   id: string;
   title: string;
@@ -237,8 +254,8 @@ export interface GuestTaskDTO {
   brand_id: string;
   brand_name: string;
   editable: boolean;
-  comments: SharedTaskComment[];
-  attachments: SharedTaskAttachment[];
+  comments: GuestSharedTaskComment[];
+  attachments: GuestSharedTaskAttachment[];
   created_at: string;
   updated_at: string;
 }
@@ -256,6 +273,7 @@ export interface CalendarEvent {
   brand_id: string | null;
   brand_name?: string | null;
   type: CalendarEventType;
+  color_key: CalendarEventColor;
   title: string;
   description: string | null;
   start_at: string;

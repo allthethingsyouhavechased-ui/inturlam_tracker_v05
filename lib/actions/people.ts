@@ -18,7 +18,7 @@ import { deleteAuthSessionsForPerson } from "@/lib/repositories/authSessions";
 import { deleteAuthSessionsForAccount } from "@/lib/repositories/authSessions";
 import { setGuestAccountActive, upsertGuestAccount } from "@/lib/repositories/accounts";
 import { replacePersonBrandAssignments } from "@/lib/repositories/brandAssignments";
-import { saveImageFiles, validateImageFiles } from "@/lib/uploads";
+import { deleteUploadedFile, validateImageFiles, withSavedImageFiles } from "@/lib/uploads";
 import type { Person } from "@/lib/types";
 
 function optionalText(value: FormDataEntryValue | null): string | null {
@@ -179,16 +179,25 @@ export async function updatePersonProfileAction(formData: FormData) {
   const avatarEntry = formData.get("avatar");
   const avatar = avatarEntry instanceof File && avatarEntry.size > 0 ? avatarEntry : null;
   if (avatar) validateImageFiles([avatar]);
-  const savedAvatar = avatar ? (await saveImageFiles([avatar], "people"))[0] : null;
-
-  updatePersonProfile({
+  const saveProfile = (avatarPath: string | null) => updatePersonProfile({
     id,
     name,
     title,
     bio,
     department,
-    avatarPath: savedAvatar?.filePath ?? person.avatar_path,
+    avatarPath,
   });
+  if (avatar) {
+    const savedAvatar = await withSavedImageFiles([avatar], "people", (saved) => {
+      saveProfile(saved[0].filePath);
+      return saved[0];
+    });
+    if (person.avatar_path && person.avatar_path !== savedAvatar.filePath) {
+      await deleteUploadedFile(person.avatar_path);
+    }
+  } else {
+    saveProfile(person.avatar_path);
+  }
   revalidatePath("/", "layout");
   revalidatePath(`/team/${id}`);
   revalidatePath("/settings/profile");

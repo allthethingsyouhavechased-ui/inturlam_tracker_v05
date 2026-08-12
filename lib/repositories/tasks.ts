@@ -2,6 +2,7 @@ import { getDb, plainList, plainOne } from "@/lib/db/client";
 import { NO_DEPARTMENT, type DepartmentKey } from "@/lib/departments";
 import { departmentPeopleCondition } from "@/lib/repositories/people";
 import { ARCHIVE_AFTER_DAYS } from "@/lib/taskArchive";
+import { plannedTaskCondition } from "@/lib/taskPlanning";
 import type { Task, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
 
 // Acil→Düşük sıralaması için ORDER BY'da kullanılan CASE ifadesi.
@@ -39,12 +40,13 @@ const WITH_CONTEXT_SELECT = `
 // ayrıca bunu yazması gerekmez — ama pano/liste gibi yayınlananları da gösteren
 // sorgular bunu EKLEMEK ZORUNDA, yoksa arşiv hiçbir yerde gizlenmez.
 const NOT_ARCHIVED = "t.archived_at IS NULL";
+const IS_PLANNED = plannedTaskCondition("t");
 
 export function listTasksByContent(contentItemId: string): TaskWithContext[] {
   return plainList<TaskWithContext>(
     getDb()
       .prepare(
-        `${WITH_CONTEXT_SELECT} WHERE t.content_item_id = ? AND ${NOT_ARCHIVED}
+        `${WITH_CONTEXT_SELECT} WHERE t.content_item_id = ? AND ${NOT_ARCHIVED} AND ${IS_PLANNED}
          ORDER BY ${PRIORITY_ORDER_SQL}, t.created_at`,
       )
       .all(contentItemId),
@@ -82,7 +84,7 @@ export function listAllTasks(includeArchived = false): TaskWithContext[] {
     getDb()
       .prepare(
         `${WITH_CONTEXT_SELECT}
-         ${includeArchived ? "" : `WHERE ${NOT_ARCHIVED}`}
+         WHERE ${IS_PLANNED}${includeArchived ? "" : ` AND ${NOT_ARCHIVED}`}
          ORDER BY ${PRIORITY_ORDER_SQL}, (t.due_date IS NULL), t.due_date, b.name`,
       )
       .all(),
@@ -145,7 +147,7 @@ export function listBoardTasksByAssignee(personId: string): TaskWithContext[] {
     getDb()
       .prepare(
         `${WITH_CONTEXT_SELECT}
-         WHERE t.assignee_id = ? AND ${NOT_ARCHIVED}
+         WHERE t.assignee_id = ? AND ${NOT_ARCHIVED} AND ${IS_PLANNED}
          ORDER BY (t.due_date IS NULL), t.due_date, b.name`,
       )
       .all(personId),
@@ -326,6 +328,8 @@ export function createNextOccurrence(task: Task, _today: string): string {
 interface TaskStatusRow {
   id: string;
   status: TaskStatus;
+  origin: "team" | "guest";
+  due_date: string | null;
 }
 
 function applyTaskStatusChanges(
@@ -333,6 +337,12 @@ function applyTaskStatusChanges(
   status: TaskStatus,
   actorId: string | null,
 ): number {
+  if (
+    status !== "Beklemede" &&
+    tasks.some((task) => task.origin === "guest" && task.due_date === null)
+  ) {
+    throw new Error("Guest görevi ilerletilmeden önce iç teslim tarihi atanmalı.");
+  }
   const changed = tasks.filter((task) => task.status !== status);
   if (changed.length === 0) return 0;
 
@@ -386,7 +396,7 @@ export function updateTaskStatus(
   actorId: string | null = null,
 ): boolean {
   const task = plainOne<TaskStatusRow>(
-    getDb().prepare("SELECT id, status FROM tasks WHERE id = ?").get(id),
+    getDb().prepare("SELECT id, status, origin, due_date FROM tasks WHERE id = ?").get(id),
   );
   if (!task) return false;
   return applyTaskStatusChanges([task], status, actorId) > 0;
@@ -434,13 +444,26 @@ export function updateTaskDetails(input: {
   title: string;
   dueDate: string;
   notes: string | null;
-}): void {
+}, attachments: Array<{ filePath: string; originalName: string | null }> = []): void {
   if (!input.dueDate) throw new Error("Teslim tarihi zorunlu.");
-  getDb()
-    .prepare(
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
       "UPDATE tasks SET title = ?, due_date = ?, notes = ?, updated_at = datetime('now') WHERE id = ?",
     )
     .run(input.title, input.dueDate, input.notes, input.id);
+    const insertAttachment = db.prepare(
+      "INSERT INTO task_attachments (id, task_id, file_path, original_name) VALUES (?, ?, ?, ?)",
+    );
+    for (const attachment of attachments) {
+      insertAttachment.run(crypto.randomUUID(), input.id, attachment.filePath, attachment.originalName);
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function updateTaskWeight(id: string, weightPoints: number): void {
@@ -513,7 +536,7 @@ export function bulkUpdateTaskStatus(
   const placeholders = ids.map(() => "?").join(", ");
   const tasks = plainList<TaskStatusRow>(
     getDb()
-      .prepare(`SELECT id, status FROM tasks WHERE id IN (${placeholders})`)
+      .prepare(`SELECT id, status, origin, due_date FROM tasks WHERE id IN (${placeholders})`)
       .all(...ids),
   );
   return applyTaskStatusChanges(tasks, status, actorId);

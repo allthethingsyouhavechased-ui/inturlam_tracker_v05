@@ -5,6 +5,9 @@ import {
   departmentPeopleCondition,
 } from "@/lib/repositories/people";
 import type { TaskPriority, TaskStatus } from "@/lib/types";
+import { plannedTaskCondition, visibleContentCondition } from "@/lib/taskPlanning";
+
+const IS_PLANNED = plannedTaskCondition("t");
 
 export interface DateRange {
   start: string;
@@ -226,10 +229,12 @@ export function getTrendReport(range: DateRange | null, scope: ReportScope = nul
       FROM (
         SELECT date(created_at) AS event_date, 'opened' AS event_type, assignee_id
           FROM tasks
+         WHERE ${plannedTaskCondition("tasks")}
         UNION ALL
         SELECT date(completed_at) AS event_date, 'completed' AS event_type, assignee_id
           FROM tasks
          WHERE status = 'Yayinlandi' AND completed_at IS NOT NULL
+           AND ${plannedTaskCondition("tasks")}
       ) events
      WHERE ${conditions.join("\n       AND ")}
      GROUP BY event_date, event_type
@@ -288,7 +293,8 @@ export function getCycleTimeReport(
   const rows = allForRange<{ duration_days: number }>(
     `SELECT MAX(julianday(t.completed_at) - julianday(t.created_at), 0) AS duration_days
        FROM tasks t
-      WHERE t.status = 'Yayinlandi'
+      WHERE ${IS_PLANNED}
+        AND t.status = 'Yayinlandi'
         AND t.completed_at IS NOT NULL
         AND ${completed}
         ${scopeCondition(scope)}
@@ -343,6 +349,7 @@ export function listDueHealthReport(
            FROM buckets
            LEFT JOIN tasks t
              ON t.status != 'Yayinlandi'
+            AND ${IS_PLANNED}
             ${scopeCondition(scope)}
             AND CASE buckets.bucket
               WHEN 'overdue' THEN t.due_date IS NOT NULL AND t.due_date < :today
@@ -398,7 +405,7 @@ export function getReportSummary(
         THEN MAX(julianday(t.completed_at) - julianday(t.created_at), 0)
       END), 1) AS average_cycle_days
     FROM tasks t
-    ${scoped ? `WHERE ${scoped}` : ""}
+    WHERE ${IS_PLANNED}${scoped ? ` AND ${scoped}` : ""}
   `);
   const params: Record<string, string> = { today, ...scopeParams(scope) };
   if (range) {
@@ -427,7 +434,8 @@ export function listWorkflowReport(scope: ReportScope = null): WorkflowReportRow
          )
          SELECT workflow.status, COUNT(t.id) AS task_count
            FROM workflow
-           LEFT JOIN tasks t ON t.status = workflow.status ${scopeCondition(scope)}
+           LEFT JOIN tasks t ON t.status = workflow.status
+            AND ${IS_PLANNED} ${scopeCondition(scope)}
           GROUP BY workflow.status, workflow.sort_order
           ORDER BY workflow.sort_order`,
       )
@@ -463,6 +471,7 @@ export function listPriorityReport(
            LEFT JOIN tasks t
              ON t.priority = levels.priority
             AND t.status != 'Yayinlandi'
+            AND ${IS_PLANNED}
             ${scopeCondition(scope)}
           GROUP BY levels.priority, levels.sort_order
           ORDER BY levels.sort_order`,
@@ -514,7 +523,7 @@ export function listPersonReport(
         THEN MAX(julianday(t.completed_at) - julianday(t.created_at), 0)
       END), 1) AS average_cycle_days
     FROM people p
-    LEFT JOIN tasks t ON t.assignee_id = p.id
+    LEFT JOIN tasks t ON t.assignee_id = p.id AND ${IS_PLANNED}
     GROUP BY p.id
     ORDER BY completed_tasks DESC, open_tasks DESC, p.name
   `);
@@ -595,7 +604,7 @@ export function listDepartmentReport(
         THEN MAX(julianday(t.completed_at) - julianday(t.created_at), 0)
       END), 1) AS average_cycle_days
     FROM people p
-    LEFT JOIN tasks t ON t.assignee_id = p.id
+    LEFT JOIN tasks t ON t.assignee_id = p.id AND ${IS_PLANNED}
     GROUP BY ${bucket}
     ORDER BY completed_tasks DESC, open_tasks DESC, ${bucket}
   `);
@@ -634,7 +643,7 @@ export function listBrandBreakdownForScope(
        FROM tasks t
        JOIN content_items ci ON ci.id = t.content_item_id
        JOIN brands b ON b.id = ci.brand_id
-      WHERE 1 = 1 ${scopeCondition(scope)}
+      WHERE ${IS_PLANNED} ${scopeCondition(scope)}
       GROUP BY b.id
      HAVING total_tasks > 0 OR completed_tasks > 0 OR open_tasks > 0
       ORDER BY completed_tasks DESC, open_tasks DESC, b.name`,
@@ -660,7 +669,7 @@ export function listPersonBrandBreakdown(
        JOIN content_items ci ON ci.id = t.content_item_id
        JOIN brands b ON b.id = ci.brand_id
        JOIN people p ON p.id = t.assignee_id
-      WHERE 1 = 1 ${scopeCondition(scope)}
+      WHERE ${IS_PLANNED} ${scopeCondition(scope)}
       GROUP BY p.id, b.id
      HAVING total_tasks > 0 OR completed_tasks > 0 OR open_tasks > 0
       ORDER BY p.name, completed_tasks DESC, open_tasks DESC`,
@@ -715,8 +724,8 @@ export function listBrandReport(
         THEN MAX(julianday(t.completed_at) - julianday(t.created_at), 0)
       END), 1) AS average_cycle_days
     FROM brands b
-    LEFT JOIN content_items ci ON ci.brand_id = b.id
-    LEFT JOIN tasks t ON t.content_item_id = ci.id
+    LEFT JOIN content_items ci ON ci.brand_id = b.id AND ${visibleContentCondition("ci")}
+    LEFT JOIN tasks t ON t.content_item_id = ci.id AND ${IS_PLANNED}
     GROUP BY b.id
     ORDER BY completed_tasks DESC, open_tasks DESC, b.name
   `);
@@ -791,7 +800,8 @@ export function listTaskDetailReport(
        JOIN content_items ci ON ci.id = t.content_item_id
        JOIN brands b ON b.id = ci.brand_id
        LEFT JOIN people p ON p.id = t.assignee_id
-      WHERE (${opened}
+      WHERE ${IS_PLANNED}
+        AND (${opened}
              OR (t.status = 'Yayinlandi' AND t.completed_at IS NOT NULL AND ${completed})
              OR t.status != 'Yayinlandi')
         ${scopeCondition(scope)}
@@ -821,6 +831,7 @@ export function listBrandPersonBreakdown(
        JOIN content_items ci ON ci.id = t.content_item_id
        JOIN brands b ON b.id = ci.brand_id
        JOIN people p ON p.id = t.assignee_id
+      WHERE ${IS_PLANNED}
       GROUP BY b.id, p.id
      HAVING total_tasks > 0 OR completed_tasks > 0 OR open_tasks > 0
       ORDER BY b.name, completed_tasks DESC, open_tasks DESC`,

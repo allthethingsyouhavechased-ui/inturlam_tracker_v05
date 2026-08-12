@@ -1,5 +1,6 @@
 import { getDb, plainList } from "@/lib/db/client";
 import type { Brand, TaskWithContext } from "@/lib/types";
+import { plannedTaskCondition, visibleContentCondition } from "@/lib/taskPlanning";
 
 export interface ContentSearchResult {
   id: string;
@@ -49,6 +50,7 @@ export function searchAll(query: string): SearchResults {
         `SELECT ci.id, ci.brand_id, b.name AS brand_name, ci.title
          FROM content_items ci
          JOIN brands b ON b.id = ci.brand_id
+         WHERE ${visibleContentCondition("ci")}
          ORDER BY ci.title`,
       )
       .all(),
@@ -68,6 +70,7 @@ export function searchAll(query: string): SearchResults {
          JOIN content_items ci ON ci.id = t.content_item_id
          JOIN brands b ON b.id = ci.brand_id
          LEFT JOIN people p ON p.id = t.assignee_id
+         WHERE ${plannedTaskCondition("t")}
          ORDER BY t.title`,
       )
       .all(),

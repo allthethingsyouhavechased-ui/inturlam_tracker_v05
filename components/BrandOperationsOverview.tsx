@@ -17,6 +17,7 @@ import type {
   MonthlyProgress,
   TaskStatus,
 } from "@/lib/types";
+import { calendarEventStartDate } from "@/lib/calendar/time";
 
 const TASK_STATUSES: TaskStatus[] = ["Beklemede", "DevamEdiyor", "Incelemede", "Onaylandi", "Yayinlandi"];
 const CONTENT_STATUSES: ContentStatus[] = ["Planlandi", "Uretimde", "Tamamlandi", "IptalEdildi"];
@@ -143,7 +144,7 @@ export default function BrandOperationsOverview({
           <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">YAKLAŞAN TAKVİM</p><Link href={calendarLink(month, brand.id)} className="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">Takvimi aç</Link></div>
           {upcomingEvents.length > 0 ? (
             <div className="mt-2 divide-y divide-border-subtle">
-              {upcomingEvents.slice(0, 4).map((event) => <Link key={event.id} href={`${calendarLink(event.start_at.slice(0, 7), brand.id)}&event=${encodeURIComponent(event.id)}`} className="flex min-w-0 items-center gap-3 py-2 hover:text-brand-600"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-subtle"><Icon name="calendar" className="size-4 text-muted" /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{event.title}</span><span className="block truncate text-[11px] text-muted">{event.type === "Toplanti" ? "Toplantı" : event.type === "Cekim" ? "Çekim" : "Diğer"} · {eventDate(event)}{event.location ? ` · ${event.location}` : ""}</span></span></Link>)}
+              {upcomingEvents.slice(0, 4).map((event) => { const startDate = calendarEventStartDate(event); return <Link key={event.id} href={`${calendarLink(startDate.slice(0, 7), brand.id)}&event=${encodeURIComponent(event.id)}`} className="flex min-w-0 items-center gap-3 py-2 hover:text-brand-600"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-subtle"><Icon name="calendar" className="size-4 text-muted" /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{event.title}</span><span className="block truncate text-[11px] text-muted">{event.type === "Toplanti" ? "Toplantı" : event.type === "Cekim" ? "Çekim" : "Diğer"} · {eventDate(event)}{event.location ? ` · ${event.location}` : ""}</span></span></Link>; })}
             </div>
           ) : <p className="mt-3 text-sm text-muted">Önümüzdeki 90 günde planlanmış etkinlik yok.</p>}
         </div>

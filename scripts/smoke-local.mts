@@ -71,6 +71,7 @@ try {
   assert.ok(selectedTodayLinks > currentTodayLinks, "Bugün kısayolu yalnızca başka gün seçildiğinde eklenmeli.");
   assert.ok(selectedHtml.includes(`value="${selectedDate}T09:00"`), "Seçili gün başlangıç alanına taşınmalı.");
   assert.ok(selectedHtml.includes(`value="${selectedDate}T10:00"`), "Seçili gün bitiş alanına taşınmalı.");
+  assert.ok(currentHtml.includes('name="colorKey"') && currentHtml.includes('value="rose"'), "Takvim etkinlik rengi seçimini göstermeli.");
   assert.ok(brandHtml.includes("ÇEKİM HAKLARI") && brandHtml.includes("YILLIK"), "Marka sayfası yıllık çekim hakkını göstermeli.");
   assert.ok(homeHtml.includes("AYLIK ÜRETİM AKIŞI") && homeHtml.includes("Atanmış markalar toplamı"), "Bugün sayfası atanmış marka toplamını ve üretim akışını göstermeli.");
   assert.ok(panomHtml.includes("Üzerimdeki markalar") && panomHtml.includes("Bu ayki katkım"), "Panom kişisel araç düğmelerini göstermeli.");

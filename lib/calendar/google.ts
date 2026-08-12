@@ -1,5 +1,6 @@
 import { createSign } from "node:crypto";
 import type { CalendarEvent, CalendarEventType } from "@/lib/types";
+import { colorFromGoogle, googleColorId, isCalendarEventColor } from "@/lib/calendar/colors";
 import {
   applyInboundGoogleEvent,
   getCalendarEvent,
@@ -60,17 +61,19 @@ async function googleFetch(path: string, init: RequestInit = {}): Promise<Respon
   return response;
 }
 
-function eventBody(event: CalendarEvent) {
+export function calendarEventToGoogleBody(event: CalendarEvent) {
   const privateProperties: Record<string, string> = {
     inturlamTrackerId: event.id,
     inturlamEventType: event.type,
     inturlamGuestVisible: event.guest_visible === 1 ? "1" : "0",
+    inturlamColorKey: event.color_key,
   };
   if (event.brand_id) privateProperties.inturlamBrandId = event.brand_id;
   return {
     summary: event.title,
     description: event.description ?? undefined,
     location: event.location ?? undefined,
+    colorId: googleColorId(event.color_key),
     start: event.all_day === 1 ? { date: event.start_at.slice(0, 10) } : { dateTime: event.start_at, timeZone: "Europe/Istanbul" },
     end: event.all_day === 1 ? { date: event.end_at.slice(0, 10) } : { dateTime: event.end_at, timeZone: "Europe/Istanbul" },
     extendedProperties: { private: privateProperties },
@@ -85,6 +88,7 @@ interface GoogleEvent {
   summary?: string;
   description?: string;
   location?: string;
+  colorId?: string;
   start?: { date?: string; dateTime?: string };
   end?: { date?: string; dateTime?: string };
   extendedProperties?: { private?: Record<string, string> };
@@ -95,6 +99,9 @@ function normalizeRemote(event: GoogleEvent): GoogleCalendarEventRecord {
   const type = (["Toplanti", "Cekim", "Diger"] as CalendarEventType[]).includes(meta.inturlamEventType as CalendarEventType)
     ? meta.inturlamEventType as CalendarEventType : "Toplanti";
   const allDay = Boolean(event.start?.date);
+  const colorKey = isCalendarEventColor(meta.inturlamColorKey)
+    ? meta.inturlamColorKey
+    : colorFromGoogle(event.colorId);
   return {
     googleEventId: event.id,
     trackerId: meta.inturlamTrackerId || null,
@@ -103,6 +110,7 @@ function normalizeRemote(event: GoogleEvent): GoogleCalendarEventRecord {
     status: event.status ?? "confirmed",
     brandId: meta.inturlamBrandId || null,
     type,
+    colorKey,
     title: event.summary?.trim() || "Adsız etkinlik",
     description: event.description ?? null,
     startAt: event.start?.dateTime ?? event.start?.date ?? "1970-01-01",
@@ -140,7 +148,7 @@ export async function syncCalendarEventNow(id: string): Promise<boolean> {
     let response = await googleFetch(path, {
       method: event.google_event_id ? "PUT" : "POST",
       headers: event.google_event_id && event.google_etag ? { "If-Match": event.google_etag } : undefined,
-      body: JSON.stringify(eventBody(event)),
+      body: JSON.stringify(calendarEventToGoogleBody(event)),
     });
     if (response.status === 412 && event.google_event_id) {
       const remote = await readGoogleEvent(event.google_event_id);
@@ -148,7 +156,7 @@ export async function syncCalendarEventNow(id: string): Promise<boolean> {
         applyInboundGoogleEvent(normalizeRemote(remote));
         return true;
       }
-      response = await googleFetch(path, { method: "PUT", body: JSON.stringify(eventBody(event)) });
+      response = await googleFetch(path, { method: "PUT", body: JSON.stringify(calendarEventToGoogleBody(event)) });
     }
     if (!response.ok) throw new Error(`Google etkinlik yazımı başarısız (${response.status}).`);
     const remote = await response.json() as GoogleEvent;

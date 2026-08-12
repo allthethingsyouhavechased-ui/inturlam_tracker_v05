@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentActor, requireGuestSession, requireSession } from "@/lib/identity";
 import { getTask } from "@/lib/repositories/tasks";
-import { addSharedAttachments, addSharedComment, createGuestTask, deleteSharedAttachment, getGuestTask, getSharedAttachment, updateGuestTask } from "@/lib/repositories/guestTasks";
-import { deleteUploadedFile, extractImageFiles, saveImageFiles, validateImageFiles } from "@/lib/uploads";
+import { addSharedComment, createGuestTask, deleteGuestOwnedSharedAttachment, getGuestTask, updateGuestTask } from "@/lib/repositories/guestTasks";
+import { deleteUploadedFile, extractImageFiles, validateImageFiles, withSavedImageFiles } from "@/lib/uploads";
 
 function text(formData: FormData, key: string, max: number): string {
   const value = String(formData.get(key) ?? "").trim();
@@ -28,8 +28,10 @@ export async function createGuestTaskAction(formData: FormData) {
   const brief = text(formData, "brief", 5000);
   const images = extractImageFiles(formData);
   validateImageFiles(images);
-  const saved = await saveImageFiles(images, "guest-tasks");
-  const taskId = createGuestTask({ brandId: actor.brand.id, accountId: actor.account_id, title, brief, requestedDate: requestedDate(formData), attachments: saved });
+  const date = requestedDate(formData);
+  const taskId = await withSavedImageFiles(images, "guest-tasks", (saved) =>
+    createGuestTask({ brandId: actor.brand.id, accountId: actor.account_id, title, brief, requestedDate: date, attachments: saved }),
+  );
   revalidatePath("/guest", "layout");
   redirect(`/guest/tasks/${taskId}`);
 }
@@ -37,7 +39,7 @@ export async function createGuestTaskAction(formData: FormData) {
 export async function updateGuestTaskAction(formData: FormData) {
   const actor = await requireGuestSession();
   const taskId = String(formData.get("taskId") ?? "").trim();
-  if (!getGuestTask(taskId, actor.brand.id)) throw new Error("Görev bulunamadı.");
+  if (!getGuestTask(taskId, actor.brand.id, actor.account_id)) throw new Error("Görev bulunamadı.");
   const updated = updateGuestTask({ taskId, brandId: actor.brand.id, title: text(formData, "title", 200), brief: text(formData, "brief", 5000), requestedDate: requestedDate(formData) });
   if (!updated) throw new Error("Çalışma başladığı için brief artık düzenlenemez.");
   revalidatePath(`/guest/tasks/${taskId}`);
@@ -46,23 +48,23 @@ export async function updateGuestTaskAction(formData: FormData) {
 export async function addGuestSharedCommentAction(formData: FormData) {
   const actor = await requireGuestSession();
   const taskId = String(formData.get("taskId") ?? "").trim();
-  if (!getGuestTask(taskId, actor.brand.id)) throw new Error("Görev bulunamadı.");
+  if (!getGuestTask(taskId, actor.brand.id, actor.account_id)) throw new Error("Görev bulunamadı.");
   const body = text(formData, "body", 2000);
-  addSharedComment({ taskId, accountId: actor.account_id, authorName: `${actor.brand.name} Guest`, body });
   const images = extractImageFiles(formData);
   validateImageFiles(images);
-  addSharedAttachments({ taskId, accountId: actor.account_id, attachments: await saveImageFiles(images, "guest-tasks") });
+  await withSavedImageFiles(images, "guest-tasks", (saved) =>
+    addSharedComment({ taskId, accountId: actor.account_id, authorName: `${actor.brand.name} Guest`, body }, saved),
+  );
   revalidatePath(`/guest/tasks/${taskId}`);
 }
 
 export async function deleteGuestSharedAttachmentAction(taskId: string, attachmentId: string) {
   const actor = await requireGuestSession();
-  const task = getGuestTask(taskId, actor.brand.id);
+  const task = getGuestTask(taskId, actor.brand.id, actor.account_id);
   if (!task) throw new Error("Görev bulunamadı.");
   if (!task.editable) throw new Error("Çalışma başladığı için mevcut ekler değiştirilemez.");
-  const attachment = getSharedAttachment(attachmentId, taskId);
+  const attachment = deleteGuestOwnedSharedAttachment(attachmentId, taskId, actor.account_id);
   if (!attachment) return;
-  deleteSharedAttachment(attachmentId, taskId);
   await deleteUploadedFile(attachment.file_path);
   revalidatePath(`/guest/tasks/${taskId}`);
 }
@@ -74,9 +76,10 @@ export async function addTeamSharedCommentAction(formData: FormData) {
   const taskId = String(formData.get("taskId") ?? "").trim();
   if (!getTask(taskId)) throw new Error("Görev bulunamadı.");
   const body = text(formData, "body", 2000);
-  addSharedComment({ taskId, accountId: actor.account_id, authorName: person.name, body });
   const images = extractImageFiles(formData);
   validateImageFiles(images);
-  addSharedAttachments({ taskId, accountId: actor.account_id, attachments: await saveImageFiles(images, "guest-tasks") });
+  await withSavedImageFiles(images, "guest-tasks", (saved) =>
+    addSharedComment({ taskId, accountId: actor.account_id, authorName: person.name, body }, saved),
+  );
   revalidatePath(`/tasks/${taskId}`);
 }

@@ -49,6 +49,7 @@ function createConnection(): DatabaseSync {
   migrateV03TaskColumnsIfNeeded(db);
   migrateV03AccountsIfNeeded(db);
   migrateV03NotificationColumnsIfNeeded(db);
+  migrateCalendarEventColorIfNeeded(db);
   migrateSocialPostsUniqueIfNeeded(db);
   migrateClientRequestsArchiveIfNeeded(db);
   // SIRA ÖNEMLİ: yukarıdaki iki brands migration'ı tabloyu SABİT bir sütun
@@ -59,6 +60,20 @@ function createConnection(): DatabaseSync {
   db.exec(schemaSql);
   seedTaskTemplatesIfNeeded(db);
   return db;
+}
+
+// Takvim renkleri sınırlı bir palet anahtarı olarak saklanır. Eski v03
+// etkinlikleri mevcut tür renklerini korumak için `auto` ile taşınır.
+function migrateCalendarEventColorIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='calendar_events'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(calendar_events)`).all() as { name: string }[];
+  if (!columns.some((column) => column.name === "color_key")) {
+    db.exec(`ALTER TABLE calendar_events ADD COLUMN color_key TEXT NOT NULL DEFAULT 'auto'
+      CHECK (color_key IN ('auto','purple','blue','cyan','green','amber','rose','slate'))`);
+  }
 }
 
 // v03 görev alanları düz/nullable ya da güvenli DEFAULT taşır. Eski v02

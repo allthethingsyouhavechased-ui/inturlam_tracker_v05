@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function GuestDashboardPage() {
   const actor = await requireGuestSession();
-  const tasks = listGuestTasks(actor.brand.id);
+  const tasks = listGuestTasks(actor.brand.id, actor.account_id);
   const progress = getBrandMonthlyProgress(actor.brand.id, todayISO().slice(0, 7));
   const counts = new Map<string, number>();
   tasks.forEach((task) => counts.set(task.status, (counts.get(task.status) ?? 0) + 1));

@@ -1,10 +1,13 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
-import type { CalendarEvent, CalendarEventType } from "@/lib/types";
+import { isCalendarEventColor } from "@/lib/calendar/colors";
+import { normalizeCalendarRangeBoundary } from "@/lib/calendar/time";
+import type { CalendarEvent, CalendarEventColor, CalendarEventType } from "@/lib/types";
 
 export interface CalendarEventInput {
   id?: string;
   brandId: string | null;
   type: CalendarEventType;
+  colorKey?: CalendarEventColor;
   title: string;
   description: string | null;
   startAt: string;
@@ -25,8 +28,11 @@ export function listCalendarEvents(input: {
   type?: CalendarEventType | null;
   includeDeleted?: boolean;
 }): CalendarEvent[] {
-  const conditions = ["e.start_at < :rangeEnd", "e.end_at >= :rangeStart"];
-  const params: Record<string, string> = { rangeStart: input.rangeStart, rangeEnd: input.rangeEnd };
+  const conditions = ["e.start_at < :rangeEnd", "e.end_at > :rangeStart"];
+  const params: Record<string, string> = {
+    rangeStart: normalizeCalendarRangeBoundary(input.rangeStart),
+    rangeEnd: normalizeCalendarRangeBoundary(input.rangeEnd),
+  };
   if (!input.includeDeleted) conditions.push("e.deleted_at IS NULL");
   if (input.brandId) { conditions.push("e.brand_id = :brandId"); params.brandId = input.brandId; }
   if (input.type) { conditions.push("e.type = :type"); params.type = input.type; }
@@ -36,12 +42,14 @@ export function listCalendarEvents(input: {
 }
 
 export function listGuestCalendarEvents(brandId: string, rangeStart: string, rangeEnd: string): CalendarEvent[] {
+  const start = normalizeCalendarRangeBoundary(rangeStart);
+  const end = normalizeCalendarRangeBoundary(rangeEnd);
   return plainList<CalendarEvent>(getDb().prepare(
     `${SELECT_EVENT}
       WHERE e.brand_id = ? AND e.guest_visible = 1 AND e.deleted_at IS NULL
-        AND e.start_at < ? AND e.end_at >= ?
+        AND e.start_at < ? AND e.end_at > ?
       ORDER BY e.start_at, e.end_at, e.title`,
-  ).all(brandId, rangeEnd, rangeStart));
+  ).all(brandId, end, start));
 }
 
 export function getCalendarEvent(id: string): CalendarEvent | undefined {
@@ -52,21 +60,33 @@ export function saveCalendarEvent(input: CalendarEventInput): string {
   const id = input.id ?? crypto.randomUUID();
   const existing = input.id ? getCalendarEvent(input.id) : undefined;
   if (input.id && !existing) throw new Error("Etkinlik bulunamadı.");
+  if (existing?.deleted_at) throw new Error("İptal edilmiş etkinlik yeniden düzenlenemez.");
+  if (input.guestVisible && !input.brandId) throw new Error("Guest paylaşımı için marka seçilmeli.");
+  if (input.brandId && !getDb().prepare("SELECT 1 FROM brands WHERE id = ?").get(input.brandId)) {
+    throw new Error("Marka bulunamadı.");
+  }
+  const start = Date.parse(input.startAt);
+  const end = Date.parse(input.endAt);
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    throw new Error("Bitiş başlangıçtan sonra olmalı.");
+  }
+  const colorKey = input.colorKey ?? "auto";
+  if (!isCalendarEventColor(colorKey)) throw new Error("Etkinlik rengi geçersiz.");
   if (existing) {
     getDb().prepare(
-      `UPDATE calendar_events SET brand_id = ?, type = ?, title = ?, description = ?,
+      `UPDATE calendar_events SET brand_id = ?, type = ?, color_key = ?, title = ?, description = ?,
          start_at = ?, end_at = ?, all_day = ?, location = ?, guest_visible = ?,
          sync_status = 'pending', sync_error = NULL, deleted_at = NULL,
          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
-    ).run(input.brandId, input.type, input.title, input.description, input.startAt, input.endAt,
+    ).run(input.brandId, input.type, colorKey, input.title, input.description, input.startAt, input.endAt,
       input.allDay ? 1 : 0, input.location, input.guestVisible ? 1 : 0, id);
   } else {
     getDb().prepare(
       `INSERT INTO calendar_events
-         (id, brand_id, type, title, description, start_at, end_at, all_day, location,
+         (id, brand_id, type, color_key, title, description, start_at, end_at, all_day, location,
           guest_visible, created_by_account_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
-    ).run(id, input.brandId, input.type, input.title, input.description, input.startAt, input.endAt,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
+    ).run(id, input.brandId, input.type, colorKey, input.title, input.description, input.startAt, input.endAt,
       input.allDay ? 1 : 0, input.location, input.guestVisible ? 1 : 0, input.accountId);
   }
   return id;
@@ -111,6 +131,7 @@ export interface GoogleCalendarEventRecord {
   status: string;
   brandId: string | null;
   type: CalendarEventType;
+  colorKey?: CalendarEventColor;
   title: string;
   description: string | null;
   startAt: string;
@@ -122,6 +143,7 @@ export interface GoogleCalendarEventRecord {
 
 export function applyInboundGoogleEvent(remote: GoogleCalendarEventRecord): "inserted" | "updated" | "ignored" {
   const db = getDb();
+  const colorKey = isCalendarEventColor(remote.colorKey) ? remote.colorKey : "auto";
   const validBrandId = remote.brandId && db.prepare("SELECT 1 FROM brands WHERE id = ?").get(remote.brandId)
     ? remote.brandId : null;
   const local = plainOne<CalendarEvent>(db.prepare(
@@ -139,11 +161,11 @@ export function applyInboundGoogleEvent(remote: GoogleCalendarEventRecord): "ins
       return "updated";
     }
     db.prepare(
-      `UPDATE calendar_events SET brand_id = ?, type = ?, title = ?, description = ?, start_at = ?, end_at = ?,
+      `UPDATE calendar_events SET brand_id = ?, type = ?, color_key = ?, title = ?, description = ?, start_at = ?, end_at = ?,
          all_day = ?, location = ?, guest_visible = ?, google_event_id = ?, google_etag = ?, google_updated_at = ?,
          sync_status = 'synced', sync_error = NULL, deleted_at = ?, updated_at = ?, last_synced_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?`,
-    ).run(validBrandId, remote.type, remote.title, remote.description, remote.startAt, remote.endAt,
+    ).run(validBrandId, remote.type, colorKey, remote.title, remote.description, remote.startAt, remote.endAt,
       remote.allDay ? 1 : 0, remote.location, remote.guestVisible ? 1 : 0, remote.googleEventId,
       remote.etag, remote.updatedAt, deletedAt, remote.updatedAt, local.id);
     return "updated";
@@ -151,10 +173,10 @@ export function applyInboundGoogleEvent(remote: GoogleCalendarEventRecord): "ins
   if (remote.status === "cancelled") return "ignored";
   db.prepare(
     `INSERT INTO calendar_events
-       (id, brand_id, type, title, description, start_at, end_at, all_day, location, guest_visible,
+       (id, brand_id, type, color_key, title, description, start_at, end_at, all_day, location, guest_visible,
         google_event_id, google_etag, google_updated_at, sync_status, deleted_at, created_at, updated_at, last_synced_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', NULL, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
-  ).run(remote.trackerId ?? crypto.randomUUID(), validBrandId, remote.type, remote.title,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', NULL, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
+  ).run(remote.trackerId ?? crypto.randomUUID(), validBrandId, remote.type, colorKey, remote.title,
     remote.description, remote.startAt, remote.endAt, remote.allDay ? 1 : 0, remote.location,
     remote.guestVisible ? 1 : 0, remote.googleEventId, remote.etag, remote.updatedAt,
     remote.updatedAt, remote.updatedAt);

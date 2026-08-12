@@ -1,7 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const RUNTIME_UPLOAD_ROOT = path.join(process.cwd(), "data", "uploads");
+function runtimeUploadRoot(): string {
+  return process.env.INTURLAM_UPLOAD_ROOT || path.join(process.cwd(), "data", "uploads");
+}
+
+export interface SavedImageFile {
+  filePath: string;
+  originalName: string | null;
+}
 
 export const MAX_IMAGE_FILES = 6;
 export const MAX_IMAGE_SIZE = 8 * 1024 * 1024; // 8MB
@@ -36,9 +43,9 @@ export function validateImageFiles(images: File[]): void {
 export async function saveImageFiles(
   images: File[],
   subdir: string,
-): Promise<{ filePath: string; originalName: string | null }[]> {
+): Promise<SavedImageFile[]> {
   if (images.length === 0) return [];
-  const uploadDir = path.join(RUNTIME_UPLOAD_ROOT, subdir);
+  const uploadDir = path.join(/* turbopackIgnore: true */ runtimeUploadRoot(), subdir);
   await fs.mkdir(uploadDir, { recursive: true });
   const saved: { filePath: string; originalName: string | null }[] = [];
   try {
@@ -46,7 +53,7 @@ export async function saveImageFiles(
       const ext = ALLOWED_IMAGE_EXTENSIONS[image.type];
       const fileName = `${crypto.randomUUID()}.${ext}`;
       const buffer = Buffer.from(await image.arrayBuffer());
-      await fs.writeFile(path.join(uploadDir, fileName), buffer);
+      await fs.writeFile(path.join(/* turbopackIgnore: true */ uploadDir, fileName), buffer);
       saved.push({ filePath: `/uploads/${subdir}/${fileName}`, originalName: image.name || null });
     }
   } catch (error) {
@@ -57,11 +64,31 @@ export async function saveImageFiles(
 }
 
 export async function deleteUploadedFile(filePath: string): Promise<void> {
+  const root = runtimeUploadRoot();
+  if (!filePath.startsWith("/uploads/")) return;
   const relative = filePath.replace(/^\/uploads\//, "");
-  const abs = path.resolve(RUNTIME_UPLOAD_ROOT, relative);
-  const insideRoot = path.relative(RUNTIME_UPLOAD_ROOT, abs);
+  const abs = path.resolve(root, relative);
+  const insideRoot = path.relative(root, abs);
   if (insideRoot.startsWith("..") || path.isAbsolute(insideRoot)) return;
   await fs.unlink(abs).catch(() => {});
+}
+
+export async function deleteUploadedFiles(filePaths: string[]): Promise<void> {
+  await Promise.all(Array.from(new Set(filePaths)).map(deleteUploadedFile));
+}
+
+export async function withSavedImageFiles<T>(
+  images: File[],
+  subdir: string,
+  persist: (saved: SavedImageFile[]) => T | Promise<T>,
+): Promise<T> {
+  const saved = await saveImageFiles(images, subdir);
+  try {
+    return await persist(saved);
+  } catch (error) {
+    await deleteUploadedFiles(saved.map((file) => file.filePath));
+    throw error;
+  }
 }
 
 export async function cloneUploadedFile(
@@ -69,8 +96,9 @@ export async function cloneUploadedFile(
   subdir: string,
 ): Promise<{ filePath: string; originalName: string | null }> {
   const relative = filePath.replace(/^\/uploads\//, "");
-  const source = path.resolve(RUNTIME_UPLOAD_ROOT, relative);
-  const insideRoot = path.relative(RUNTIME_UPLOAD_ROOT, source);
+  const root = runtimeUploadRoot();
+  const source = path.resolve(root, relative);
+  const insideRoot = path.relative(root, source);
   if (insideRoot.startsWith("..") || path.isAbsolute(insideRoot)) {
     throw new Error("Kopyalanacak görsel yolu geçersiz.");
   }
@@ -78,10 +106,10 @@ export async function cloneUploadedFile(
   if (![".png", ".jpg", ".jpeg", ".gif", ".webp"].includes(extension)) {
     throw new Error("Kopyalanacak dosya desteklenen bir görsel değil.");
   }
-  const targetDir = path.join(RUNTIME_UPLOAD_ROOT, subdir);
+  const targetDir = path.join(/* turbopackIgnore: true */ root, subdir);
   await fs.mkdir(targetDir, { recursive: true });
   const targetName = `${crypto.randomUUID()}${extension === ".jpeg" ? ".jpg" : extension}`;
-  await fs.copyFile(source, path.join(targetDir, targetName));
+  await fs.copyFile(source, path.join(/* turbopackIgnore: true */ targetDir, targetName));
   return { filePath: `/uploads/${subdir}/${targetName}`, originalName: null };
 }
 

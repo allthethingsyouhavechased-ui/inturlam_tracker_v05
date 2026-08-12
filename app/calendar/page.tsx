@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CalendarDateTimeFields from "@/components/CalendarDateTimeFields";
+import CalendarBrandVisibilityFields from "@/components/CalendarBrandVisibilityFields";
 import EventCalendarGrid from "@/components/EventCalendarGrid";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
@@ -10,6 +11,7 @@ import {
   monthParamISO,
   monthParamToDate,
   shiftMonthParam,
+  shiftISODate,
   shouldShowTodayShortcut,
   todayISO,
   validISODateParam,
@@ -18,6 +20,8 @@ import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
 import { getCalendarEvent, listCalendarEvents } from "@/lib/repositories/calendarEvents";
 import type { CalendarEventType } from "@/lib/types";
+import { CALENDAR_EVENT_COLORS } from "@/lib/calendar/colors";
+import { calendarFormEndDate } from "@/lib/calendar/time";
 
 export const dynamic = "force-dynamic";
 
@@ -68,11 +72,12 @@ export default async function CalendarPage({
   const type = TYPES.some((item) => item.value === sp.type) ? sp.type as CalendarEventType : null;
   const events = listCalendarEvents({
     rangeStart: gridDays[0].date,
-    rangeEnd: `${gridDays.at(-1)!.date}T23:59:59Z`,
+    rangeEnd: shiftISODate(gridDays.at(-1)!.date, 1),
     brandId,
     type,
   });
-  const selected = sp.event ? getCalendarEvent(sp.event) : undefined;
+  const selectedEvent = sp.event ? getCalendarEvent(sp.event) : undefined;
+  const selected = selectedEvent?.deleted_at ? undefined : selectedEvent;
   const today = todayISO();
   const todayMonth = today.slice(0, 7);
   const requestedDay = validISODateParam(sp.day);
@@ -164,23 +169,22 @@ export default async function CalendarPage({
                 {TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select>
             </label>
-            <label className="grid min-w-0 gap-1 text-xs text-secondary">
-              Marka
-              <select name="brandId" defaultValue={selected?.brand_id ?? brandId ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-2 text-sm">
-                <option value="">Ajans geneli</option>
-                {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
-              </select>
-            </label>
+            <CalendarBrandVisibilityFields brands={brands.map(({ id, name }) => ({ id, name }))} initialBrandId={selected?.brand_id ?? brandId ?? ""} initialGuestVisible={selected?.guest_visible === 1} />
           </div>
+          <label className="grid min-w-0 gap-1 text-xs text-secondary">
+            Etkinlik rengi
+            <select name="colorKey" defaultValue={selected?.color_key ?? "auto"} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-2 text-sm">
+              {CALENDAR_EVENT_COLORS.map((color) => <option key={color.key} value={color.key}>{color.label}</option>)}
+            </select>
+          </label>
           <CalendarDateTimeFields
             key={selected?.id ?? selectedDay ?? "new-event"}
             initialAllDay={selected?.all_day === 1}
             initialStart={selected?.all_day === 1 ? selected.start_at.slice(0, 10) : selected ? localDateTime(selected.start_at) : selectedDay ? `${selectedDay}T09:00` : ""}
-            initialEnd={selected?.all_day === 1 ? selected.end_at.slice(0, 10) : selected ? localDateTime(selected.end_at) : selectedDay ? `${selectedDay}T10:00` : ""}
+            initialEnd={selected?.all_day === 1 ? calendarFormEndDate(selected) : selected ? localDateTime(selected.end_at) : selectedDay ? `${selectedDay}T10:00` : ""}
           />
           <label className="grid min-w-0 gap-1 text-xs text-secondary">Konum<input name="location" maxLength={300} defaultValue={selected?.location ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm" /></label>
           <label className="grid min-w-0 gap-1 text-xs text-secondary">Açıklama<textarea name="description" maxLength={5000} rows={3} defaultValue={selected?.description ?? ""} className="min-w-0 w-full rounded-lg border border-border-default bg-background px-3 py-2 text-sm" /></label>
-          <label className="inline-flex items-center gap-2 text-xs font-medium text-secondary"><input type="checkbox" name="guestVisible" value="1" defaultChecked={selected?.guest_visible === 1} />Guest ile paylaş</label>
           <button className="min-h-10 w-full rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700">{selected ? "Değişiklikleri kaydet" : "Etkinlik oluştur"}</button>
           {selected && <button formAction={cancelCalendarEventAction.bind(null, selected.id)} className="min-h-9 w-full rounded-lg border border-red-200 text-xs font-semibold text-red-700">Etkinliği iptal et</button>}
         </form>

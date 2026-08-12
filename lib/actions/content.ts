@@ -18,6 +18,8 @@ import {
   updateContentStatus,
 } from "@/lib/repositories/content";
 import type { ContentStatus, ContentType } from "@/lib/types";
+import { listUploadPathsForContent } from "@/lib/repositories/uploadReferences";
+import { deleteUploadedFiles } from "@/lib/uploads";
 
 function cleanValue(value: FormDataEntryValue | null): string | null {
   const s = String(value ?? "").trim();
@@ -148,7 +150,9 @@ export async function unarchiveContentItemAction(contentId: string) {
 export async function deleteContentItemAction(contentId: string) {
   await requireSession();
   const content = getContentItem(contentId);
+  const uploadPaths = listUploadPathsForContent(contentId);
   deleteContentItem(contentId);
+  await deleteUploadedFiles(uploadPaths);
   await recordActivity({
     action: "content.delete",
     entityType: "content",

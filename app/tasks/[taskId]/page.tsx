@@ -159,7 +159,7 @@ export default async function TaskPage({
           <section className="rounded-xl border border-border-default bg-surface p-4">
             <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">İŞ AKIŞI</h2>
             <div className="mt-4 space-y-4">
-              <label className="grid gap-1.5 text-xs font-medium text-muted">Durum<TaskStatusSelect taskId={task.id} status={task.status} /></label>
+              <label className="grid gap-1.5 text-xs font-medium text-muted">Durum<TaskStatusSelect taskId={task.id} status={task.status} locked={task.origin === "guest" && !task.due_date} />{task.origin === "guest" && !task.due_date && <span className="text-[10px] leading-4 text-amber-500">Durumu ilerletmek için önce iç teslim tarihini planlayın.</span>}</label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Atanan<AssigneeSelect taskId={task.id} assigneeId={task.assignee_id} people={people} /></label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Öncelik<TaskPrioritySelect taskId={task.id} priority={task.priority} /></label>
               {me.is_manager === 1 && <label className="grid gap-1.5 text-xs font-medium text-muted">Ağırlık puanı<TaskWeightSelect taskId={task.id} weight={task.weight_points} /></label>}

@@ -46,14 +46,27 @@ export function createComment(input: {
   taskId: string;
   authorId: string;
   body: string;
-}): string {
+}, attachments: Array<{ filePath: string; originalName: string | null }> = []): string {
   const id = crypto.randomUUID();
-  getDb()
-    .prepare(
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
       "INSERT INTO comments (id, task_id, author_id, body) VALUES (?, ?, ?, ?)",
     )
     .run(id, input.taskId, input.authorId, input.body);
-  return id;
+    const insertAttachment = db.prepare(
+      "INSERT INTO comment_attachments (id, comment_id, file_path, original_name) VALUES (?, ?, ?, ?)",
+    );
+    for (const attachment of attachments) {
+      insertAttachment.run(crypto.randomUUID(), id, attachment.filePath, attachment.originalName);
+    }
+    db.exec("COMMIT");
+    return id;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function addCommentAttachment(input: {

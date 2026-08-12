@@ -43,28 +43,40 @@ export function listSharedAttachments(taskId: string): SharedTaskAttachment[] {
   ).all(taskId));
 }
 
-function toDto(row: GuestTaskRow): GuestTaskDTO {
+function toDto(row: GuestTaskRow, viewerAccountId: string): GuestTaskDTO {
   return {
     ...row,
     editable: row.status === "Beklemede",
-    comments: listSharedComments(row.id),
-    attachments: listSharedAttachments(row.id),
+    comments: listSharedComments(row.id).map(({ id, author_name, body, created_at, updated_at }) => ({
+      id,
+      author_name,
+      body,
+      created_at,
+      updated_at,
+    })),
+    attachments: listSharedAttachments(row.id).map(({ id, account_id, file_path, original_name, created_at }) => ({
+      id,
+      file_path,
+      original_name,
+      created_at,
+      can_delete: account_id === viewerAccountId,
+    })),
   };
 }
 
-export function listGuestTasks(brandId: string): GuestTaskDTO[] {
+export function listGuestTasks(brandId: string, viewerAccountId: string): GuestTaskDTO[] {
   return plainList<GuestTaskRow>(getDb().prepare(
     `${GUEST_TASK_SELECT}
       WHERE t.origin = 'guest' AND b.id = ?
       ORDER BY CASE WHEN t.due_date IS NULL THEN 0 ELSE 1 END, t.requested_date, t.created_at DESC`,
-  ).all(brandId)).map(toDto);
+  ).all(brandId)).map((row) => toDto(row, viewerAccountId));
 }
 
-export function getGuestTask(taskId: string, brandId: string): GuestTaskDTO | undefined {
+export function getGuestTask(taskId: string, brandId: string, viewerAccountId: string): GuestTaskDTO | undefined {
   const row = plainOne<GuestTaskRow>(getDb().prepare(
     `${GUEST_TASK_SELECT} WHERE t.id = ? AND t.origin = 'guest' AND b.id = ?`,
   ).get(taskId, brandId));
-  return row ? toDto(row) : undefined;
+  return row ? toDto(row, viewerAccountId) : undefined;
 }
 
 export function createGuestTask(input: {
@@ -121,12 +133,30 @@ export function updateGuestTask(input: {
   return result.changes === 1;
 }
 
-export function addSharedComment(input: { taskId: string; accountId: string; authorName: string; body: string }): string {
+export function addSharedComment(
+  input: { taskId: string; accountId: string; authorName: string; body: string },
+  attachments: Array<{ filePath: string; originalName: string | null }> = [],
+): string {
   const id = crypto.randomUUID();
-  getDb().prepare(
-    `INSERT INTO task_shared_comments (id, task_id, account_id, author_name, body) VALUES (?, ?, ?, ?, ?)`,
-  ).run(id, input.taskId, input.accountId, input.authorName, input.body);
-  return id;
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
+      `INSERT INTO task_shared_comments (id, task_id, account_id, author_name, body) VALUES (?, ?, ?, ?, ?)`,
+    ).run(id, input.taskId, input.accountId, input.authorName, input.body);
+    const insertAttachment = db.prepare(
+      `INSERT INTO task_shared_attachments (id, task_id, account_id, file_path, original_name)
+       VALUES (?, ?, ?, ?, ?)`,
+    );
+    for (const attachment of attachments) {
+      insertAttachment.run(crypto.randomUUID(), input.taskId, input.accountId, attachment.filePath, attachment.originalName);
+    }
+    db.exec("COMMIT");
+    return id;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function addSharedAttachments(input: {
@@ -152,6 +182,20 @@ export function getSharedAttachment(id: string, taskId: string): SharedTaskAttac
 
 export function deleteSharedAttachment(id: string, taskId: string): void {
   getDb().prepare("DELETE FROM task_shared_attachments WHERE id = ? AND task_id = ?").run(id, taskId);
+}
+
+export function deleteGuestOwnedSharedAttachment(
+  id: string,
+  taskId: string,
+  accountId: string,
+): SharedTaskAttachment | undefined {
+  const attachment = getSharedAttachment(id, taskId);
+  if (!attachment) return undefined;
+  if (attachment.account_id !== accountId) {
+    throw new Error("Yalnızca kendi eklerinizi kaldırabilirsiniz.");
+  }
+  deleteSharedAttachment(id, taskId);
+  return attachment;
 }
 
 export function guestCanAccessUpload(accountBrandId: string, filePath: string): boolean {

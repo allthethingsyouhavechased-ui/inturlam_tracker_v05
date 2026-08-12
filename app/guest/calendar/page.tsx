@@ -8,6 +8,7 @@ import {
   monthParamISO,
   monthParamToDate,
   shiftMonthParam,
+  shiftISODate,
   shouldShowTodayShortcut,
   todayISO,
 } from "@/lib/date";
@@ -22,7 +23,7 @@ export default async function GuestCalendarPage({ searchParams }: { searchParams
   const month = monthParamISO(monthDate);
   const todayMonth = todayISO().slice(0, 7);
   const days = calendarGridDays(monthDate);
-  const events = listGuestCalendarEvents(actor.brand.id, days[0].date, `${days.at(-1)!.date}T23:59:59Z`);
+  const events = listGuestCalendarEvents(actor.brand.id, days[0].date, shiftISODate(days.at(-1)!.date, 1));
   return (
     <div>
       <PageHeader

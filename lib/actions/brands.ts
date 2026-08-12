@@ -13,7 +13,8 @@ import {
   updateBrand,
   updateBrandLogo,
 } from "@/lib/repositories/brands";
-import { deleteUploadedFile, saveBrandLogo } from "@/lib/uploads";
+import { deleteUploadedFile, deleteUploadedFiles, saveBrandLogo } from "@/lib/uploads";
+import { listUploadPathsForBrand } from "@/lib/repositories/uploadReferences";
 
 function extractLogoFile(formData: FormData): File | null {
   const value = formData.get("logo");
@@ -141,7 +142,9 @@ export async function deleteBrandAction(brandId: string) {
   if (brand.archived !== 1) {
     throw new Error("Önce markayı arşivle, sonra sil.");
   }
+  const uploadPaths = listUploadPathsForBrand(brandId);
   deleteBrand(brandId);
+  await deleteUploadedFiles(uploadPaths);
   if (brand.logo_path) {
     await deleteUploadedFile(brand.logo_path);
   }
