@@ -11,6 +11,7 @@ import {
   TASK_STATUSES,
 } from "@/lib/constants";
 import { formatDateShort, todayISO } from "@/lib/date";
+import { announceGuestTaskPlanned, announceGuestTaskStatus } from "@/lib/guestTaskCommunications";
 import { assertWeightPoints } from "@/lib/progress";
 import { requireSession } from "@/lib/identity";
 import { notifyTaskUpdate } from "@/lib/notifications";
@@ -105,13 +106,23 @@ export async function setTaskStatusAction(taskId: string, status: TaskStatus) {
   const task = getTask(taskId);
   const changed = updateTaskStatus(taskId, status, actor.id);
   if (changed) {
-    await recordActivity({
-      action: "task.status",
-      entityType: "task",
-      entityId: taskId,
-      brandId: task?.brand_id ?? null,
-      summary: `“${task?.title ?? "Görev"}” görevini ${TASK_STATUS_LABEL[status]} durumuna aldı`,
-    });
+    if (task?.origin === "guest") {
+      await announceGuestTaskStatus({
+        actor,
+        taskId,
+        taskTitle: task.title,
+        brandId: task.brand_id,
+        statusLabel: TASK_STATUS_LABEL[status],
+      });
+    } else {
+      await recordActivity({
+        action: "task.status",
+        entityType: "task",
+        entityId: taskId,
+        brandId: task?.brand_id ?? null,
+        summary: `“${task?.title ?? "Görev"}” görevini ${TASK_STATUS_LABEL[status]} durumuna aldı`,
+      });
+    }
   }
 
   // Tekrar eden görev tamamlandıysa bir sonraki örneğini aç. Yeni görev
@@ -191,17 +202,22 @@ export async function setTaskAssigneeAction(
 }
 
 export async function setTaskDueDateAction(taskId: string, dueDate: string | null) {
-  await requireSession();
+  const actor = await requireSession();
   const task = getTask(taskId);
+  if (!task) throw new Error("Görev bulunamadı.");
   const cleanDueDate = requiredDate(dueDate);
   updateTaskDueDate(taskId, cleanDueDate);
-  await recordActivity({
-    action: "task.duedate",
-    entityType: "task",
-    entityId: taskId,
-    brandId: task?.brand_id ?? null,
-    summary: `“${task?.title ?? "Görev"}” teslim tarihini ${formatDateShort(cleanDueDate)} yaptı`,
-  });
+  if (task.origin === "guest" && !task.due_date) {
+    await announceGuestTaskPlanned({ actor, taskId, taskTitle: task.title, brandId: task.brand_id });
+  } else {
+    await recordActivity({
+      action: "task.duedate",
+      entityType: "task",
+      entityId: taskId,
+      brandId: task.brand_id,
+      summary: `“${task.title}” teslim tarihini ${formatDateShort(cleanDueDate)} yaptı`,
+    });
+  }
   revalidatePath("/", "layout");
 }
 
@@ -239,13 +255,17 @@ export async function updateTaskDetailsAction(formData: FormData) {
     updateTaskDetails({ id, title, dueDate, notes }, saved),
   );
 
-  await recordActivity({
-    action: "task.details",
-    entityType: "task",
-    entityId: id,
-    brandId: task?.brand_id ?? null,
-    summary: `“${title}” görev detaylarını güncelledi`,
-  });
+  if (task?.origin === "guest" && !task.due_date) {
+    await announceGuestTaskPlanned({ actor, taskId: id, taskTitle: title, brandId: task.brand_id });
+  } else {
+    await recordActivity({
+      action: "task.details",
+      entityType: "task",
+      entityId: id,
+      brandId: task?.brand_id ?? null,
+      summary: `“${title}” görev detaylarını güncelledi`,
+    });
+  }
 
   notifyTaskUpdate({
     actor,
@@ -340,6 +360,10 @@ export async function bulkSetTaskStatusAction(ids: string[], status: TaskStatus)
   const actor = await requireSession();
   if (!TASK_STATUSES.includes(status)) throw new Error("Geçersiz durum.");
   const clean = cleanIds(ids);
+  const guestTasksToNotify = clean.flatMap((id) => {
+    const task = getTask(id);
+    return task?.origin === "guest" && task.status !== status ? [task] : [];
+  });
   const changedCount = bulkUpdateTaskStatus(clean, status, actor.id);
   if (changedCount > 0) {
     await recordActivity({
@@ -349,6 +373,15 @@ export async function bulkSetTaskStatusAction(ids: string[], status: TaskStatus)
       brandId: null,
       summary: `${changedCount} görevi ${TASK_STATUS_LABEL[status]} durumuna aldı`,
     });
+    for (const task of guestTasksToNotify) {
+      await announceGuestTaskStatus({
+        actor,
+        taskId: task.id,
+        taskTitle: task.title,
+        brandId: task.brand_id,
+        statusLabel: TASK_STATUS_LABEL[status],
+      });
+    }
   }
   revalidatePath("/", "layout");
 }

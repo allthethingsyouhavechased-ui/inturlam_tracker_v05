@@ -1,6 +1,5 @@
 import Link from "next/link";
 import CalendarDateTimeFields from "@/components/CalendarDateTimeFields";
-import CalendarBrandVisibilityFields from "@/components/CalendarBrandVisibilityFields";
 import EventCalendarGrid from "@/components/EventCalendarGrid";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
@@ -162,14 +161,22 @@ export default async function CalendarPage({
             Başlık
             <input name="title" required maxLength={200} defaultValue={selected?.title ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm" />
           </label>
-          <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <label className="grid min-w-0 gap-1 text-xs text-secondary">
               Tür
               <select name="type" defaultValue={selected?.type ?? "Toplanti"} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-2 text-sm">
                 {TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select>
             </label>
-            <CalendarBrandVisibilityFields brands={brands.map(({ id, name }) => ({ id, name }))} initialBrandId={selected?.brand_id ?? brandId ?? ""} initialGuestVisible={selected?.guest_visible === 1} />
+            <CalendarDateTimeFields
+              key={selected?.id ?? selectedDay ?? "new-event"}
+              brands={brands.map(({ id, name }) => ({ id, name }))}
+              initialBrandId={selected?.brand_id ?? brandId ?? ""}
+              initialGuestVisible={selected?.guest_visible === 1}
+              initialAllDay={selected?.all_day === 1}
+              initialStart={selected?.all_day === 1 ? selected.start_at.slice(0, 10) : selected ? localDateTime(selected.start_at) : selectedDay ? `${selectedDay}T09:00` : ""}
+              initialEnd={selected?.all_day === 1 ? calendarFormEndDate(selected) : selected ? localDateTime(selected.end_at) : selectedDay ? `${selectedDay}T10:00` : ""}
+            />
           </div>
           <label className="grid min-w-0 gap-1 text-xs text-secondary">
             Etkinlik rengi
@@ -177,12 +184,6 @@ export default async function CalendarPage({
               {CALENDAR_EVENT_COLORS.map((color) => <option key={color.key} value={color.key}>{color.label}</option>)}
             </select>
           </label>
-          <CalendarDateTimeFields
-            key={selected?.id ?? selectedDay ?? "new-event"}
-            initialAllDay={selected?.all_day === 1}
-            initialStart={selected?.all_day === 1 ? selected.start_at.slice(0, 10) : selected ? localDateTime(selected.start_at) : selectedDay ? `${selectedDay}T09:00` : ""}
-            initialEnd={selected?.all_day === 1 ? calendarFormEndDate(selected) : selected ? localDateTime(selected.end_at) : selectedDay ? `${selectedDay}T10:00` : ""}
-          />
           <label className="grid min-w-0 gap-1 text-xs text-secondary">Konum<input name="location" maxLength={300} defaultValue={selected?.location ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm" /></label>
           <label className="grid min-w-0 gap-1 text-xs text-secondary">Açıklama<textarea name="description" maxLength={5000} rows={3} defaultValue={selected?.description ?? ""} className="min-w-0 w-full rounded-lg border border-border-default bg-background px-3 py-2 text-sm" /></label>
           <button className="min-h-10 w-full rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700">{selected ? "Değişiklikleri kaydet" : "Etkinlik oluştur"}</button>

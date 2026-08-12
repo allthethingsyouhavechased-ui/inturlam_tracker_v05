@@ -86,15 +86,20 @@ export default function GuestNotificationBell({
             {notifications.map((item) => {
               const unreadItem = item.read === 0 && !locallyRead.has(item.id);
               const month = item.calendar_event_start_at?.slice(0, 7);
+              const href = item.task_id
+                ? `/guest/tasks/${item.task_id}`
+                : month
+                  ? `/guest/calendar?month=${month}`
+                  : "/guest/calendar";
               return (
                 <li key={item.id}>
                   <Link
-                    href={month ? `/guest/calendar?month=${month}` : "/guest/calendar"}
+                    href={href}
                     onClick={() => { markRead(item.id); setOpen(false); }}
                     className={`flex gap-2.5 rounded-lg px-2 py-2 hover:bg-surface-hover ${unreadItem ? "bg-brand-50 dark:bg-brand-950/40" : ""}`}
                   >
                     <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                      <Icon name="calendar" className="size-3.5" />
+                      <Icon name={item.task_id ? "tasks" : "calendar"} className="size-3.5" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block text-sm leading-5 ${unreadItem ? "font-medium text-foreground" : "text-secondary"}`}>{item.summary}</span>

@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentActor, requireGuestSession, requireSession } from "@/lib/identity";
+import {
+  announceGuestComment,
+  announceGuestTaskCreated,
+  announceTeamSharedReply,
+} from "@/lib/guestTaskCommunications";
 import { getTask } from "@/lib/repositories/tasks";
 import { addSharedComment, createGuestTask, deleteGuestOwnedSharedAttachment, getGuestTask, updateGuestTask } from "@/lib/repositories/guestTasks";
 import { deleteUploadedFile, extractImageFiles, validateImageFiles, withSavedImageFiles } from "@/lib/uploads";
@@ -32,6 +37,13 @@ export async function createGuestTaskAction(formData: FormData) {
   const taskId = await withSavedImageFiles(images, "guest-tasks", (saved) =>
     createGuestTask({ brandId: actor.brand.id, accountId: actor.account_id, title, brief, requestedDate: date, attachments: saved }),
   );
+  await announceGuestTaskCreated({
+    guestAccountId: actor.account_id,
+    guestName: `${actor.brand.name} Guest`,
+    taskId,
+    taskTitle: title,
+    brandId: actor.brand.id,
+  });
   revalidatePath("/guest", "layout");
   redirect(`/guest/tasks/${taskId}`);
 }
@@ -49,12 +61,23 @@ export async function addGuestSharedCommentAction(formData: FormData) {
   const actor = await requireGuestSession();
   const taskId = String(formData.get("taskId") ?? "").trim();
   if (!getGuestTask(taskId, actor.brand.id, actor.account_id)) throw new Error("Görev bulunamadı.");
+  const task = getTask(taskId);
+  if (!task || task.origin !== "guest") throw new Error("Görev bulunamadı.");
   const body = text(formData, "body", 2000);
   const images = extractImageFiles(formData);
   validateImageFiles(images);
   await withSavedImageFiles(images, "guest-tasks", (saved) =>
     addSharedComment({ taskId, accountId: actor.account_id, authorName: `${actor.brand.name} Guest`, body }, saved),
   );
+  await announceGuestComment({
+    guestAccountId: actor.account_id,
+    guestName: `${actor.brand.name} Guest`,
+    taskId,
+    taskTitle: task.title,
+    brandId: actor.brand.id,
+    assigneeId: task.assignee_id,
+    body,
+  });
   revalidatePath(`/guest/tasks/${taskId}`);
 }
 
@@ -74,12 +97,20 @@ export async function addTeamSharedCommentAction(formData: FormData) {
   const actor = await getCurrentActor();
   if (!actor || actor.kind !== "team" || actor.person.id !== person.id) throw new Error("Ekip oturumu gerekli.");
   const taskId = String(formData.get("taskId") ?? "").trim();
-  if (!getTask(taskId)) throw new Error("Görev bulunamadı.");
+  const task = getTask(taskId);
+  if (!task || task.origin !== "guest") throw new Error("Guest görevi bulunamadı.");
   const body = text(formData, "body", 2000);
   const images = extractImageFiles(formData);
   validateImageFiles(images);
   await withSavedImageFiles(images, "guest-tasks", (saved) =>
     addSharedComment({ taskId, accountId: actor.account_id, authorName: person.name, body }, saved),
   );
+  await announceTeamSharedReply({
+    actor: person,
+    taskId,
+    taskTitle: task.title,
+    brandId: task.brand_id,
+    body,
+  });
   revalidatePath(`/tasks/${taskId}`);
 }

@@ -12,6 +12,7 @@ const { applyInboundGoogleEvent, getCalendarEvent, listCalendarEvents, listGuest
 const { notifyGuestCalendarEvent } = await import("@/lib/notifications");
 const { listNotificationsForRecipient } = await import("@/lib/repositories/notifications");
 const { calendarEventTone } = await import("@/lib/calendar/colors");
+const { calendarWeekEventSegments } = await import("@/lib/calendar/layout");
 const { calendarEventStartDate, eventOccursOnDate, normalizeCalendarFormRange } = await import("@/lib/calendar/time");
 const { calendarEventToGoogleBody } = await import("@/lib/calendar/google");
 
@@ -79,6 +80,44 @@ describe("v03 etkinlik takvimi", () => {
     assert.equal(eventOccursOnDate(event, "2026-08-12"), false);
   });
 
+  it("çok günlük etkinliği haftada tek ve kesintisiz bir segmente dönüştürür", () => {
+    const week = Array.from({ length: 7 }, (_, index) => ({
+      date: `2026-08-${String(index + 3).padStart(2, "0")}`,
+      inMonth: true,
+    }));
+    const event = {
+      id: "multi", brand_id: "b1", type: "Cekim", color_key: "rose", title: "Üç günlük çekim",
+      description: null, start_at: "2026-08-04", end_at: "2026-08-07", all_day: 1,
+      location: null, guest_visible: 0, google_event_id: null, google_etag: null,
+      google_updated_at: null, sync_status: "pending", sync_error: null, deleted_at: null,
+      created_by_account_id: null, created_at: "", updated_at: "", last_synced_at: null,
+    } as const;
+
+    const segments = calendarWeekEventSegments([event], week);
+    assert.equal(segments.length, 1);
+    assert.deepEqual(
+      { startColumn: segments[0].startColumn, span: segments[0].span, lane: segments[0].lane },
+      { startColumn: 2, span: 3, lane: 0 },
+    );
+  });
+
+  it("hafta sınırını aşan etkinliği aynı şeritte devam işaretleriyle böler", () => {
+    const firstWeek = Array.from({ length: 7 }, (_, index) => ({ date: `2026-08-${String(index + 3).padStart(2, "0")}`, inMonth: true }));
+    const secondWeek = Array.from({ length: 7 }, (_, index) => ({ date: `2026-08-${String(index + 10).padStart(2, "0")}`, inMonth: true }));
+    const event = {
+      id: "cross-week", brand_id: null, type: "Toplanti", color_key: "blue", title: "Uzun toplantı",
+      description: null, start_at: "2026-08-08", end_at: "2026-08-13", all_day: 1,
+      location: null, guest_visible: 0, google_event_id: null, google_etag: null,
+      google_updated_at: null, sync_status: "pending", sync_error: null, deleted_at: null,
+      created_by_account_id: null, created_at: "", updated_at: "", last_synced_at: null,
+    } as const;
+
+    const first = calendarWeekEventSegments([event], firstWeek)[0];
+    const second = calendarWeekEventSegments([event], secondWeek)[0];
+    assert.deepEqual({ startColumn: first.startColumn, span: first.span, continuesAfter: first.continuesAfter }, { startColumn: 6, span: 2, continuesAfter: true });
+    assert.deepEqual({ startColumn: second.startColumn, span: second.span, continuesBefore: second.continuesBefore }, { startColumn: 1, span: 3, continuesBefore: true });
+  });
+
   it("ekip takvim sayfası görev sorgusu veya görev bileşeni içermez", () => {
     const source = fs.readFileSync(path.join(process.cwd(), "app/calendar/page.tsx"), "utf8");
     assert.doesNotMatch(source, /listTasksDueInRange|TaskListView|QuickAddModal/);
@@ -87,11 +126,16 @@ describe("v03 etkinlik takvimi", () => {
     assert.match(source, /preservedQuery/);
     assert.match(source, /minmax\(12rem,20rem\)/);
     assert.match(source, /name="colorKey"/);
+    assert.doesNotMatch(source, /CalendarBrandVisibilityFields/);
+    assert.doesNotMatch(source, /xl:grid-cols-1/);
 
     const gridSource = fs.readFileSync(path.join(process.cwd(), "components/EventCalendarGrid.tsx"), "utf8");
     assert.match(gridSource, /günü için etkinlik oluştur/);
     assert.match(gridSource, /dayQuery\.set\("day"/);
     assert.match(gridSource, /pointer-events-auto/);
+    assert.match(gridSource, /calendarWeekEventSegments/);
+    const dateFieldsSource = fs.readFileSync(path.join(process.cwd(), "components/CalendarDateTimeFields.tsx"), "utf8");
+    assert.match(dateFieldsSource, /Tüm gün[\s\S]*Guest ile paylaş/);
   });
 
   it("paylaşılan marka etkinliğini aktif guest hesabına yalnızca bir kez bildirir", () => {
