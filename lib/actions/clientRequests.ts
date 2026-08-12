@@ -12,12 +12,22 @@ import {
   addClientRequestComment,
   approveClientRequest,
   createClientRequest,
+  deleteClientRequest,
   getClientRequest,
+  listClientRequestAttachments,
   rejectClientRequest,
+  updateClientRequestDetails,
   updateClientRequestReview,
   type ClientRequestReviewInput,
 } from "@/lib/repositories/clientRequests";
 import type { ContentType, Person, TaskPriority } from "@/lib/types";
+import {
+  cloneUploadedFile,
+  deleteUploadedFile,
+  extractImageFiles,
+  saveImageFiles,
+  validateImageFiles,
+} from "@/lib/uploads";
 
 function clean(value: FormDataEntryValue | null): string | null {
   const text = String(value ?? "").trim();
@@ -75,8 +85,7 @@ function reviewInput(formData: FormData, reviewerId: string): ClientRequestRevie
   };
 }
 
-export async function createClientRequestAction(formData: FormData) {
-  const actor = await requireSession();
+function requestDetailsInput(formData: FormData) {
   const brandId = String(formData.get("brandId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
@@ -91,7 +100,7 @@ export async function createClientRequestAction(formData: FormData) {
   if (!department) throw new Error("Hedef departman zorunlu.");
   if (!CONTENT_TYPES.includes(contentType)) throw new Error("Geçersiz iş türü.");
 
-  const id = createClientRequest({
+  return {
     brandId,
     title,
     description,
@@ -101,17 +110,86 @@ export async function createClientRequestAction(formData: FormData) {
     department,
     contentType,
     dueDate: cleanDate(formData.get("dueDate")),
-    createdById: actor.id,
-  });
+  };
+}
+
+export async function createClientRequestAction(formData: FormData) {
+  const actor = await requireSession();
+  assertReviewer(actor);
+  const details = requestDetailsInput(formData);
+  const images = extractImageFiles(formData);
+  validateImageFiles(images);
+
+  const savedImages = await saveImageFiles(images, "requests");
+  let id: string;
+  try {
+    id = createClientRequest({
+      ...details,
+      createdById: actor.id,
+    }, savedImages);
+  } catch (error) {
+    for (const image of savedImages) await deleteUploadedFile(image.filePath);
+    throw error;
+  }
   await recordActivity({
     action: "request.create",
     entityType: "request",
     entityId: id,
-    brandId,
-    summary: `“${title}” müşteri talebini kaydetti`,
+    brandId: details.brandId,
+    summary: `“${details.title}” müşteri talebini kaydetti`,
   });
   revalidatePath("/requests");
   redirect(`/requests/${id}`);
+}
+
+export async function updateClientRequestAction(formData: FormData) {
+  const actor = await requireSession();
+  assertReviewer(actor);
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  if (!requestId) throw new Error("Talep bulunamadı.");
+  const request = getClientRequest(requestId);
+  if (!request) throw new Error("Talep bulunamadı.");
+  const details = requestDetailsInput(formData);
+  const images = extractImageFiles(formData);
+  validateImageFiles(images);
+
+  const savedImages = await saveImageFiles(images, "requests");
+  try {
+    updateClientRequestDetails({ id: requestId, ...details }, savedImages);
+  } catch (error) {
+    for (const image of savedImages) await deleteUploadedFile(image.filePath);
+    throw error;
+  }
+  await recordActivity({
+    action: "request.update",
+    entityType: "request",
+    entityId: requestId,
+    brandId: details.brandId,
+    summary: `“${details.title}” müşteri talebini güncelledi`,
+  });
+  revalidatePath(`/requests/${requestId}`);
+  revalidatePath("/requests");
+}
+
+export async function deleteClientRequestAction(requestId: string) {
+  const actor = await requireSession();
+  assertReviewer(actor);
+  const request = getClientRequest(requestId);
+  if (!request) throw new Error("Talep bulunamadı.");
+  const attachments = listClientRequestAttachments(requestId);
+  deleteClientRequest(requestId);
+  for (const attachment of attachments) {
+    await deleteUploadedFile(attachment.file_path);
+  }
+  await recordActivity({
+    action: "request.delete",
+    entityType: "request",
+    entityId: null,
+    brandId: request.brand_id,
+    summary: `“${request.title}” müşteri talebini sildi`,
+  });
+  revalidatePath("/requests", "layout");
+  redirect("/requests");
 }
 
 export async function updateClientRequestReviewAction(formData: FormData) {
@@ -157,7 +235,21 @@ export async function approveClientRequestAction(formData: FormData) {
   const input = reviewInput(formData, reviewer.id);
   const request = getClientRequest(input.id);
   if (!request) throw new Error("Talep bulunamadı.");
-  const converted = approveClientRequest(input);
+  const requestAttachments = listClientRequestAttachments(input.id);
+  const taskAttachments = [] as Array<{ filePath: string; originalName: string | null }>;
+  let converted;
+  try {
+    for (const attachment of requestAttachments) {
+      const copy = await cloneUploadedFile(attachment.file_path, "tasks");
+      taskAttachments.push({ ...copy, originalName: attachment.original_name });
+    }
+    converted = approveClientRequest(input, taskAttachments);
+  } catch (error) {
+    for (const attachment of taskAttachments) {
+      await deleteUploadedFile(attachment.filePath);
+    }
+    throw error;
+  }
   await recordActivity({
     action: "request.approve",
     entityType: "request",

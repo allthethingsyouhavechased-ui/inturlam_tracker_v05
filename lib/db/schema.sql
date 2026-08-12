@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS client_requests (
   reviewed_by_id    TEXT REFERENCES people(id) ON DELETE SET NULL,
   converted_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
   reviewed_at       TEXT,
+  archived_at       TEXT,
   created_at        TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -156,6 +157,14 @@ CREATE TABLE IF NOT EXISTS client_request_comments (
   author_id  TEXT NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
   body       TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS client_request_attachments (
+  id            TEXT PRIMARY KEY,
+  request_id    TEXT NOT NULL REFERENCES client_requests(id) ON DELETE CASCADE,
+  file_path     TEXT NOT NULL,
+  original_name TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Resmi teslim tarihinden bağımsız kişisel çalışma hedefi. Kişi bazlı ayrı
@@ -385,8 +394,12 @@ CREATE INDEX IF NOT EXISTS idx_client_requests_creator
   ON client_requests(created_by_id, updated_at);
 CREATE INDEX IF NOT EXISTS idx_client_requests_department
   ON client_requests(department, status);
+CREATE INDEX IF NOT EXISTS idx_client_requests_archive
+  ON client_requests(archived_at, reviewed_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_client_requests_converted_task
   ON client_requests(converted_task_id) WHERE converted_task_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_client_request_attachments_request
+  ON client_request_attachments(request_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_client_request_comments_request
   ON client_request_comments(request_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_personal_targets_person

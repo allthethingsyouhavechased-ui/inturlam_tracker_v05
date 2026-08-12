@@ -5,11 +5,13 @@ import SidebarToggle from "@/components/SidebarToggle";
 import Icon from "@/components/ui/Icon";
 import { getCurrentPerson } from "@/lib/identity";
 import { canReviewClientRequests } from "@/lib/requestAccess";
-import { countOpenClientRequests } from "@/lib/repositories/clientRequests";
+import { countOpenClientRequests, sweepArchivableClientRequests } from "@/lib/repositories/clientRequests";
 
 export default async function Sidebar() {
   const person = await getCurrentPerson();
-  const pendingRequestCount = canReviewClientRequests(person) ? countOpenClientRequests() : 0;
+  const canViewRequests = canReviewClientRequests(person);
+  if (canViewRequests) sweepArchivableClientRequests();
+  const pendingRequestCount = canViewRequests ? countOpenClientRequests() : 0;
 
   return (
     <aside className="app-sidebar flex h-full w-72 flex-col border-r border-border-subtle bg-surface md:w-full">
@@ -32,6 +34,7 @@ export default async function Sidebar() {
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <SidebarNav
           canViewReports={person?.is_manager === 1}
+          canViewRequests={canViewRequests}
           pendingRequestCount={pendingRequestCount}
         />
       </div>

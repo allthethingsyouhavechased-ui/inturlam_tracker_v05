@@ -47,7 +47,7 @@ Adrese ilk girdiğinde hesap seçme ekranı açılır.
 1. Listeden kendi adını seç.
 2. Şifreni girip **Giriş yap** düğmesine bas.
 
-Oturumun bu tarayıcıda 30 gün hatırlanır. Şifren yoksa yöneticiden **Ekip → Hesap
+Oturum tarayıcı kapanana kadar ve en fazla 12 saat geçerlidir. Şifren yoksa yöneticiden **Ekip → Hesap
 yönetimi** ekranında ilk şifreni belirlemesini iste.
 
 Kendi adını değiştirmek/çıkış yapmak istersen: sağ üstteki adının yanındaki
@@ -418,10 +418,16 @@ görev sayfasındaki "Hareketler" bölümleri bu akışın o markaya/göreve ait
 ## 17. Müşteri talepleri
 
 **Talepler** sayfasında müşteriden gelen briefi marka, iş türü, hedef departman,
-teslim tarihi ve referans bağlantısıyla kaydet. Kaydeden kişi kendi taleplerinin
-durumunu izler. Yunus, Sıla, Erhan ve Sosyal Medya ekibi bütün kuyruğu görebilir;
-talebe değerlendirme notu ekler, hedef departmandaki kişiye atar, önceliğini belirler
-ve onaylar. Onaylanan talep otomatik olarak içerik ve görev kaydına dönüşür.
+teslim tarihi, referans bağlantısı ve en fazla altı görselle kaydet. Bu alan yalnızca
+Yunus, Erhan, Sıla, Defne ve Cansu'ya açıktır. Yetkili kişi açık talebi düzenleyebilir,
+değerlendirme notu ekleyebilir, hedef departmandaki görev sahibini ve önceliği seçip
+onaylayabilir veya gerekçesiyle reddedebilir. Onaylanan talep, görselleriyle birlikte
+otomatik olarak içerik ve görev kaydına dönüşür.
+
+Açık ya da reddedilmiş ve henüz göreve dönüşmemiş talepler düzenlenebilir veya
+silinebilir. Reddedilmiş talep düzenlendiğinde yeniden **Beklemede** durumuna alınır.
+Göreve dönüşen talep denetim geçmişini korumak için silinmez. Onaylanan ve reddedilen
+talepler karar tarihinden yedi gün sonra aktif kuyruktan **Talep arşivi**ne taşınır.
 
 Şablonlar v02 alışma döneminde menüden ve görev oluşturma akışından kaldırıldı;
 önceki şablon verileri silinmeden korunuyor.
@@ -468,7 +474,7 @@ yazması yeterli — kişi aktif ekip listesinde olmalı (§16).
 ## 21. Bilmen gereken küçük detaylar
 
 - **Yetkiler sunucuda kontrol edilir.** Raporlar ve hesap yönetimi yalnızca
-  yöneticilere; müşteri talebi kararları tanımlı sorumlulara ve Sosyal Medya ekibine
+  yöneticilere; müşteri talebi alanı yalnızca Yunus, Erhan, Sıla, Defne ve Cansu'ya
   açıktır. Oturum açmış ekip üyeleri ortak operasyon görevlerini güncelleyebilir.
 - **Değişiklikler diğerlerine ~15 saniyede yansır.** Aynı sayfayı açık tutan biri
   senin yaptığın değişikliği hemen görmeyebilir, sayfa kendini birkaç saniyede bir

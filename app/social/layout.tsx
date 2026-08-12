@@ -20,14 +20,7 @@ export default function SocialLayout({ children }: { children: React.ReactNode }
         description="Hesap sağlığını, hazır içerik stoklarını ve haftalık paylaşım planını tek çalışma alanında yönet."
         summary={
           <div className="border-l-2 border-brand-500 pl-4 sm:ml-auto sm:max-w-md">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1">
-              <p className="text-xs font-semibold text-foreground">Hesap sağlığı</p>
-              <p className="text-[11px] font-medium text-secondary">
-                {latestRun
-                  ? `Son tarama ${formatDateTime(latestRun.started_at)}`
-                  : "Henüz tarama yapılmadı"}
-              </p>
-            </div>
+            <p className="text-xs font-semibold text-foreground">Hesap sağlığı</p>
             <p
               className={`mt-1 text-[11px] leading-4 ${
                 latestRun?.status === "error" ? "text-rose-600 dark:text-rose-400" : "text-muted"
@@ -41,12 +34,15 @@ export default function SocialLayout({ children }: { children: React.ReactNode }
                     ? `${latestRun.accounts} hesap kontrol edildi · ${latestRun.new_posts} yeni gönderi`
                     : "Takip için marka hesaplarını bağla."}
             </p>
+            <p className="mt-1 text-[11px] font-medium text-secondary">
+              {latestRun
+                ? `Son tarama ${formatDateTime(latestRun.started_at)}`
+                : "Henüz tarama yapılmadı"}
+            </p>
           </div>
         }
+        actions={<SocialTabs />}
       />
-      <div className="mb-6">
-        <SocialTabs />
-      </div>
       <div>{children}</div>
     </div>
   );

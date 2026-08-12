@@ -41,12 +41,17 @@ export async function saveImageFiles(
   const uploadDir = path.join(RUNTIME_UPLOAD_ROOT, subdir);
   await fs.mkdir(uploadDir, { recursive: true });
   const saved: { filePath: string; originalName: string | null }[] = [];
-  for (const image of images) {
-    const ext = ALLOWED_IMAGE_EXTENSIONS[image.type];
-    const fileName = `${crypto.randomUUID()}.${ext}`;
-    const buffer = Buffer.from(await image.arrayBuffer());
-    await fs.writeFile(path.join(uploadDir, fileName), buffer);
-    saved.push({ filePath: `/uploads/${subdir}/${fileName}`, originalName: image.name || null });
+  try {
+    for (const image of images) {
+      const ext = ALLOWED_IMAGE_EXTENSIONS[image.type];
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const buffer = Buffer.from(await image.arrayBuffer());
+      await fs.writeFile(path.join(uploadDir, fileName), buffer);
+      saved.push({ filePath: `/uploads/${subdir}/${fileName}`, originalName: image.name || null });
+    }
+  } catch (error) {
+    for (const image of saved) await deleteUploadedFile(image.filePath);
+    throw error;
   }
   return saved;
 }
@@ -57,6 +62,27 @@ export async function deleteUploadedFile(filePath: string): Promise<void> {
   const insideRoot = path.relative(RUNTIME_UPLOAD_ROOT, abs);
   if (insideRoot.startsWith("..") || path.isAbsolute(insideRoot)) return;
   await fs.unlink(abs).catch(() => {});
+}
+
+export async function cloneUploadedFile(
+  filePath: string,
+  subdir: string,
+): Promise<{ filePath: string; originalName: string | null }> {
+  const relative = filePath.replace(/^\/uploads\//, "");
+  const source = path.resolve(RUNTIME_UPLOAD_ROOT, relative);
+  const insideRoot = path.relative(RUNTIME_UPLOAD_ROOT, source);
+  if (insideRoot.startsWith("..") || path.isAbsolute(insideRoot)) {
+    throw new Error("Kopyalanacak görsel yolu geçersiz.");
+  }
+  const extension = path.extname(source).toLowerCase();
+  if (![".png", ".jpg", ".jpeg", ".gif", ".webp"].includes(extension)) {
+    throw new Error("Kopyalanacak dosya desteklenen bir görsel değil.");
+  }
+  const targetDir = path.join(RUNTIME_UPLOAD_ROOT, subdir);
+  await fs.mkdir(targetDir, { recursive: true });
+  const targetName = `${crypto.randomUUID()}${extension === ".jpeg" ? ".jpg" : extension}`;
+  await fs.copyFile(source, path.join(targetDir, targetName));
+  return { filePath: `/uploads/${subdir}/${targetName}`, originalName: null };
 }
 
 // Marka logoları `public/logos/<brandId>.<uzanti>` altında, `db/seed.mts`'in

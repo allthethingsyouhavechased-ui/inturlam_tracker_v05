@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import EmptyState from "@/components/EmptyState";
+import RequestImagePicker from "@/components/RequestImagePicker";
 import SubmitButton from "@/components/SubmitButton";
 import Badge from "@/components/ui/Badge";
 import { buttonClass } from "@/components/ui/Button";
@@ -21,7 +23,11 @@ import { formatDateLong, formatDateTime } from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
 import { canReviewClientRequests } from "@/lib/requestAccess";
 import { listBrands } from "@/lib/repositories/brands";
-import { listClientRequestsForPerson } from "@/lib/repositories/clientRequests";
+import {
+  countArchivedClientRequests,
+  listClientRequestsForPerson,
+  sweepArchivableClientRequests,
+} from "@/lib/repositories/clientRequests";
 import type { ClientRequestStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -33,13 +39,16 @@ function isRequestStatus(value: unknown): value is ClientRequestStatus {
 export default async function ClientRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; view?: string }>;
 }) {
   const person = await requirePageSession();
-  const canReview = canReviewClientRequests(person);
-  const allRequests = listClientRequestsForPerson(person.id, canReview);
-  const brands = listBrands();
+  if (!canReviewClientRequests(person)) notFound();
+  sweepArchivableClientRequests();
   const sp = await searchParams;
+  const showArchive = sp.view === "archive";
+  const allRequests = listClientRequestsForPerson(person.id, true, showArchive);
+  const archivedCount = countArchivedClientRequests();
+  const brands = listBrands();
   const selectedStatus = isRequestStatus(sp.status)
     ? (sp.status as ClientRequestStatus)
     : null;
@@ -57,20 +66,22 @@ export default async function ClientRequestsPage({
     <div>
       <PageHeader
         eyebrow="MÜŞTERİ TALEPLERİ"
-        title={canReview ? "Ön talep onayı" : "Talep merkezi"}
-        description={
-          canReview
-            ? "Müşteriden gelen işi değerlendir, doğru ekibe ata ve hazır olduğunda tek adımda göreve dönüştür."
-            : "Müşteriden gelen işi kaydet; değerlendirme ve göreve dönüşme sürecini buradan izle."
-        }
+        title="Ön talep onayı"
+        description="Müşteriden gelen işi değerlendir, doğru ekibe ata ve hazır olduğunda tek adımda göreve dönüştür."
         actions={
-          <a href="#yeni-talep" className={buttonClass()}>
-            <Icon name="plus" className="size-4" /> Yeni talep
-          </a>
+          <>
+            <Link href={showArchive ? "/requests" : "/requests?view=archive"} className={buttonClass({ variant: "secondary" })}>
+              <Icon name="archive" className="size-4" />
+              {showArchive ? "Aktif talepler" : `Arşiv · ${archivedCount}`}
+            </Link>
+            <a href={showArchive ? "/requests#yeni-talep" : "#yeni-talep"} className={buttonClass()}>
+              <Icon name="plus" className="size-4" /> Yeni talep
+            </a>
+          </>
         }
       />
 
-      <section className="mb-6 grid grid-cols-2 border-y border-border-subtle sm:grid-cols-4" aria-label="Talep özeti">
+      {!showArchive && <section className="mb-6 grid grid-cols-2 border-y border-border-subtle sm:grid-cols-4" aria-label="Talep özeti">
         {CLIENT_REQUEST_STATUSES.map((status, index) => (
           <Link
             key={status}
@@ -84,9 +95,16 @@ export default async function ClientRequestsPage({
             <span className="mt-1 block text-xl font-semibold tabular-nums text-foreground">{counts.get(status)}</span>
           </Link>
         ))}
-      </section>
+      </section>}
 
-      <details
+      {showArchive && (
+        <div className="mb-6 flex items-center gap-3 border-y border-border-subtle px-1 py-3 text-xs text-muted">
+          <Icon name="archive" className="size-4" />
+          Onaylanan veya reddedilen talepler karar tarihinden 7 gün sonra burada saklanır.
+        </div>
+      )}
+
+      {!showArchive && <details
         id="yeni-talep"
         open={allRequests.length === 0}
         className="group mb-7 scroll-mt-20 rounded-xl border border-border-default bg-surface"
@@ -147,20 +165,21 @@ export default async function ClientRequestsPage({
               Referans linki
               <Input name="referenceUrl" type="url" placeholder="https://…" />
             </label>
+            <RequestImagePicker />
           </div>
           <div className="mt-5 flex justify-end border-t border-border-subtle pt-4">
             <SubmitButton>Talebi değerlendirmeye gönder</SubmitButton>
           </div>
         </form>
-      </details>
+      </details>}
 
       <section>
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-foreground">{canReview ? "Değerlendirme kuyruğu" : "Taleplerim"}</h2>
+            <h2 className="text-base font-semibold text-foreground">{showArchive ? "Talep arşivi" : "Değerlendirme kuyruğu"}</h2>
             <p className="mt-0.5 text-xs text-muted">{requests.length} kayıt gösteriliyor</p>
           </div>
-          {selectedStatus && (
+          {selectedStatus && !showArchive && (
             <Link href="/requests" className="text-xs font-semibold text-brand-600 hover:underline">Tüm durumları göster</Link>
           )}
         </div>
@@ -169,7 +188,11 @@ export default async function ClientRequestsPage({
           <EmptyState
             compact
             title="Bu görünümde talep yok"
-            description={selectedStatus ? "Başka bir durum seçebilir veya yeni talep ekleyebilirsin." : "İlk müşteri talebini yukarıdaki formdan kaydet."}
+            description={showArchive
+              ? "Henüz yedi günlük bekleme süresini tamamlayan bir talep yok."
+              : selectedStatus
+                ? "Başka bir durum seçebilir veya yeni talep ekleyebilirsin."
+                : "İlk müşteri talebini yukarıdaki formdan kaydet."}
           />
         ) : (
           <div className="overflow-hidden rounded-xl border border-border-default bg-surface">
@@ -187,7 +210,7 @@ export default async function ClientRequestsPage({
                   <p className="mt-1 truncate pl-4 text-xs text-muted">
                     <span className="font-medium text-secondary">{request.brand_name}</span>
                     <span aria-hidden="true"> · </span>{CONTENT_TYPE_LABEL[request.content_type]}
-                    {canReview && <><span aria-hidden="true"> · </span>{request.created_by_name}</>}
+                    <span aria-hidden="true"> · </span>{request.created_by_name}
                   </p>
                 </div>
                 <div className="pl-4 text-xs sm:pl-0">

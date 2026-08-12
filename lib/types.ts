@@ -53,6 +53,7 @@ export interface ClientRequest {
   reviewed_by_id: string | null;
   converted_task_id: string | null;
   reviewed_at: string | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +63,14 @@ export interface ClientRequestComment {
   request_id: string;
   author_id: string;
   body: string;
+  created_at: string;
+}
+
+export interface ClientRequestAttachment {
+  id: string;
+  request_id: string;
+  file_path: string;
+  original_name: string | null;
   created_at: string;
 }
 

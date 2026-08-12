@@ -93,7 +93,7 @@ export default async function PanomPage() {
   );
 
   return (
-    <div>
+    <div className="relative">
       <AutoRefresh />
       <PageHeader
         eyebrow="KİŞİSEL ÇALIŞMA ALANI"
@@ -120,24 +120,23 @@ export default async function PanomPage() {
         </section>
       )}
 
-      <div className="space-y-7">
-        {me && (
-          <PersonalDeadlineRadar
-            personId={me.id}
-            tasks={myPlanningTasks}
-            today={today}
-            horizonDays={PERSONAL_DEADLINE_HORIZON_DAYS}
-          />
-        )}
-
-        <PanomViews
-          myTasks={myBoardTasks}
-          otherTasks={otherTasks}
-          people={people}
-          hasIdentity={Boolean(me)}
-          initialView={initialView}
+      {me && (
+        <PersonalDeadlineRadar
+          personId={me.id}
+          tasks={myPlanningTasks}
+          today={today}
+          horizonDays={PERSONAL_DEADLINE_HORIZON_DAYS}
+          headerAction
         />
-      </div>
+      )}
+
+      <PanomViews
+        myTasks={myBoardTasks}
+        otherTasks={otherTasks}
+        people={people}
+        hasIdentity={Boolean(me)}
+        initialView={initialView}
+      />
     </div>
   );
 }

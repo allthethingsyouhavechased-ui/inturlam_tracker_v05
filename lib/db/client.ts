@@ -47,6 +47,7 @@ function createConnection(): DatabaseSync {
   migratePeopleDepartmentIfNeeded(db);
   migratePeopleAuthIfNeeded(db);
   migrateSocialPostsUniqueIfNeeded(db);
+  migrateClientRequestsArchiveIfNeeded(db);
   // SIRA ÖNEMLİ: yukarıdaki iki brands migration'ı tabloyu SABİT bir sütun
   // listesiyle yeniden kuruyor; bu ALTER onlardan sonra çalışmalı, yoksa
   // eklediği sütun rebuild sırasında düşer.
@@ -54,6 +55,20 @@ function createConnection(): DatabaseSync {
   db.exec(schemaSql);
   seedTaskTemplatesIfNeeded(db);
   return db;
+}
+
+// Ön talep kayıtları onay/ret kararından yedi gün sonra listeden arşive
+// taşınır. Eski LAN veritabanlarına nullable damga eklemek veri kaybetmeden
+// ALTER TABLE ile yapılabilir; ek tablosunu schema.sql ayrıca kurar.
+function migrateClientRequestsArchiveIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='client_requests'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(client_requests)`).all() as { name: string }[];
+  if (!columns.some((column) => column.name === "archived_at")) {
+    db.exec(`ALTER TABLE client_requests ADD COLUMN archived_at TEXT`);
+  }
 }
 
 // brands.stats_updated_at — takipçi/gönderi sayılarının en son ne zaman

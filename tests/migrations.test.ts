@@ -629,11 +629,12 @@ describe("sosyal medya üretim planı tabloları (yeni tablolar, migration YOK)"
   });
 });
 
-describe("müşteri talebi tabloları (yeni tablolar, migration YOK)", () => {
+describe("müşteri talebi tabloları", () => {
   it("mevcut veritabanını açınca talep tablolarını veri kaybetmeden kurar", () => {
     const legacySchema = SCHEMA_SQL
       .replace(/CREATE TABLE IF NOT EXISTS client_requests[\s\S]*?\);\r?\n\r?\n/, "")
       .replace(/CREATE TABLE IF NOT EXISTS client_request_comments[\s\S]*?\);\r?\n\r?\n/, "")
+      .replace(/CREATE TABLE IF NOT EXISTS client_request_attachments[\s\S]*?\);\r?\n\r?\n/, "")
       .replace(/CREATE (?:UNIQUE )?INDEX IF NOT EXISTS idx_client_request[\s\S]*?;\r?\n/g, "");
 
     const legacy = new DatabaseSync(TMP_DB);
@@ -646,10 +647,11 @@ describe("müşteri talebi tabloları (yeni tablolar, migration YOK)", () => {
     const tables = db
       .prepare(
         `SELECT name FROM sqlite_master WHERE type = 'table'
-         AND name IN ('client_requests', 'client_request_comments') ORDER BY name`,
+         AND name IN ('client_requests', 'client_request_comments', 'client_request_attachments') ORDER BY name`,
       )
       .all() as { name: string }[];
     assert.deepEqual(tables.map((row) => row.name), [
+      "client_request_attachments",
       "client_request_comments",
       "client_requests",
     ]);

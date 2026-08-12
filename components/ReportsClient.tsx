@@ -425,7 +425,7 @@ export default function ReportsClient({
         </div>
       </section>
 
-      <section aria-label="Süre ve teslim analizi" className="grid gap-4 xl:grid-cols-2">
+      <section aria-label="Süre ve teslim analizi" className="grid items-start gap-4 xl:grid-cols-2">
         <CycleTimePanel report={cycleTime} />
         <DueHealthPanel rows={dueHealth} />
       </section>

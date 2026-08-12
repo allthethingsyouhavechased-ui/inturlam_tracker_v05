@@ -17,6 +17,7 @@ import { controlClass } from "@/components/ui/Input";
 import { CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { updateTaskDetailsAction } from "@/lib/actions/tasks";
 import { requirePageSession } from "@/lib/identity";
+import { canReviewClientRequests } from "@/lib/requestAccess";
 import { listActivityForEntity } from "@/lib/repositories/activity";
 import { listCommentsByTask } from "@/lib/repositories/comments";
 import { getClientRequestByTask } from "@/lib/repositories/clientRequests";
@@ -44,7 +45,9 @@ export default async function TaskPage({
   const comments = listCommentsByTask(taskId);
   const activity = listActivityForEntity("task", taskId);
   const attachments = listAttachmentsByTask(taskId);
-  const sourceRequest = getClientRequestByTask(taskId);
+  const sourceRequest = canReviewClientRequests(me)
+    ? getClientRequestByTask(taskId)
+    : undefined;
   // Görevi açmak, bu görevle ilgili okunmamış bildirimleri (görev güncelleme
   // + @mention) okundu yapar — Panom'daki "🔔 Güncellendi" rozeti bu sayede
   // tekrar görülünce kaybolur. sweepArchivablePublishedTasks() ile aynı

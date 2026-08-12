@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
+import { IDENTITY_COOKIE } from "@/lib/auth/constants";
 import { getPersonForSession } from "@/lib/repositories/authSessions";
 import type { Person } from "@/lib/types";
 
-export const IDENTITY_COOKIE = "inturlam_session";
+export { IDENTITY_COOKIE } from "@/lib/auth/constants";
 
 export const getCurrentPerson = cache(async (): Promise<Person | null> => {
   const store = await cookies();

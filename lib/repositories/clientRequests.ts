@@ -2,10 +2,13 @@ import { getDb, plainList, plainOne } from "@/lib/db/client";
 import type { DepartmentId } from "@/lib/departments";
 import type {
   ClientRequest,
+  ClientRequestAttachment,
   ClientRequestComment,
   ContentType,
   TaskPriority,
 } from "@/lib/types";
+
+export const CLIENT_REQUEST_ARCHIVE_AFTER_DAYS = 7;
 
 export interface ClientRequestWithContext extends ClientRequest {
   brand_name: string;
@@ -46,10 +49,12 @@ export function createClientRequest(input: {
   contentType: ContentType;
   dueDate: string | null;
   createdById: string;
-}): string {
+}, attachments: Array<{ filePath: string; originalName: string | null }> = []): string {
   const id = crypto.randomUUID();
-  getDb()
-    .prepare(
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
       `INSERT INTO client_requests
          (id, brand_id, title, description, requested_by_name, source,
           reference_url, department, content_type, due_date, created_by_id)
@@ -68,14 +73,93 @@ export function createClientRequest(input: {
       input.dueDate,
       input.createdById,
     );
-  return id;
+    const insertAttachment = db.prepare(
+      `INSERT INTO client_request_attachments (id, request_id, file_path, original_name)
+       VALUES (?, ?, ?, ?)`,
+    );
+    for (const attachment of attachments) {
+      insertAttachment.run(crypto.randomUUID(), id, attachment.filePath, attachment.originalName);
+    }
+    db.exec("COMMIT");
+    return id;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function updateClientRequestDetails(input: {
+  id: string;
+  brandId: string;
+  title: string;
+  description: string;
+  requestedByName: string | null;
+  source: string | null;
+  referenceUrl: string | null;
+  department: DepartmentId;
+  contentType: ContentType;
+  dueDate: string | null;
+}, attachments: Array<{ filePath: string; originalName: string | null }> = []): void {
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const result = db.prepare(
+      `UPDATE client_requests
+       SET brand_id = ?, title = ?, description = ?, requested_by_name = ?,
+           source = ?, reference_url = ?,
+           assignee_id = CASE
+             WHEN status = 'Reddedildi' THEN NULL
+             WHEN department = ? THEN assignee_id
+             ELSE NULL
+           END,
+           department = ?, content_type = ?,
+           due_date = ?,
+           status = CASE WHEN status = 'Reddedildi' THEN 'Beklemede' ELSE status END,
+           reviewed_by_id = CASE WHEN status = 'Reddedildi' THEN NULL ELSE reviewed_by_id END,
+           reviewed_at = CASE WHEN status = 'Reddedildi' THEN NULL ELSE reviewed_at END,
+           updated_at = datetime('now')
+       WHERE id = ? AND status IN ('Beklemede', 'Incelemede', 'Reddedildi')
+         AND converted_task_id IS NULL AND archived_at IS NULL`,
+    )
+    .run(
+      input.brandId,
+      input.title,
+      input.description,
+      input.requestedByName,
+      input.source,
+      input.referenceUrl,
+      input.department,
+      input.department,
+      input.contentType,
+      input.dueDate,
+      input.id,
+    );
+    if (result.changes !== 1) {
+      throw new Error("Yalnızca arşivlenmemiş ve göreve dönüşmemiş talepler düzenlenebilir.");
+    }
+    const insertAttachment = db.prepare(
+      `INSERT INTO client_request_attachments (id, request_id, file_path, original_name)
+       VALUES (?, ?, ?, ?)`,
+    );
+    for (const attachment of attachments) {
+      insertAttachment.run(crypto.randomUUID(), input.id, attachment.filePath, attachment.originalName);
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function listClientRequestsForPerson(
   personId: string,
   canReview: boolean,
+  archived = false,
 ): ClientRequestWithContext[] {
-  const where = canReview ? "" : "WHERE r.created_by_id = ?";
+  const archiveWhere = archived ? "r.archived_at IS NOT NULL" : "r.archived_at IS NULL";
+  const where = canReview
+    ? `WHERE ${archiveWhere}`
+    : `WHERE ${archiveWhere} AND r.created_by_id = ?`;
   const args = canReview ? [] : [personId];
   return plainList<ClientRequestWithContext>(
     getDb()
@@ -94,6 +178,28 @@ export function listClientRequestsForPerson(
       )
       .all(...args),
   );
+}
+
+export function countArchivedClientRequests(): number {
+  return (
+    plainOne<{ count: number }>(
+      getDb().prepare("SELECT COUNT(*) AS count FROM client_requests WHERE archived_at IS NOT NULL").get(),
+    )?.count ?? 0
+  );
+}
+
+export function sweepArchivableClientRequests(): number {
+  const result = getDb()
+    .prepare(
+      `UPDATE client_requests
+       SET archived_at = datetime('now'), updated_at = datetime('now')
+       WHERE archived_at IS NULL
+         AND status IN ('Onaylandi', 'Reddedildi')
+         AND reviewed_at IS NOT NULL
+         AND reviewed_at <= datetime('now', ?)`,
+    )
+    .run(`-${CLIENT_REQUEST_ARCHIVE_AFTER_DAYS} days`);
+  return Number(result.changes);
 }
 
 export function countOpenClientRequests(): number {
@@ -139,6 +245,38 @@ export function listClientRequestComments(
       )
       .all(requestId),
   );
+}
+
+export function listClientRequestAttachments(requestId: string): ClientRequestAttachment[] {
+  return plainList<ClientRequestAttachment>(
+    getDb()
+      .prepare("SELECT * FROM client_request_attachments WHERE request_id = ? ORDER BY created_at, rowid")
+      .all(requestId),
+  );
+}
+
+export function addClientRequestAttachment(input: {
+  requestId: string;
+  filePath: string;
+  originalName: string | null;
+}): string {
+  const id = crypto.randomUUID();
+  getDb()
+    .prepare(
+      `INSERT INTO client_request_attachments (id, request_id, file_path, original_name)
+       VALUES (?, ?, ?, ?)`,
+    )
+    .run(id, input.requestId, input.filePath, input.originalName);
+  return id;
+}
+
+export function deleteClientRequest(id: string): void {
+  const result = getDb()
+    .prepare("DELETE FROM client_requests WHERE id = ? AND converted_task_id IS NULL")
+    .run(id);
+  if (result.changes !== 1) {
+    throw new Error("Göreve dönüştürülmüş talep silinemez; kayıt görev geçmişinin parçasıdır.");
+  }
 }
 
 export function addClientRequestComment(input: {
@@ -215,6 +353,7 @@ function taskNotes(request: ClientRequest): string {
 
 export function approveClientRequest(
   input: ClientRequestReviewInput,
+  taskAttachments: Array<{ filePath: string; originalName: string | null }> = [],
 ): { taskId: string; contentItemId: string } {
   const db = getDb();
   ensureAssignable(input.assigneeId, input.department);
@@ -258,6 +397,18 @@ export function approveClientRequest(
       input.dueDate,
       taskNotes(request),
     );
+    const insertTaskAttachment = db.prepare(
+      `INSERT INTO task_attachments (id, task_id, file_path, original_name)
+       VALUES (?, ?, ?, ?)`,
+    );
+    for (const attachment of taskAttachments) {
+      insertTaskAttachment.run(
+        crypto.randomUUID(),
+        taskId,
+        attachment.filePath,
+        attachment.originalName,
+      );
+    }
     db.prepare(
       `UPDATE client_requests
        SET department = ?, assignee_id = ?, priority = ?, due_date = ?,

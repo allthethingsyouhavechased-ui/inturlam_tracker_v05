@@ -20,7 +20,7 @@ export default async function TeamPage() {
   const canManageAccounts = currentPerson.is_manager === 1;
 
   return (
-    <div className="team-page-wide">
+    <div className="w-full">
       <AutoRefresh />
       <PageHeader
         eyebrow="ORGANİZASYON"

@@ -259,13 +259,17 @@ export default function PersonalDeadlineRadar({
   tasks,
   today,
   horizonDays,
+  headerAction = false,
 }: {
   personId: string;
   tasks: TaskWithPersonalTarget[];
   today: string;
   horizonDays: number;
+  headerAction?: boolean;
 }) {
-  const { open, toggle } = usePanelOpen(PANEL_KEY, true);
+  // Radar bir kullanici tercihi: ayni tarayicida kimlik degistirildiginde bir
+  // kisinin acik/kapali secimi digerinin Panom'unu etkilemesin.
+  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${personId}`, false);
   // Takvim ayı istemci state'i ama başlangıcı SUNUCUDAN gelen `today` —
   // render sırasında `new Date()` çağrılmadığı için SSR/istemci aynı ayı çizer.
   const [monthParam, setMonthParam] = useState(() => today.slice(0, 7));
@@ -388,10 +392,47 @@ export default function PersonalDeadlineRadar({
         ? "bg-amber-50/80 dark:bg-amber-950/20"
         : "bg-zinc-50/80 dark:bg-white/[0.025]";
 
+  if (!open) {
+    const riskCount = overdueCount + todayCount;
+    return (
+      <div
+        className={
+          headerAction
+            ? "mb-5 flex items-center lg:absolute lg:right-0 lg:top-8 lg:z-10 lg:mb-0"
+            : "flex items-center"
+        }
+      >
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label="Kişisel teslim radarını aç"
+          aria-expanded="false"
+          aria-controls="personal-deadline-body"
+          title={summary}
+          className={`ui-press inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border bg-surface px-3 text-left shadow-sm hover:bg-surface-hover ${toneBorder}`}
+        >
+          <Icon
+            name="clock"
+            className={riskCount > 0 ? "size-4 text-rose-500" : "size-4 text-brand-500"}
+          />
+          <span className="truncate text-xs font-semibold text-foreground">
+            Kişisel teslim radarı
+          </span>
+          {riskCount > 0 && (
+            <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+              {riskCount}
+            </span>
+          )}
+          <span className="text-[11px] font-medium text-brand-600 dark:text-brand-300">Aç</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <section
       aria-labelledby="personal-deadline-title"
-      className={`overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-zinc-900 ${toneBorder}`}
+      className={`mb-7 overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-zinc-900 ${toneBorder}`}
     >
       <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4 ${toneHeader}`}>
         <button

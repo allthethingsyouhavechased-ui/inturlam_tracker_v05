@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import Icon from "@/components/ui/Icon";
 import { updateBrandAction } from "@/lib/actions/brands";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { Brand } from "@/lib/types";
@@ -9,9 +11,18 @@ import ClusterSelect from "./ClusterSelect";
 import SubmitButton from "./SubmitButton";
 
 const inputClass =
-  "w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+  "w-full rounded-md border border-border-default bg-surface-elevated px-3 py-2 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand-500";
 
-const labelClass = "grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400";
+const labelClass = "grid gap-1.5 text-xs font-medium text-secondary";
+const emptySubscribe = () => () => {};
+
+function useIsClient(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+}
 
 export default function EditBrandForm({
   brand,
@@ -22,135 +33,223 @@ export default function EditBrandForm({
 }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const savingRef = useRef(saving);
+  const isClient = useIsClient();
+
+  useEffect(() => {
+    savingRef.current = saving;
+  }, [saving]);
+
+  useEffect(() => {
+    if (!editing) return;
+
+    function close() {
+      if (!savingRef.current) setEditing(false);
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        close();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    const trigger = triggerRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>("button")?.focus());
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      trigger?.focus();
+    };
+  }, [editing]);
 
   if (!editing) {
     return (
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setEditing(true)}
-        className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 dark:hover:text-brand-400"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        className="text-xs font-medium text-muted hover:text-brand-600 dark:hover:text-brand-400"
       >
         Düzenle
       </button>
     );
   }
 
-  return (
-    <form
-      action={async (fd) => {
-        setError(null);
-        try {
-          await updateBrandAction(fd);
-          setEditing(false);
-        } catch (e) {
-          setError(getActionErrorMessage(e));
-        }
-      }}
-      className="w-full space-y-4 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900"
-    >
-      <input type="hidden" name="brandId" value={brand.id} />
+  if (!isClient) return null;
 
-      <BrandLogoPicker currentLogoPath={brand.logo_path} />
-
-      {/* Temel bilgiler */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className={labelClass}>
-          Marka adı
-          <input name="name" required defaultValue={brand.name} className={inputClass} />
-        </label>
-        <label className={labelClass}>
-          Kategori
-          <ClusterSelect
-            clusters={clusters}
-            defaultValue={
-              // Markanın kategorisi silinmişse select'te karşılığı yok — o
-              // durumda ilk kategoriye düşmesin, seçim boş kalmasın diye
-              // listeye geçici bir seçenek eklemek yerine ilk sıradakine
-              // bırakıyoruz ve kullanıcı bilinçli seçim yapıyor.
-              clusters.some((c) => c.id === brand.cluster) ? brand.cluster : undefined
-            }
-            className={inputClass}
-          />
-        </label>
-        <label className={labelClass}>
-          Instagram
-          <input
-            name="instagramHandle"
-            defaultValue={brand.instagram_handle ?? ""}
-            placeholder="kullaniciadi"
-            className={inputClass}
-          />
-        </label>
-      </div>
-
-      {/* Instagram sayıları — haftalık elle güncelleniyor. Kaydedince
-          "son güncelleme" damgası otomatik bugüne çekilir (yalnızca sayılardan
-          biri gerçekten değiştiyse; bkz. lib/repositories/brands.ts). */}
-      <div className="space-y-3 border-t border-black/10 pt-3 dark:border-white/10">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          Instagram sayıları{" "}
-          <span className="font-normal normal-case tracking-normal">
-            — haftalık güncelle
-          </span>
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <label className={labelClass}>
-            Takipçi
-            <input
-              name="followerCount"
-              type="number"
-              min="0"
-              inputMode="numeric"
-              defaultValue={brand.follower_count ?? ""}
-              placeholder="Örn. 12500"
-              className={inputClass}
-            />
-          </label>
-          <label className={labelClass}>
-            Gönderi
-            <input
-              name="postCount"
-              type="number"
-              min="0"
-              inputMode="numeric"
-              defaultValue={brand.post_count ?? ""}
-              placeholder="Örn. 340"
-              className={inputClass}
-            />
-          </label>
-          <label className={labelClass}>
-            Tier
-            <input
-              name="tier"
-              defaultValue={brand.tier ?? ""}
-              placeholder="Örn. A"
-              className={inputClass}
-            />
-          </label>
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-950/65 p-4 pt-8 backdrop-blur-[2px] sm:pt-14">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Pencereyi kapat"
+        className="absolute inset-0 cursor-default"
+        onClick={() => !savingRef.current && setEditing(false)}
+      />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-brand-title"
+        className="ui-enter relative w-full max-w-4xl overflow-hidden rounded-xl border border-border-default bg-surface-elevated shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">
+              MARKA AYARLARI
+            </p>
+            <h2 id="edit-brand-title" className="mt-1 truncate text-lg font-semibold tracking-[-0.015em] text-foreground">
+              {brand.name} markasını düzenle
+            </h2>
+            <p className="mt-1 text-xs text-muted">Kimlik, sosyal hesap ve özet bilgilerini güncelle.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => !savingRef.current && setEditing(false)}
+            aria-label="Kapat"
+            className="ui-press inline-flex size-9 shrink-0 items-center justify-center rounded-[9px] text-muted hover:bg-surface-hover hover:text-foreground"
+          >
+            <Icon name="close" className="size-[17px]" />
+          </button>
         </div>
-        <label className={labelClass}>
-          Kısa bilgi
-          <textarea
-            name="keyFinding"
-            rows={3}
-            defaultValue={brand.key_finding ?? ""}
-            placeholder="Marka hakkında bilinmesi gereken birkaç cümle: ne satıyor, tonu ne, nelere dikkat edilmeli…"
-            className={inputClass}
-          />
-        </label>
-      </div>
 
-      <div className="flex items-center gap-3">
-        <SubmitButton>Kaydet</SubmitButton>
-        <button
-          type="button"
-          onClick={() => setEditing(false)}
-          className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+        <form
+          action={async (fd) => {
+            setError(null);
+            setSaving(true);
+            try {
+              await updateBrandAction(fd);
+              setEditing(false);
+            } catch (e) {
+              setError(getActionErrorMessage(e));
+            } finally {
+              setSaving(false);
+            }
+          }}
+          className="max-h-[calc(100dvh-10rem)] space-y-5 overflow-y-auto p-5 sm:p-6"
         >
-          Vazgeç
-        </button>
-        {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+          <input type="hidden" name="brandId" value={brand.id} />
+
+          <BrandLogoPicker currentLogoPath={brand.logo_path} />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <label className={labelClass}>
+              Marka adı
+              <input name="name" required defaultValue={brand.name} className={inputClass} />
+            </label>
+            <label className={labelClass}>
+              Kategori
+              <ClusterSelect
+                clusters={clusters}
+                defaultValue={
+                  clusters.some((c) => c.id === brand.cluster) ? brand.cluster : undefined
+                }
+                className={inputClass}
+              />
+            </label>
+            <label className={labelClass}>
+              Instagram
+              <input
+                name="instagramHandle"
+                defaultValue={brand.instagram_handle ?? ""}
+                placeholder="kullaniciadi"
+                className={inputClass}
+              />
+            </label>
+          </div>
+
+          <div className="space-y-4 border-t border-border-subtle pt-4">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-secondary">Instagram sayıları</h3>
+              <p className="mt-1 text-xs text-muted">Takipçi ve gönderi sayılarını haftalık olarak güncelle.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className={labelClass}>
+                Takipçi
+                <input
+                  name="followerCount"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  defaultValue={brand.follower_count ?? ""}
+                  placeholder="Örn. 12500"
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                Gönderi
+                <input
+                  name="postCount"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  defaultValue={brand.post_count ?? ""}
+                  placeholder="Örn. 340"
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                Tier
+                <input
+                  name="tier"
+                  defaultValue={brand.tier ?? ""}
+                  placeholder="Örn. A"
+                  className={inputClass}
+                />
+              </label>
+            </div>
+            <label className={labelClass}>
+              Kısa bilgi
+              <textarea
+                name="keyFinding"
+                rows={3}
+                defaultValue={brand.key_finding ?? ""}
+                placeholder="Marka hakkında bilinmesi gereken birkaç cümle: ne satıyor, tonu ne, nelere dikkat edilmeli…"
+                className={inputClass}
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-4">
+            <SubmitButton>Kaydet</SubmitButton>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setEditing(false)}
+              className="text-xs font-medium text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Vazgeç
+            </button>
+            {error && <p role="alert" className="basis-full text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+          </div>
+        </form>
       </div>
-    </form>
+    </div>,
+    document.body,
   );
 }

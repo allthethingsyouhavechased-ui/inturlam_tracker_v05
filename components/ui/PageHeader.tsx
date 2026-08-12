@@ -22,8 +22,8 @@ export default function PageHeader({
   className,
 }: {
   eyebrow?: string;
-  title: string;
-  description?: string;
+  title: ReactNode;
+  description?: ReactNode;
   breadcrumb?: Breadcrumb[];
   media?: ReactNode;
   summary?: ReactNode;

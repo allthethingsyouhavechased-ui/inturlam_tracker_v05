@@ -279,7 +279,7 @@ tüm zincir denenebilir.
 
 ## Yedekleme
 
-Tüm veri tek dosyada: `data/inturlam.db`, dosya ekleri `public/uploads/` altında.
+Tüm veri tek dosyada: `data/inturlam.db`, çalışma zamanı dosya ekleri `data/uploads/` altında.
 
 ```bash
 npm run db:backup

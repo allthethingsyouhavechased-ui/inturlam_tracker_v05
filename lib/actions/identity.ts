@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { hashPassword, validatePassword, verifyPassword } from "@/lib/auth/password";
 import { LoginThrottle } from "@/lib/auth/loginThrottle";
-import { IDENTITY_COOKIE, getCurrentPerson } from "@/lib/identity";
+import { IDENTITY_COOKIE } from "@/lib/auth/constants";
+import { getCurrentPerson } from "@/lib/identity";
 import {
   createAuthSession,
   deleteAuthSession,
@@ -16,7 +17,6 @@ import {
   updatePersonPassword,
 } from "@/lib/repositories/people";
 
-const THIRTY_DAYS = 60 * 60 * 24 * 30;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
 const loginThrottle = new LoginThrottle(MAX_LOGIN_FAILURES, LOGIN_WINDOW_MS);
@@ -34,8 +34,7 @@ async function replaceSession(personId: string): Promise<void> {
   const token = createAuthSession(personId);
   store.set(IDENTITY_COOKIE, token, {
     httpOnly: true,
-    sameSite: "lax",
-    maxAge: THIRTY_DAYS,
+    sameSite: "strict",
     path: "/",
   });
 }

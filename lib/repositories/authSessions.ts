@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
+import { SESSION_TTL_SECONDS } from "@/lib/auth/constants";
 import { getDb, plainOne } from "@/lib/db/client";
 import type { Person } from "@/lib/types";
 
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const PUBLIC_PERSON_COLUMNS =
   "p.id, p.name, p.title, p.bio, p.avatar_path, p.department, p.is_manager, p.active";
 

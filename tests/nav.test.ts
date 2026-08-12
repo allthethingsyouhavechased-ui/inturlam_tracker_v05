@@ -14,14 +14,20 @@ function allHrefs(groups: readonly { items: readonly NavItem[] }[]): string[] {
 
 describe("visibleNavGroups", () => {
   it("yönetici değilse Raporlar'ı eler, ürün gruplarını korur", () => {
-    const withReports = visibleNavGroups(true);
-    const withoutReports = visibleNavGroups(false);
+    const withReports = visibleNavGroups(true, true);
+    const withoutReports = visibleNavGroups(false, true);
     const withHrefs = allHrefs(withReports);
     const withoutHrefs = allHrefs(withoutReports);
     assert.ok(withHrefs.includes("/reports"));
     assert.ok(!withoutHrefs.includes("/reports"));
     assert.equal(withoutHrefs.length, withHrefs.length - 1);
     assert.equal(withoutReports.length, withReports.length);
+  });
+
+  it("talep yetkisi yoksa Talepler bağlantısını gizler", () => {
+    const hrefs = allHrefs(visibleNavGroups(true, false));
+    assert.ok(!hrefs.includes("/requests"));
+    assert.ok(hrefs.includes("/reports"));
   });
 });
 

@@ -21,6 +21,7 @@ import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
 import { classifySocial } from "@/lib/socialSilence";
 import { requirePageSession } from "@/lib/identity";
+import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
 import { getBrand } from "@/lib/repositories/brands";
 import { listActivityForBrand } from "@/lib/repositories/activity";
 import { clusterLabelMap, listClusters } from "@/lib/repositories/clusters";
@@ -63,21 +64,108 @@ export default async function BrandPage({
   const socialHealth = socialRow
     ? classifySocial(socialRow, SOCIAL_SILENCE_DAYS, todayISO())
     : null;
+  const instagramHandle = normalizeInstagramHandle(brand.instagram_handle);
+  const instagramUrl = instagramProfileUrl(brand.instagram_handle);
 
   return (
     <div className="space-y-6">
       <AutoRefresh />
       <PageHeader
-        className="!mb-0"
+        className="!mb-0 sm:flex-wrap xl:flex-nowrap"
         eyebrow="MARKA ÇALIŞMA ALANI"
         title={brand.name}
-        description={[
-          clusterLabels[brand.cluster] ?? UNKNOWN_CLUSTER_LABEL,
-          brand.instagram_handle ? `@${brand.instagram_handle}` : null,
-          brand.tier ? `Tier ${brand.tier}` : null,
-        ].filter(Boolean).join(" · ")}
+        description={
+          <span className="flex flex-wrap items-center gap-x-1.5">
+            <span>{clusterLabels[brand.cluster] ?? UNKNOWN_CLUSTER_LABEL}</span>
+            {instagramUrl && instagramHandle && (
+              <>
+                <span aria-hidden="true">·</span>
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-secondary underline decoration-border-strong underline-offset-4 hover:text-brand-600 dark:hover:text-brand-300"
+                >
+                  @{instagramHandle}
+                </a>
+              </>
+            )}
+            {brand.tier && <><span aria-hidden="true">·</span><span>Tier {brand.tier}</span></>}
+          </span>
+        }
         breadcrumb={[{ label: "Markalar", href: "/brands" }, { label: brand.name }]}
         media={<BrandLogo name={brand.name} logoPath={brand.logo_path} size="lg" />}
+        summary={
+          <section
+            aria-label="Marka bilgi özeti"
+            className="min-w-0 border-t border-border-subtle pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0 lg:pl-5"
+          >
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_1fr_0.85fr] xl:gap-0">
+              <div data-brand-info="summary" className="min-w-0 xl:pr-5">
+                <p className="text-[10px] font-semibold tracking-[0.09em] text-faint">MARKA ÖZETİ</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="text-xs font-semibold tabular-nums text-foreground">
+                    {brand.follower_count != null
+                      ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi`
+                      : "Takipçi verisi yok"}
+                  </span>
+                  {brand.post_count != null && (
+                    <span className="text-xs font-semibold tabular-nums text-foreground">
+                      {brand.post_count.toLocaleString("tr-TR")} gönderi
+                    </span>
+                  )}
+                  {staleStats && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      Tazelenmeli
+                    </span>
+                  )}
+                </div>
+                <p
+                  className="mt-2 line-clamp-2 text-xs leading-5 text-secondary"
+                  title={brand.key_finding ?? undefined}
+                >
+                  {brand.key_finding?.split("\n")[0] ?? "Kısa marka notu eklenmemiş"}
+                </p>
+              </div>
+
+              <div
+                data-brand-info="targets"
+                className="min-w-0 border-t border-border-subtle pt-4 md:border-l md:border-t-0 md:pl-4 md:pt-0 xl:px-5"
+              >
+                <BrandContentTargetsSection
+                  brandId={brand.id}
+                  brandName={brand.name}
+                  targets={contentTargets}
+                  compact
+                />
+              </div>
+
+              <div
+                data-brand-info="activity"
+                className="min-w-0 border-t border-border-subtle pt-4 md:col-span-2 xl:col-span-1 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0"
+              >
+                <p className="text-[9px] font-semibold tracking-[0.08em] text-faint">AKTİFLİK</p>
+                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                  {socialHealth ? (
+                    <>
+                      <SocialHealthBadge
+                        health={socialHealth}
+                        detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
+                      />
+                      <span className="min-w-0 truncate text-xs text-muted">
+                        {socialRow?.last_post_at
+                          ? `Son paylaşım ${formatIsoDateTime(socialRow.last_post_at)}`
+                          : "Paylaşım kaydı yok"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-muted">Takip hesabı bağlanmamış</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        }
         actions={
           <>
             <QuickAddModal
@@ -92,65 +180,6 @@ export default async function BrandPage({
           </>
         }
       />
-
-      <section
-        aria-label={`${brand.name} operasyon özeti`}
-        className="grid overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-[0.9fr_1.25fr_1.35fr]"
-      >
-        <div className="min-w-0 px-4 py-3.5">
-          <p className="text-[10px] font-semibold tracking-[0.09em] text-faint">SOSYAL DURUM</p>
-          <div className="mt-2.5 flex min-w-0 items-center gap-2.5">
-            {socialHealth ? (
-              <>
-                <SocialHealthBadge
-                  health={socialHealth}
-                  detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
-                />
-                <span className="truncate text-xs text-muted">
-                  {socialRow?.last_post_at
-                    ? `Son paylaşım ${formatIsoDateTime(socialRow.last_post_at)}`
-                    : "Paylaşım kaydı yok"}
-                </span>
-              </>
-            ) : (
-              <span className="text-xs text-muted">Takip hesabı bağlanmamış</span>
-            )}
-          </div>
-        </div>
-
-        <div className="min-w-0 border-t border-border-subtle px-4 py-3.5 lg:border-l lg:border-t-0">
-          <BrandContentTargetsSection
-            brandId={brand.id}
-            brandName={brand.name}
-            targets={contentTargets}
-            compact
-          />
-        </div>
-
-        <div className="min-w-0 border-t border-border-subtle px-4 py-3.5 lg:border-l lg:border-t-0">
-          <p className="text-[10px] font-semibold tracking-[0.09em] text-faint">MARKA ÖZETİ</p>
-          <div className="mt-2.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <p className="text-sm font-semibold tabular-nums text-foreground">
-              {brand.follower_count != null
-                ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi`
-                : "Takipçi verisi yok"}
-            </p>
-            {brand.post_count != null && (
-              <p className="text-sm font-semibold tabular-nums text-foreground">
-                {brand.post_count.toLocaleString("tr-TR")} gönderi
-              </p>
-            )}
-            {staleStats && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                Tazelenmeli
-              </span>
-            )}
-          </div>
-          <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-muted" title={brand.key_finding ?? undefined}>
-            {brand.key_finding?.split("\n")[0] ?? "Kısa marka notu eklenmemiş"}
-          </p>
-        </div>
-      </section>
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">

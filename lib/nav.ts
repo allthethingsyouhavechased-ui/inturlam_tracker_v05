@@ -43,11 +43,18 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   },
 ] as const;
 
-export function visibleNavGroups(canViewReports: boolean): readonly NavGroup[] {
-  if (canViewReports) return NAV_GROUPS;
+export function visibleNavGroups(
+  canViewReports: boolean,
+  canViewRequests: boolean,
+): readonly NavGroup[] {
+  if (canViewReports && canViewRequests) return NAV_GROUPS;
   return NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => item.href !== "/reports"),
+    items: group.items.filter(
+      (item) =>
+        (canViewReports || item.href !== "/reports")
+        && (canViewRequests || item.href !== "/requests"),
+    ),
   }));
 }
 

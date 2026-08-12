@@ -34,10 +34,17 @@ describe("veritabanı oturumları", () => {
     const stored = db.prepare("SELECT token_hash FROM auth_sessions").get() as {
       token_hash: string;
     };
+    const expiresAt = Number(
+      (db.prepare("SELECT expires_at FROM auth_sessions").get() as { expires_at: number })
+        .expires_at,
+    );
+    const remainingSeconds = expiresAt - Math.floor(Date.now() / 1000);
 
     assert.notEqual(token, "yunus");
     assert.notEqual(stored.token_hash, token);
     assert.equal(stored.token_hash.length, 64);
+    assert.ok(remainingSeconds <= 60 * 60 * 12);
+    assert.ok(remainingSeconds >= 60 * 60 * 12 - 2);
     assert.equal(getPersonForSession(token)?.is_manager, 1);
 
     deleteAuthSession(token);

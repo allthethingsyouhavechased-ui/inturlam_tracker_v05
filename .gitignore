@@ -53,3 +53,6 @@ next-env.d.ts
 
 # local security verification output
 /.security-audit/
+
+# local production server output
+/logs/

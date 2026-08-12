@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ActivityFeed from "@/components/ActivityFeed";
+import DeleteClientRequestButton from "@/components/DeleteClientRequestButton";
+import EditClientRequestForm from "@/components/EditClientRequestForm";
 import PersonAvatar from "@/components/PersonAvatar";
 import RequestReviewForm from "@/components/RequestReviewForm";
 import SubmitButton from "@/components/SubmitButton";
@@ -22,8 +24,10 @@ import { canReviewClientRequests } from "@/lib/requestAccess";
 import { listActivityForEntity } from "@/lib/repositories/activity";
 import {
   getClientRequest,
+  listClientRequestAttachments,
   listClientRequestComments,
 } from "@/lib/repositories/clientRequests";
+import { listBrands } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 
 export const dynamic = "force-dynamic";
@@ -34,16 +38,18 @@ export default async function ClientRequestDetailPage({
   params: Promise<{ requestId: string }>;
 }) {
   const person = await requirePageSession();
+  if (!canReviewClientRequests(person)) notFound();
   const { requestId } = await params;
   const request = getClientRequest(requestId);
   if (!request) notFound();
-  const canReview = canReviewClientRequests(person);
-  if (!canReview && request.created_by_id !== person.id) notFound();
 
   const comments = listClientRequestComments(requestId);
+  const attachments = listClientRequestAttachments(requestId);
   const activity = listActivityForEntity("request", requestId);
   const people = listActivePeople();
-  const isOpen = request.status === "Beklemede" || request.status === "Incelemede";
+  const brands = listBrands();
+  const isOpen = (request.status === "Beklemede" || request.status === "Incelemede") && !request.archived_at;
+  const canEdit = !request.converted_task_id && !request.archived_at;
 
   return (
     <div>
@@ -57,11 +63,15 @@ export default async function ClientRequestDetailPage({
           { label: request.title },
         ]}
         actions={
-          request.converted_task_id ? (
-            <Link href={`/tasks/${request.converted_task_id}`} className={buttonClass()}>
-              Oluşan görevi aç <Icon name="arrow-right" className="size-4" />
-            </Link>
-          ) : undefined
+          <>
+            {request.converted_task_id && (
+              <Link href={`/tasks/${request.converted_task_id}`} className={buttonClass()}>
+                Oluşan görevi aç <Icon name="arrow-right" className="size-4" />
+              </Link>
+            )}
+            {canEdit && <EditClientRequestForm request={request} brands={brands} />}
+            <DeleteClientRequestButton requestId={request.id} converted={Boolean(request.converted_task_id)} />
+          </>
         }
       />
 
@@ -74,9 +84,14 @@ export default async function ClientRequestDetailPage({
         {request.reviewed_by_name && (
           <span><span className="text-faint">Değerlendiren</span> · {request.reviewed_by_name}</span>
         )}
+        {request.archived_at && (
+          <span className="inline-flex items-center gap-1.5 font-medium text-secondary">
+            <Icon name="archive" className="size-3.5" /> Arşivlendi · {formatDateTime(request.archived_at)}
+          </span>
+        )}
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <main className="min-w-0 space-y-5">
           <section className="overflow-hidden rounded-xl border border-border-default bg-surface">
             <div className="border-b border-border-subtle px-4 py-3 sm:px-5">
@@ -110,6 +125,22 @@ export default async function ClientRequestDetailPage({
                   Referans bağlantısını aç <Icon name="arrow-right" className="size-3.5" />
                 </a>
               )}
+              {attachments.length > 0 && (
+                <div className="mt-5 border-t border-border-subtle pt-4">
+                  <p className="mb-2 text-[10px] font-semibold tracking-wide text-faint">TALEP GÖRSELLERİ · {attachments.length}</p>
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {attachments.map((attachment) => (
+                      <li key={attachment.id}>
+                        <a href={attachment.file_path} target="_blank" rel="noopener noreferrer" className="group block overflow-hidden rounded-xl border border-border-default bg-surface-subtle">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={attachment.file_path} alt={attachment.original_name ?? "Talep görseli"} className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-[1.02]" />
+                          <span className="block truncate px-2.5 py-2 text-[11px] font-medium text-secondary">{attachment.original_name ?? "Görseli aç"}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </section>
 
@@ -139,16 +170,14 @@ export default async function ClientRequestDetailPage({
                 <p className="py-3 text-center text-sm text-muted">Henüz değerlendirme notu yok.</p>
               )}
 
-              {canReview && (
-                <form action={addClientRequestCommentAction} className="mt-5 border-t border-border-subtle pt-4">
-                  <input type="hidden" name="requestId" value={request.id} />
-                  <label className="grid gap-1.5 text-xs font-medium text-secondary">
-                    Yorum ekle
-                    <Textarea name="body" rows={3} required maxLength={2000} placeholder="Eksik bilgi, müşteri dönüşü veya değerlendirme notu…" />
-                  </label>
-                  <div className="mt-3 flex justify-end"><SubmitButton>Notu ekle</SubmitButton></div>
-                </form>
-              )}
+              <form action={addClientRequestCommentAction} className="mt-5 border-t border-border-subtle pt-4">
+                <input type="hidden" name="requestId" value={request.id} />
+                <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                  Yorum ekle
+                  <Textarea name="body" rows={3} required maxLength={2000} placeholder="Eksik bilgi, müşteri dönüşü veya değerlendirme notu…" />
+                </label>
+                <div className="mt-3 flex justify-end"><SubmitButton>Notu ekle</SubmitButton></div>
+              </form>
             </div>
           </section>
         </main>
@@ -156,7 +185,7 @@ export default async function ClientRequestDetailPage({
         <aside className="space-y-4 xl:sticky xl:top-20">
           <section className="rounded-xl border border-border-default bg-surface p-4">
             <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">KARAR</h2>
-            {canReview && isOpen ? (
+            {isOpen ? (
               <div className="mt-4">
                 <RequestReviewForm
                   requestId={request.id}
@@ -181,9 +210,6 @@ export default async function ClientRequestDetailPage({
                   <span className="text-muted">Öncelik</span>
                   <span className="font-medium text-foreground">{TASK_PRIORITY_LABEL[request.priority]}</span>
                 </div>
-                {!canReview && isOpen && (
-                  <p className="border-t border-border-subtle pt-3 leading-5 text-muted">Talep değerlendirme ekibinin kuyruğunda.</p>
-                )}
               </div>
             )}
           </section>

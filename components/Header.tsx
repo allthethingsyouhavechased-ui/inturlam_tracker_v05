@@ -21,16 +21,16 @@ export default async function Header() {
 
   return (
     <header className="app-topbar sticky top-0 z-30 border-b border-border-subtle bg-background/90 backdrop-blur-xl">
-      <div className="flex h-[var(--header-h)] items-center gap-3 px-3 sm:px-5">
+      <div className="relative flex h-[var(--header-h)] items-center gap-3 px-3 sm:px-5">
         <div className="flex min-w-0 items-center md:hidden">
           <MobileMenuButton />
         </div>
 
-        <div className="flex min-w-0 flex-1 justify-start px-2 md:px-0">
+        <div className="header-search-center flex min-w-0 flex-1 justify-start px-2 md:px-0">
           <GlobalSearch />
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           {person && (
             <QuickAddModal
               brands={brands}

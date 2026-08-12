@@ -7,6 +7,7 @@ import NewBrandForm from "@/components/NewBrandForm";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import { requirePageSession } from "@/lib/identity";
+import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
 import { listArchivedBrands, listBrandsWithOpenCounts } from "@/lib/repositories/brands";
 import { groupBrandsByCluster, listClusters } from "@/lib/repositories/clusters";
 
@@ -75,15 +76,20 @@ export default async function BrandsPage() {
               </h2>
 
               <div className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface">
-                {group.items.map((brand) => (
+                {group.items.map((brand) => {
+                  const instagramHandle = normalizeInstagramHandle(brand.instagram_handle);
+                  const instagramUrl = instagramProfileUrl(brand.instagram_handle);
+                  return (
                   <div
                     key={brand.id}
                     className="group relative flex min-h-[72px] min-w-0 items-center gap-3 bg-surface px-3 py-2.5 transition-colors hover:bg-surface-hover sm:px-4"
                   >
                     <Link
                       href={`/brands/${brand.id}`}
-                      className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 lg:grid-cols-[minmax(15rem,1.15fr)_minmax(8rem,0.55fr)_minmax(10rem,0.75fr)_minmax(12rem,1fr)]"
-                    >
+                      aria-label={`${brand.name} çalışma alanına git`}
+                      className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-500"
+                    ><span className="sr-only">{brand.name} çalışma alanına git</span></Link>
+                    <div className="pointer-events-none relative z-[1] grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 lg:grid-cols-[minmax(15rem,1.15fr)_minmax(8rem,0.55fr)_minmax(10rem,0.75fr)_minmax(12rem,1fr)]">
                       <span className="flex min-w-0 items-center gap-3">
                       <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
                       <span className="min-w-0">
@@ -105,9 +111,19 @@ export default async function BrandsPage() {
 
                       <span className="hidden min-w-0 lg:block">
                         <span className="block text-[9px] font-semibold tracking-[0.08em] text-faint">SOSYAL HESAP</span>
-                        <span className="mt-1 block truncate text-xs font-medium text-secondary">
-                          {brand.instagram_handle ? `@${brand.instagram_handle}` : "Kullanıcı adı girilmemiş"}
-                        </span>
+                        {instagramUrl && instagramHandle ? (
+                          <a
+                            href={instagramUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`${brand.name} Instagram hesabını aç`}
+                            className="pointer-events-auto relative z-10 mt-0.5 inline-flex min-h-8 max-w-full items-center truncate rounded-md text-xs font-medium text-secondary underline decoration-border-strong underline-offset-4 hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-brand-500 dark:hover:text-brand-300"
+                          >
+                            @{instagramHandle}
+                          </a>
+                        ) : (
+                          <span className="mt-1 block truncate text-xs font-medium text-muted">Kullanıcı adı girilmemiş</span>
+                        )}
                       </span>
 
                       <span className="hidden min-w-0 lg:block">
@@ -120,8 +136,8 @@ export default async function BrandsPage() {
                               : "Marka notu henüz eklenmemiş"}
                         </span>
                       </span>
-                    </Link>
-                    <span className="flex shrink-0 items-center gap-1.5">
+                    </div>
+                    <span className="relative z-10 flex shrink-0 items-center gap-1.5">
                       <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                         <ArchiveBrandButton brandId={brand.id} />
                       </span>
@@ -134,7 +150,8 @@ export default async function BrandsPage() {
                       </Link>
                     </span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           );

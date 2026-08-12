@@ -86,9 +86,9 @@ export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
 
 export const TASK_STATUS_BADGE: Record<TaskStatus, string> = {
   Beklemede:
-    "bg-slate-200 text-slate-800 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
+    "bg-zinc-200 text-zinc-800 ring-1 ring-inset ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700",
   DevamEdiyor:
-    "bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-300 dark:bg-blue-950 dark:text-blue-200 dark:ring-blue-800",
+    "bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-300 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800",
   Incelemede:
     "bg-violet-100 text-violet-800 ring-1 ring-inset ring-violet-300 dark:bg-violet-950 dark:text-violet-200 dark:ring-violet-800",
   Onaylandi:
@@ -98,8 +98,8 @@ export const TASK_STATUS_BADGE: Record<TaskStatus, string> = {
 };
 
 export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
-  Beklemede: "bg-slate-400",
-  DevamEdiyor: "bg-blue-600",
+  Beklemede: "bg-zinc-400",
+  DevamEdiyor: "bg-sky-600",
   Incelemede: "bg-violet-600",
   Onaylandi: "bg-amber-500",
   Yayinlandi: "bg-emerald-600",
@@ -110,8 +110,8 @@ export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 // string'lerini yakalayamadığı için (ör. .replace("bg-","border-t-")) ayrı
 // bir sabit olarak literal yazılmalı.
 export const TASK_STATUS_BORDER_TOP: Record<TaskStatus, string> = {
-  Beklemede: "border-t-slate-400",
-  DevamEdiyor: "border-t-blue-600",
+  Beklemede: "border-t-zinc-400",
+  DevamEdiyor: "border-t-sky-600",
   Incelemede: "border-t-violet-600",
   Onaylandi: "border-t-amber-500",
   Yayinlandi: "border-t-emerald-600",
@@ -120,8 +120,8 @@ export const TASK_STATUS_BORDER_TOP: Record<TaskStatus, string> = {
 // Rapor çubukları ve diğer dolu durum göstergeleri de yukarıdaki semantik
 // paleti kullanır. Aynı durum uygulamanın hiçbir yerinde başka renge dönmez.
 export const TASK_STATUS_PROGRESS: Record<TaskStatus, string> = {
-  Beklemede: "bg-slate-400 dark:bg-slate-500",
-  DevamEdiyor: "bg-blue-600",
+  Beklemede: "bg-zinc-400 dark:bg-zinc-500",
+  DevamEdiyor: "bg-sky-600",
   Incelemede: "bg-violet-600",
   Onaylandi: "bg-amber-500",
   Yayinlandi: "bg-emerald-600",

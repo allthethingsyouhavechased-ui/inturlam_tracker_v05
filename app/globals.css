@@ -133,7 +133,6 @@ body {
   transform: translateY(0);
 }
 
-.page-shell:has(> .team-page-wide),
 .page-shell:has(> .workspace-page-wide) {
   max-width: 100rem;
 }
@@ -225,13 +224,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (min-width: 768px) {
-  .sidebar-panel {
+  .sidebar-panel,
+  .sidebar-spacer {
     width: var(--sidebar-expanded);
-    overflow: hidden;
     transition: width var(--motion-deliberate) var(--motion-ease-standard);
   }
 
-  html[data-sidebar="collapsed"] .sidebar-panel {
+  .sidebar-panel {
+    overflow: hidden;
+  }
+
+  html[data-sidebar="collapsed"] .sidebar-panel,
+  html[data-sidebar="collapsed"] .sidebar-spacer {
     width: var(--sidebar-collapsed);
   }
 
@@ -261,6 +265,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   html[data-sidebar="collapsed"] .sidebar-accounting {
     justify-content: center;
+  }
+}
+
+/* Ust cubuk ana icerik alaninda baslasa da arama viewport'un gercek yatay
+   merkezinde kalir. Boylece sidebar acilip kapandiginda gozle saga/sola kaymaz. */
+@media (min-width: 1024px) {
+  .header-search-center {
+    position: absolute;
+    left: calc(50% - var(--sidebar-expanded) / 2);
+    width: clamp(18rem, 32vw, 30rem);
+    transform: translateX(-50%);
+  }
+
+  .header-search-center > form {
+    width: 100%;
+    max-width: none;
+  }
+
+  html[data-sidebar="collapsed"] .header-search-center {
+    left: calc(50% - var(--sidebar-collapsed) / 2);
   }
 }
 

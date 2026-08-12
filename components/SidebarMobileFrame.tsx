@@ -74,13 +74,14 @@ export default function SidebarMobileFrame({ children }: { children: React.React
           onClick={close}
         />
       )}
+      <div className="sidebar-spacer hidden shrink-0 md:block" aria-hidden="true" />
       <div
         ref={panelRef}
         id="app-sidebar"
         role={open ? "dialog" : undefined}
         aria-modal={open ? true : undefined}
         aria-label={open ? "Ana gezinme" : undefined}
-        className={`sidebar-panel invisible fixed inset-y-0 left-0 z-50 w-72 -translate-x-full bg-surface shadow-lg transition-[transform,visibility] duration-200 md:visible md:sticky md:top-0 md:z-auto md:h-screen md:w-auto md:shrink-0 md:self-start md:translate-x-0 md:bg-transparent md:shadow-none ${
+        className={`sidebar-panel invisible fixed inset-y-0 left-0 z-50 w-72 -translate-x-full bg-surface shadow-lg transition-[transform,visibility] duration-200 md:visible md:z-40 md:h-screen md:w-auto md:translate-x-0 md:bg-transparent md:shadow-none ${
           open ? "visible translate-x-0" : ""
         }`}
       >

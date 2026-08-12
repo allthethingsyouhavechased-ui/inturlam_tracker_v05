@@ -7,13 +7,15 @@ import { isNavActive, visibleNavGroups } from "@/lib/nav";
 
 export default function SidebarNav({
   canViewReports,
+  canViewRequests,
   pendingRequestCount = 0,
 }: {
   canViewReports: boolean;
+  canViewRequests: boolean;
   pendingRequestCount?: number;
 }) {
   const pathname = usePathname();
-  const groups = visibleNavGroups(canViewReports);
+  const groups = visibleNavGroups(canViewReports, canViewRequests);
 
   return (
     <nav aria-label="Ana gezinme" className="flex min-h-0 flex-1 flex-col gap-4 py-3">
