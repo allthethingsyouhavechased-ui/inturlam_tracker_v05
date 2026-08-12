@@ -8,14 +8,49 @@ function source(path: string): string {
 }
 
 describe("Panom teslim radari", () => {
-  it("varsayilan olarak kapali baslar ve tercihi kisi bazinda saklar", () => {
+  it("üç kişisel aracı aynı açılır kontrol sırasında toplar", () => {
     const radar = source("components/PersonalDeadlineRadar.tsx");
+    const panom = source("app/panom/page.tsx");
+    const insights = source("components/PanomInsightPanels.tsx");
+    const views = source("components/PanomViews.tsx");
 
     assert.match(radar, /usePanelOpen\(`\$\{PANEL_KEY\}:\$\{personId\}`, false\)/);
     assert.match(radar, /if \(!open\)/);
-    assert.match(radar, /Kişisel teslim radarını aç/);
-    assert.match(radar, /lg:absolute lg:right-0 lg:top-8/);
-    assert.match(source("app/panom/page.tsx"), /headerAction/);
+    assert.match(radar, /const dockTrigger/);
+    assert.match(radar, /dock && <div className="flex items-center">\{dockTrigger\}/);
+    assert.match(radar, /order-last w-full basis-full/);
+    assert.match(panom, /aria-label="Kişisel pano araçları"/);
+    assert.match(panom, /<PersonalDeadlineRadar[\s\S]*?dock/);
+    assert.match(panom, /<PanomInsightPanels/);
+    assert.match(insights, /panom-brands:\$\{personId\}/);
+    assert.match(insights, /panom-contribution:\$\{personId\}/);
+    assert.match(insights, /href="\/panom\/katkim"/);
+    assert.match(insights, /href="\/panom\/markalar"/);
+    assert.match(source("app/panom/markalar/page.tsx"), /combineMonthlyProgress/);
+    assert.doesNotMatch(views, /otherTasks|Ekipte gecikmiş \/ bu hafta teslim/);
+  });
+});
+
+describe("İkincil operasyon panelleri", () => {
+  it("tarih bekleyenleri Görevler başlığındaki açılır düğmeye taşır", () => {
+    const tasks = source("app/tasks/page.tsx");
+    const queue = source("components/TaskPlanningQueue.tsx");
+
+    assert.match(tasks, /actions=\{<TaskPlanningQueue/);
+    assert.match(queue, /Tarih bekleyenler/);
+    assert.match(queue, /Planlama kuyruğu/);
+    assert.doesNotMatch(tasks, /mb-5 grid gap-3 lg:grid-cols-2/);
+  });
+
+  it("ekip aylık puanını aktif iş akışının hemen altındaki kapalı panele alır", () => {
+    const reports = source("components/ReportsClient.tsx");
+    const workflowPanel = reports.indexOf('panelKey="workflow"');
+    const scorePanel = reports.indexOf('panelKey="team-monthly-score"');
+    const departmentSection = reports.indexOf('id="departman-raporu"');
+
+    assert.ok(workflowPanel >= 0 && scorePanel > workflowPanel && departmentSection > scorePanel);
+    assert.match(reports, /defaultOpen=\{false\}/);
+    assert.match(source("app/reports/page.tsx"), /teamMonthlyProgress=\{teamMonthlyProgress\}/);
   });
 });
 

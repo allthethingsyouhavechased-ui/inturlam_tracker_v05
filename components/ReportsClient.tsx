@@ -43,6 +43,7 @@ import type {
   TrendReport,
   WorkflowReportRow,
 } from "@/lib/repositories/reports";
+import type { MonthlyProgress } from "@/lib/types";
 
 export type { RangeKey };
 
@@ -85,6 +86,7 @@ export default function ReportsClient({
   customEnd,
   reportLabel,
   generatedAt,
+  teamMonthlyProgress,
 }: {
   summary: ReportSummary;
   previousSummary: ReportSummary | null;
@@ -100,6 +102,7 @@ export default function ReportsClient({
   customEnd: string;
   reportLabel: string;
   generatedAt: string;
+  teamMonthlyProgress: Array<{ person_id: string; person_name: string; progress: MonthlyProgress }>;
 }) {
   const [hideArchived, setHideArchived] = useState(false);
   const [showDepartmentTable, setShowDepartmentTable] = useState(true);
@@ -474,6 +477,26 @@ export default function ReportsClient({
             })}
           </div>
         )}
+      </CollapsiblePanel>
+
+      <CollapsiblePanel
+        panelKey="team-monthly-score"
+        title="Ekip aylık puanı"
+        description="Teslim tarihi bu ayda olan görevlerin ağırlıklı durum ilerlemesi."
+        meta={<span className="tabular-nums text-muted">{teamMonthlyProgress.filter((row) => row.progress.percent !== null).length}/{teamMonthlyProgress.length} kişi planlı</span>}
+        defaultOpen={false}
+      >
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {teamMonthlyProgress.map((row) => (
+            <div key={row.person_id} className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="truncate font-semibold text-foreground">{row.person_name}</span>
+                <span className="shrink-0 tabular-nums text-muted">{row.progress.percent === null ? "Bu ay plan yok" : `%${row.progress.percent}`}</span>
+              </div>
+              {row.progress.percent !== null && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-brand-600" style={{ width: `${row.progress.percent}%` }} /></div>}
+            </div>
+          ))}
+        </div>
       </CollapsiblePanel>
 
       <section id="departman-raporu" className="scroll-mt-24 space-y-3">

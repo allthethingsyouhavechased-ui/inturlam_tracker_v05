@@ -4,16 +4,26 @@ import path from "node:path";
 import { describe, it } from "node:test";
 
 const source = fs.readFileSync(path.join(process.cwd(), "app", "page.tsx"), "utf8");
+const progressSource = fs.readFileSync(path.join(process.cwd(), "components", "HomeBrandProgress.tsx"), "utf8");
 
 describe("Bugün sayfası bilgi akışı", () => {
-  it("boş kalan sol sütunda son ajans hareketlerini gösteriyor", () => {
-    assert.match(source, /listRecentActivity\(3\)/);
-    assert.match(source, /title="Ajans akışı"/);
-    assert.match(source, /<ActivityPanel[\s\S]*entries=\{recentActivity\}/);
-    assert.match(source, /<ActivityFeed entries=\{entries\}/);
+  it("üst operasyon göstergelerini ve sosyal uyarı şeridini koruyor", () => {
+    assert.match(source, /aria-label="Operasyon göstergeleri"/);
+    assert.match(source, /<Metric href="\/brands"/);
+    assert.match(source, /<SilentAccountsCard/);
   });
 
-  it("ajans akışını gecikmiş panelle aynı sütunda tutuyor", () => {
-    assert.match(source, /className="space-y-5"[\s\S]*id="gecikmis"[\s\S]*title="Ajans akışı"/);
+  it("alt alanı kişisel ve portföy marka ilerlemesine ayırıyor", () => {
+    assert.match(source, /listPersonBrandAssignments/);
+    assert.match(source, /listBrandMonthlyProgress/);
+    assert.match(source, /getPortfolioMonthlyProgress/);
+    assert.match(source, /listMonthlyTaskStatusCounts/);
+    assert.match(source, /combineMonthlyProgress/);
+    assert.match(source, /<HomeBrandProgress/);
+    assert.match(progressSource, /KİŞİSEL MARKA GÖRÜNÜMÜ/);
+    assert.match(progressSource, /PORTFÖY AYLIK İLERLEME/);
+    assert.match(progressSource, /AYLIK ÜRETİM AKIŞI/);
+    assert.match(progressSource, /Atanmış markalar toplamı/);
+    assert.doesNotMatch(source, /TaskPanel|ActivityPanel|listRecentActivity/);
   });
 });

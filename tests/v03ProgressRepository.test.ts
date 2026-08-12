@@ -7,7 +7,7 @@ import { after, beforeEach, describe, it } from "node:test";
 const TMP_DB = path.join(os.tmpdir(), `inturlam-test-v03-progress-repo-${process.pid}.db`);
 process.env.INTURLAM_DB_PATH = TMP_DB;
 const { getDb } = await import("@/lib/db/client");
-const { getBrandMonthlyProgress, getPersonMonthlyProgress } = await import("@/lib/repositories/progress");
+const { getBrandMonthlyProgress, getPersonMonthlyProgress, getPortfolioMonthlyProgress, listBrandMonthlyProgress, listMonthlyTaskStatusCounts } = await import("@/lib/repositories/progress");
 
 function resetDb() { globalThis.__inturlamDb?.close(); globalThis.__inturlamDb = undefined; for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(TMP_DB + suffix, { force: true }); }
 beforeEach(resetDb); after(resetDb);
@@ -15,7 +15,7 @@ beforeEach(resetDb); after(resetDb);
 describe("v03 ilerleme aylık kapsamı", () => {
   it("due_date ay sınırını kullanır, arşivliyi tutar ve planlanmamış guest görevini dışarıda bırakır", () => {
     const db = getDb();
-    db.prepare("INSERT INTO brands (id,name,cluster) VALUES ('b1','Bir','tek')").run();
+    db.prepare("INSERT INTO brands (id,name,cluster,sort_order) VALUES ('b1','Bir','tek',1),('b2','İki','tek',2)").run();
     db.prepare("INSERT INTO people (id,name) VALUES ('p1','Ada')").run();
     db.prepare("INSERT INTO content_items (id,brand_id,title,type) VALUES ('c1','b1','İş','Diger')").run();
     const insert = db.prepare(`INSERT INTO tasks (id,content_item_id,title,status,assignee_id,due_date,weight_points,origin,archived_at,requested_date) VALUES (?,?,?,?,?,?,?,?,?,?)`);
@@ -28,5 +28,11 @@ describe("v03 ilerleme aylık kapsamı", () => {
     assert.equal(brand.weighted_total, 10);
     assert.equal(brand.percent, 70);
     assert.equal(getPersonMonthlyProgress("p1", "2026-08").percent, 70);
+    assert.equal(getPortfolioMonthlyProgress("2026-08").percent, 70);
+    const portfolio = listBrandMonthlyProgress("2026-08");
+    assert.deepEqual(portfolio.map((row) => [row.brand_id, row.progress.percent]), [["b1", 70], ["b2", null]]);
+    assert.deepEqual(listMonthlyTaskStatusCounts("2026-08"), {
+      Beklemede: 0, DevamEdiyor: 1, Incelemede: 0, Onaylandi: 0, Yayinlandi: 1,
+    });
   });
 });

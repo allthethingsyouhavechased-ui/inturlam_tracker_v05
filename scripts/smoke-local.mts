@@ -32,20 +32,38 @@ function occurrenceCount(value: string, fragment: string): number {
 }
 
 try {
-  const [currentResponse, selectedResponse, brandResponse] = await Promise.all([
+  const [currentResponse, selectedResponse, brandResponse, homeResponse, panomResponse, contributionResponse, assignedBrandsResponse, tasksResponse, reportsResponse] = await Promise.all([
     fetch(`${baseUrl}/calendar?month=${month}`, { headers }),
     fetch(`${baseUrl}/calendar?month=${month}&day=${selectedDate}`, { headers }),
     fetch(`${baseUrl}/brands/${brand.id}`, { headers }),
+    fetch(`${baseUrl}/`, { headers }),
+    fetch(`${baseUrl}/panom`, { headers }),
+    fetch(`${baseUrl}/panom/katkim`, { headers }),
+    fetch(`${baseUrl}/panom/markalar`, { headers }),
+    fetch(`${baseUrl}/tasks`, { headers }),
+    fetch(`${baseUrl}/reports`, { headers }),
   ]);
 
   assert.equal(currentResponse.status, 200, "Güncel ay takvimi açılamadı.");
   assert.equal(selectedResponse.status, 200, "Seçili gün takvimi açılamadı.");
   assert.equal(brandResponse.status, 200, "Marka sayfası açılamadı.");
+  assert.equal(homeResponse.status, 200, "Bugün sayfası açılamadı.");
+  assert.equal(panomResponse.status, 200, "Panom açılamadı.");
+  assert.equal(contributionResponse.status, 200, "Katkı detay sayfası açılamadı.");
+  assert.equal(assignedBrandsResponse.status, 200, "Üzerimdeki markalar detay sayfası açılamadı.");
+  assert.equal(tasksResponse.status, 200, "Görevler sayfası açılamadı.");
+  assert.equal(reportsResponse.status, 200, "Raporlar sayfası açılamadı.");
 
-  const [currentHtml, selectedHtml, brandHtml] = await Promise.all([
+  const [currentHtml, selectedHtml, brandHtml, homeHtml, panomHtml, contributionHtml, assignedBrandsHtml, tasksHtml, reportsHtml] = await Promise.all([
     currentResponse.text(),
     selectedResponse.text(),
     brandResponse.text(),
+    homeResponse.text(),
+    panomResponse.text(),
+    contributionResponse.text(),
+    assignedBrandsResponse.text(),
+    tasksResponse.text(),
+    reportsResponse.text(),
   ]);
 
   const currentTodayLinks = occurrenceCount(currentHtml, encodedTodayHref);
@@ -54,12 +72,26 @@ try {
   assert.ok(selectedHtml.includes(`value="${selectedDate}T09:00"`), "Seçili gün başlangıç alanına taşınmalı.");
   assert.ok(selectedHtml.includes(`value="${selectedDate}T10:00"`), "Seçili gün bitiş alanına taşınmalı.");
   assert.ok(brandHtml.includes("ÇEKİM HAKLARI") && brandHtml.includes("YILLIK"), "Marka sayfası yıllık çekim hakkını göstermeli.");
+  assert.ok(homeHtml.includes("AYLIK ÜRETİM AKIŞI") && homeHtml.includes("Atanmış markalar toplamı"), "Bugün sayfası atanmış marka toplamını ve üretim akışını göstermeli.");
+  assert.ok(panomHtml.includes("Üzerimdeki markalar") && panomHtml.includes("Bu ayki katkım"), "Panom kişisel araç düğmelerini göstermeli.");
+  assert.ok(!panomHtml.includes("Ekipte gecikmiş / bu hafta teslim"), "Panom ekip geneli görev panelini göstermemeli.");
+  assert.ok(contributionHtml.includes("Katkı dökümü") && contributionHtml.includes("Durum analizi"), "Katkı detay sayfası ayrıntılı analizi göstermeli.");
+  assert.ok(assignedBrandsHtml.includes("TOPLAM İLERLEME") && assignedBrandsHtml.includes("AĞIRLIKLI PUAN"), "Üzerimdeki markalar detay sayfası birleşik ilerlemeyi göstermeli.");
+  const undatedTaskCount = (db.prepare("SELECT COUNT(*) AS count FROM tasks WHERE due_date IS NULL").get() as { count: number }).count;
+  if (undatedTaskCount > 0) assert.ok(tasksHtml.includes("Tarih bekleyenler"), "Görevler sayfası tarih bekleyenler düğmesini göstermeli.");
+  assert.ok(reportsHtml.includes("Ekip aylık puanı"), "Raporlar sayfası ekip aylık puanı panelini göstermeli.");
 
   console.log(JSON.stringify({
     baseUrl,
     calendarCurrent: currentResponse.status,
     calendarSelected: selectedResponse.status,
     brand: brandResponse.status,
+    home: homeResponse.status,
+    panom: panomResponse.status,
+    contribution: contributionResponse.status,
+    assignedBrands: assignedBrandsResponse.status,
+    tasks: tasksResponse.status,
+    reports: reportsResponse.status,
     selectedDate,
   }));
 } finally {

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import TaskBoard from "@/components/TaskBoard";
-import TaskGridCard from "@/components/TaskGridCard";
 import TaskListView from "@/components/TaskListView";
 import type { Person, TaskWithContext } from "@/lib/types";
 import {
@@ -48,18 +47,15 @@ function ViewToggle({
   );
 }
 
-// Panom'un iki bölümü (bana atanmışlar + ekipte gecikmiş/bu hafta) tek bir
-// Pano/Liste düğmesiyle birlikte görünüm değiştirir — /tasks'taki alışkanlığın
-// aynısı. Liste görünümü sütun başlıklarından sıralanabilir (TaskListView).
+// Panom yalnızca kişisel çalışma alanıdır. Ekip geneli riskleri Bugün ve Görevler
+// sayfalarında kalır; buradaki düğme kişinin kendi işlerinin görünümünü değiştirir.
 export default function PanomViews({
   myTasks,
-  otherTasks,
   people,
   hasIdentity,
   initialView,
 }: {
   myTasks: TaskWithContext[];
-  otherTasks: TaskWithContext[];
   people: Person[];
   hasIdentity: boolean;
   initialView: View;
@@ -100,33 +96,6 @@ export default function PanomViews({
               <div className="flex justify-end">{toggle}</div>
               <TaskListView tasks={myTasks} people={people} />
             </>
-          )}
-        </section>
-      )}
-
-      {otherTasks.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Ekipte gecikmiş / bu hafta teslim ({otherTasks.length})
-          </h2>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Bu görevler başkalarına atanmış ya da hiç atanmamış — takip için burada.
-            </p>
-            {/* Kimlik seçilmemişken üstteki bölüm hiç çizilmiyor; tek görünüm
-                düğmesi o zaman buraya iner. */}
-            {!hasIdentity && toggle}
-          </div>
-          {view === "pano" ? (
-            // Bilinçli olarak sürüklenemez: bu bölüm başkasının işi, Panom'dan
-            // durum değiştirmek yerine görünürlük sağlıyor.
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {otherTasks.map((t) => (
-                <TaskGridCard key={t.id} task={t} badges={t.badges} />
-              ))}
-            </div>
-          ) : (
-            <TaskListView tasks={otherTasks} people={people} />
           )}
         </section>
       )}

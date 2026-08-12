@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { calculateMonthlyProgress, TASK_STATUS_COEFFICIENT } from "@/lib/progress";
+import { calculateMonthlyProgress, combineMonthlyProgress, TASK_STATUS_COEFFICIENT } from "@/lib/progress";
 
 describe("v03 ağırlıklı aylık ilerleme", () => {
   it("beş durum katsayısını sabit tutar", () => {
@@ -24,5 +24,15 @@ describe("v03 ağırlıklı aylık ilerleme", () => {
 
   it("payda sıfırsa yüzde yerine plan yok durumunu üretir", () => {
     assert.equal(calculateMonthlyProgress("2026-08", []).percent, null);
+  });
+
+  it("birden fazla marka ilerlemesini yüzdeleri ortalamadan ağırlıklarıyla birleştirir", () => {
+    const combined = combineMonthlyProgress("2026-08", [
+      { month: "2026-08", weighted_total: 10, weighted_earned: 10, percent: 100, task_count: 1 },
+      { month: "2026-08", weighted_total: 30, weighted_earned: 0, percent: 0, task_count: 3 },
+    ]);
+    assert.deepEqual(combined, {
+      month: "2026-08", weighted_total: 40, weighted_earned: 10, percent: 25, task_count: 4,
+    });
   });
 });

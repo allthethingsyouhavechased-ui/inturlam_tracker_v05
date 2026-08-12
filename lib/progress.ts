@@ -28,6 +28,23 @@ export function calculateMonthlyProgress(month: string, tasks: WeightedTask[]): 
   };
 }
 
+export function combineMonthlyProgress(
+  month: string,
+  progresses: MonthlyProgress[],
+): MonthlyProgress {
+  const weightedTotal = progresses.reduce((sum, progress) => sum + progress.weighted_total, 0);
+  const weightedEarned = Number(
+    progresses.reduce((sum, progress) => sum + progress.weighted_earned, 0).toFixed(2),
+  );
+  return {
+    month,
+    weighted_total: weightedTotal,
+    weighted_earned: weightedEarned,
+    percent: weightedTotal === 0 ? null : Number(((weightedEarned / weightedTotal) * 100).toFixed(1)),
+    task_count: progresses.reduce((sum, progress) => sum + progress.task_count, 0),
+  };
+}
+
 export function assertWeightPoints(value: number): number {
   if (!Number.isInteger(value) || value < 1 || value > 100) {
     throw new Error("Görev ağırlığı 1 ile 100 arasında tam sayı olmalı.");
