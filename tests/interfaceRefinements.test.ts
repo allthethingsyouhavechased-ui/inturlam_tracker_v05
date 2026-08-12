@@ -36,7 +36,7 @@ describe("İkincil operasyon panelleri", () => {
     const tasks = source("app/tasks/page.tsx");
     const queue = source("components/TaskPlanningQueue.tsx");
 
-    assert.match(tasks, /actions=\{<TaskPlanningQueue/);
+    assert.match(tasks, /actions=\{[\s\S]*?<TaskPlanningQueue/);
     assert.match(queue, /Tarih bekleyenler/);
     assert.match(queue, /Planlama kuyruğu/);
     assert.doesNotMatch(tasks, /mb-5 grid gap-3 lg:grid-cols-2/);

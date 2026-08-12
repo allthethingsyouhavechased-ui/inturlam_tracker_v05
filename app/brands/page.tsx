@@ -14,7 +14,8 @@ import { groupBrandsByCluster, listClusters } from "@/lib/repositories/clusters"
 export const dynamic = "force-dynamic";
 
 export default async function BrandsPage() {
-  await requirePageSession();
+  const me = await requirePageSession();
+  const canManageBrands = me.is_manager === 1;
   const brands = listBrandsWithOpenCounts();
   const archived = listArchivedBrands();
   const clusters = listClusters();
@@ -34,7 +35,7 @@ export default async function BrandsPage() {
         eyebrow="PORTFÖY"
         title="Markalar"
         description={`${brands.length} aktif markanın çalışma alanları, açık iş yükleri ve içerik akışları.`}
-        actions={
+        actions={canManageBrands && (
           <div className="relative flex w-full max-w-[calc(100vw-2rem)] flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:max-w-none sm:flex-wrap sm:overflow-visible sm:pb-0">
             <ClusterManager
               clusters={clusters.map((cluster) => ({
@@ -60,7 +61,7 @@ export default async function BrandsPage() {
               </div>
             </details>
           </div>
-        }
+        )}
       />
 
       <div className="space-y-7">
@@ -138,9 +139,11 @@ export default async function BrandsPage() {
                       </span>
                     </div>
                     <span className="relative z-10 flex shrink-0 items-center gap-1.5">
-                      <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                        <ArchiveBrandButton brandId={brand.id} />
-                      </span>
+                      {canManageBrands && (
+                        <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                          <ArchiveBrandButton brandId={brand.id} />
+                        </span>
+                      )}
                       <Link
                         href={`/brands/${brand.id}`}
                         aria-label={`${brand.name} çalışma alanına git`}
@@ -160,7 +163,11 @@ export default async function BrandsPage() {
         {brands.length === 0 && (
           <section className="rounded-xl border border-dashed border-border-default bg-surface-subtle px-5 py-10 text-center">
             <h2 className="text-sm font-semibold text-foreground">Henüz aktif marka yok</h2>
-            <p className="mt-1 text-xs text-muted">İlk çalışma alanını oluşturmak için “Yeni marka”yı kullan.</p>
+            <p className="mt-1 text-xs text-muted">
+              {canManageBrands
+                ? "İlk çalışma alanını oluşturmak için “Yeni marka”yı kullan."
+                : "Yeni bir çalışma alanı oluşturmak için yöneticinle iletişime geç."}
+            </p>
           </section>
         )}
 
@@ -176,10 +183,12 @@ export default async function BrandsPage() {
                     <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
                     <span className="truncate text-sm text-secondary">{brand.name}</span>
                   </span>
-                  <span className="flex items-center gap-2">
-                    <ArchiveBrandButton brandId={brand.id} archived />
-                    <DeleteBrandButton brandId={brand.id} />
-                  </span>
+                  {canManageBrands && (
+                    <span className="flex items-center gap-2">
+                      <ArchiveBrandButton brandId={brand.id} archived />
+                      <DeleteBrandButton brandId={brand.id} />
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

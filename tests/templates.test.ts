@@ -17,6 +17,7 @@ const {
   applyTemplateToContent,
   createTemplate,
   listTemplates,
+  listTemplatesForContentType,
   listTemplateItems,
   shiftDate,
 } = await import("@/lib/repositories/templates");
@@ -53,6 +54,46 @@ describe("varsayılan şablonlar", () => {
     assert.ok(reel, "Reel akışı şablonu tohumlanmalı");
     assert.equal(reel.content_type, "Reel");
     assert.equal(listTemplateItems("reel-akisi").length, 5);
+  });
+
+  it("içerik türüne özel listede genel ve eşleşen şablonları döndürür", () => {
+    createTemplate({ name: "Her içerik", contentType: null });
+    createTemplate({ name: "Yalnız Post", contentType: "Post" });
+    const reelTemplates = listTemplatesForContentType("Reel");
+    const reelNames = reelTemplates.map((template) => template.name);
+    assert.ok(reelNames.includes("Her içerik"));
+    assert.ok(reelTemplates.some((template) => template.id === "reel-akisi"));
+    assert.ok(!reelNames.includes("Yalnız Post"));
+  });
+});
+
+describe("şablon ürün bağlantıları", () => {
+  it("yönetim rotasını, görevler girişini ve iki uygulama yüzeyini bağlı tutar", () => {
+    const templatesPage = fs.readFileSync(path.join(process.cwd(), "app/templates/page.tsx"), "utf8");
+    const tasksPage = fs.readFileSync(path.join(process.cwd(), "app/tasks/page.tsx"), "utf8");
+    const contentPage = fs.readFileSync(path.join(process.cwd(), "app/brands/[brandId]/content/[contentId]/page.tsx"), "utf8");
+    const brandPage = fs.readFileSync(path.join(process.cwd(), "app/brands/[brandId]/page.tsx"), "utf8");
+    const newContent = fs.readFileSync(path.join(process.cwd(), "components/NewContentForm.tsx"), "utf8");
+    const applyForm = fs.readFileSync(path.join(process.cwd(), "components/ApplyTemplateForm.tsx"), "utf8");
+
+    assert.doesNotMatch(templatesPage, /redirect\("\/tasks"\)/);
+    assert.match(templatesPage, /listTemplatesWithItems/);
+    assert.match(templatesPage, /<TemplateManager/);
+    assert.match(tasksPage, /href="\/templates"/);
+    assert.match(contentPage, /<ApplyTemplateForm/);
+    assert.match(contentPage, /listTemplatesForContentType/);
+    assert.match(brandPage, /templates=\{templates\}/);
+    assert.match(newContent, /name="templateId"/);
+    assert.match(newContent, /required=\{Boolean\(templateId\)\}/);
+    assert.match(applyForm, /hasTargetDate/);
+  });
+
+  it("boş gün kaymasını teslim günü olarak anlatır ve tarihsiz şablon görevi vaat etmez", () => {
+    const manager = fs.readFileSync(path.join(process.cwd(), "components/TemplateManager.tsx"), "utf8");
+    const actions = fs.readFileSync(path.join(process.cwd(), "lib/actions/templates.ts"), "utf8");
+    assert.match(manager, /Boş bırakılırsa teslim günü/);
+    assert.doesNotMatch(manager, /tarihsiz açılır/);
+    assert.match(actions, /let dueOffsetDays = 0/);
   });
 });
 
@@ -145,6 +186,7 @@ describe("applyTemplateToContent", () => {
     });
     const [task] = listTasksByContent("atama-icerik");
     assert.equal(task.assignee_id, "ekin");
+    assert.equal(task.due_date, "2026-08-10", "eski boş ofset teslim gününe düşmeli");
   });
 });
 

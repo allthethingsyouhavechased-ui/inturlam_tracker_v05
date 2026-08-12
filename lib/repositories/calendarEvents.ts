@@ -107,6 +107,21 @@ export function listPendingCalendarEvents(): CalendarEvent[] {
   ).all());
 }
 
+export function getCalendarSyncQueueCounts(): { pendingCount: number; errorCount: number } {
+  const row = plainOne<{ pending_count: number; error_count: number }>(
+    getDb().prepare(
+      `SELECT
+         SUM(CASE WHEN sync_status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+         SUM(CASE WHEN sync_status = 'error' THEN 1 ELSE 0 END) AS error_count
+       FROM calendar_events`,
+    ).get(),
+  );
+  return {
+    pendingCount: Number(row?.pending_count ?? 0),
+    errorCount: Number(row?.error_count ?? 0),
+  };
+}
+
 export function markCalendarEventSynced(input: {
   id: string; googleEventId: string | null; etag: string | null; googleUpdatedAt: string | null;
 }): void {

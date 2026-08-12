@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTeamSession } from "@/lib/identity";
-import { syncCalendarEventNow } from "@/lib/calendar/google";
+import { requireManager, requireTeamSession } from "@/lib/identity";
+import { runCalendarSync, syncCalendarEventNow } from "@/lib/calendar/google";
 import { notifyGuestCalendarEvent } from "@/lib/notifications";
 import { cancelCalendarEvent, getCalendarEvent, saveCalendarEvent } from "@/lib/repositories/calendarEvents";
 import { isCalendarEventColor } from "@/lib/calendar/colors";
@@ -71,4 +71,10 @@ export async function cancelCalendarEventAction(id: string) {
   await syncCalendarEventNow(id);
   revalidatePath("/calendar", "layout");
   revalidatePath("/guest/calendar");
+}
+
+export async function runCalendarSyncAction(): Promise<void> {
+  await requireManager();
+  await runCalendarSync("manual");
+  revalidatePath("/calendar");
 }

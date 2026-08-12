@@ -32,11 +32,11 @@ function startsWithSessionGuard(node: ts.FunctionDeclaration & { body: ts.Block 
   const [firstStatement] = node.body.statements;
   if (!firstStatement) return false;
   if (ts.isExpressionStatement(firstStatement)) {
-    return ["requireSession", "requireTeamSession", "requireGuestSession"].includes(awaitedCallName(firstStatement.expression) ?? "");
+    return ["requireSession", "requireTeamSession", "requireGuestSession", "requireManager"].includes(awaitedCallName(firstStatement.expression) ?? "");
   }
   if (!ts.isVariableStatement(firstStatement)) return false;
   const [declaration] = firstStatement.declarationList.declarations;
-  return ["requireSession", "requireTeamSession", "requireGuestSession"].includes(awaitedCallName(declaration?.initializer) ?? "");
+  return ["requireSession", "requireTeamSession", "requireGuestSession", "requireManager"].includes(awaitedCallName(declaration?.initializer) ?? "");
 }
 
 describe("mutasyon Server Action oturum koruması", () => {

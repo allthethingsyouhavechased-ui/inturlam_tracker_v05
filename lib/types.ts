@@ -498,6 +498,13 @@ export interface BrandAssetCount {
   updated_at: string;
 }
 
+export interface BrandMonthlyContentCompletion {
+  brand_id: string;
+  month: string; // 'YYYY-MM'
+  completed_by: string | null;
+  completed_at: string;
+}
+
 // Paylaşım takvimindeki tek bir gün. `combo` boş satır hiç üretilmez (silinir),
 // bu yüzden burada nullable değil.
 export interface BrandPlanEntry {
@@ -517,4 +524,6 @@ export interface BrandVarlikRow {
   logo_path: string | null;
   targets: Record<ContentKind, number>;
   ready: Record<ContentKind, number>;
+  monthly_content_completed: boolean;
+  monthly_content_completed_at: string | null;
 }

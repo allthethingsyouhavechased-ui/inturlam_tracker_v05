@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ArchiveContentButton from "@/components/ArchiveContentButton";
 import ArchiveTaskButton from "@/components/ArchiveTaskButton";
+import ApplyTemplateForm from "@/components/ApplyTemplateForm";
 import AutoRefresh from "@/components/AutoRefresh";
 import ContentStatusSelect from "@/components/ContentStatusSelect";
 import DeleteContentButton from "@/components/DeleteContentButton";
@@ -15,6 +16,7 @@ import { requirePageSession } from "@/lib/identity";
 import { getBrand } from "@/lib/repositories/brands";
 import { getContentItem } from "@/lib/repositories/content";
 import { listActivePeople } from "@/lib/repositories/people";
+import { listTemplatesForContentType } from "@/lib/repositories/templates";
 import {
   listArchivedTasksByContent,
   listTasksByContent,
@@ -30,6 +32,7 @@ export default async function ContentPage({
   params: Promise<{ brandId: string; contentId: string }>;
 }) {
   const me = await requirePageSession();
+  const canDeleteContent = me.is_manager === 1;
   const { brandId, contentId } = await params;
   const content = getContentItem(contentId);
   const brand = getBrand(brandId);
@@ -42,6 +45,7 @@ export default async function ContentPage({
   });
   const archivedTasks = listArchivedTasksByContent(contentId);
   const people = listActivePeople();
+  const templates = listTemplatesForContentType(content.type);
   return (
     <div className="space-y-6">
       <AutoRefresh />
@@ -63,15 +67,23 @@ export default async function ContentPage({
             <ContentStatusSelect contentId={content.id} status={content.status} />
             <EditContentForm content={content} people={people} />
             <ArchiveContentButton contentId={content.id} archived={content.archived === 1} />
-            <DeleteContentButton contentId={content.id} />
+            {canDeleteContent && <DeleteContentButton contentId={content.id} />}
           </>
         }
       />
 
       <section className="space-y-3 rounded-xl border border-border-default bg-surface p-4">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Görev oluştur</h2>
-          <p className="mt-0.5 text-xs text-muted">Bu içerik için yeni bir görev ekle.</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Görev oluştur</h2>
+            <p className="mt-0.5 text-xs text-muted">Tek görev ekle veya standart bir iş akışını şablondan getir.</p>
+          </div>
+          <ApplyTemplateForm
+            contentItemId={content.id}
+            templates={templates}
+            defaultAssigneeId={content.assignee_id ?? me.id}
+            hasTargetDate={Boolean(content.target_date)}
+          />
         </div>
         <NewTaskForm
           contentItemId={content.id}

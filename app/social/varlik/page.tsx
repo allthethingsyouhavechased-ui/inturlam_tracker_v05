@@ -5,6 +5,7 @@ import EmptyState from "@/components/EmptyState";
 import { setBrandAssetCountAction } from "@/lib/actions/socialPlan";
 import { requirePageSession } from "@/lib/identity";
 import { listBrandVarlikRows } from "@/lib/repositories/socialPlan";
+import { todayISO } from "@/lib/date";
 import { CONTENT_KINDS, CONTENT_KIND_LABEL } from "@/lib/socialPlan";
 import type { ContentKind } from "@/lib/types";
 
@@ -22,7 +23,10 @@ function progressTone(ready: number, target: number): string {
 
 export default async function SocialVarlikPage() {
   await requirePageSession();
-  const rows = listBrandVarlikRows();
+  const month = todayISO().slice(0, 7);
+  const monthLabel = new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric", timeZone: "Europe/Istanbul" })
+    .format(new Date(`${month}-01T12:00:00+03:00`));
+  const rows = listBrandVarlikRows(month);
 
   const totals: Record<ContentKind, { ready: number; target: number }> = {
     Post: { ready: 0, target: 0 },
@@ -41,6 +45,9 @@ export default async function SocialVarlikPage() {
       <div>
         <h2 className="text-base font-semibold text-foreground">Hazır içerik varlığı</h2>
         <p className="mt-1 text-xs text-muted">Yayına hazır stok ve marka bazlı aylık hedef karşılaştırması.</p>
+        <p className="mt-2 max-w-3xl rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2 text-xs leading-5 text-secondary">
+          Hazır varlık sayıları canlı stoktur ve içerikler paylaşıldıkça azalır. Bu azalma eksik teslim anlamına gelmez; aylık teslim durumu marka sayfasından ayrıca işaretlenir.
+        </p>
       </div>
 
       {rows.length === 0 ? (
@@ -59,6 +66,7 @@ export default async function SocialVarlikPage() {
                     {CONTENT_KIND_LABEL[kind]}
                   </th>
                 ))}
+                <th className="px-3 py-2 font-medium">Aylık teslim</th>
               </tr>
             </thead>
             <tbody>
@@ -105,6 +113,16 @@ export default async function SocialVarlikPage() {
                       </td>
                     );
                   })}
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/brands/${row.brand_id}`}
+                      className={row.monthly_content_completed
+                        ? "inline-flex rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300"
+                        : "inline-flex rounded-full border border-border-default px-2 py-1 text-[10px] font-semibold text-muted hover:bg-surface-hover hover:text-foreground"}
+                    >
+                      {row.monthly_content_completed ? `${monthLabel} teslimi tamamlandı` : `${monthLabel} teslimi açık`}
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -116,6 +134,9 @@ export default async function SocialVarlikPage() {
                     {totals[kind].ready} / {totals[kind].target}
                   </td>
                 ))}
+                <td className="px-3 py-2 text-muted">
+                  {rows.filter((row) => row.monthly_content_completed).length} / {rows.length} marka kapalı
+                </td>
               </tr>
             </tfoot>
           </table>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { ensureCluster } from "@/lib/clusters";
-import { requireSession } from "@/lib/identity";
+import { requireManager } from "@/lib/identity";
 import {
   countBrandsInCluster,
   deleteCluster,
@@ -12,7 +12,7 @@ import {
 } from "@/lib/repositories/clusters";
 
 export async function createClusterAction(formData: FormData) {
-  await requireSession();
+  await requireManager();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) throw new Error("Kategori adı zorunlu.");
   if (label.length > 80) throw new Error("Kategori adı en fazla 80 karakter olabilir.");
@@ -21,7 +21,7 @@ export async function createClusterAction(formData: FormData) {
 }
 
 export async function renameClusterAction(formData: FormData) {
-  await requireSession();
+  await requireManager();
   const id = String(formData.get("clusterId") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) throw new Error("Kategori adı zorunlu.");
@@ -41,7 +41,7 @@ export async function renameClusterAction(formData: FormData) {
 }
 
 export async function deleteClusterAction(clusterId: string) {
-  await requireSession();
+  await requireManager();
   const current = getCluster(clusterId);
   if (!current) throw new Error("Kategori bulunamadı.");
 

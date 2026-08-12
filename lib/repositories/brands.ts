@@ -22,6 +22,7 @@ export function createBrand(input: {
   name: string;
   cluster: Cluster;
   instagramHandle: string | null;
+  logoPath?: string | null;
 }): string {
   const id = crypto.randomUUID();
   const { maxOrder } = plainOne<{ maxOrder: number | null }>(
@@ -29,9 +30,9 @@ export function createBrand(input: {
   )!;
   getDb()
     .prepare(
-      "INSERT INTO brands (id, name, cluster, sort_order, instagram_handle) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO brands (id, name, cluster, sort_order, instagram_handle, logo_path) VALUES (?, ?, ?, ?, ?, ?)",
     )
-    .run(id, input.name, input.cluster, (maxOrder ?? 0) + 10, input.instagramHandle);
+    .run(id, input.name, input.cluster, (maxOrder ?? 0) + 10, input.instagramHandle, input.logoPath ?? null);
   return id;
 }
 
@@ -54,6 +55,7 @@ export function updateBrand(input: {
   monthlyShootAllowance: number | null;
   annualShootAllowance: number | null;
   today: string;
+  logoPath?: string;
 }): void {
   const db = getDb();
   const current = plainOne<Pick<Brand, "follower_count" | "post_count" | "stats_updated_at">>(
@@ -74,7 +76,8 @@ export function updateBrand(input: {
     `UPDATE brands SET
        name = ?, cluster = ?, instagram_handle = ?,
        follower_count = ?, post_count = ?,
-       key_finding = ?, tier = ?, stats_updated_at = ?, monthly_shoot_allowance = ?, annual_shoot_allowance = ?
+       key_finding = ?, tier = ?, stats_updated_at = ?, monthly_shoot_allowance = ?, annual_shoot_allowance = ?,
+       logo_path = COALESCE(?, logo_path)
      WHERE id = ?`,
   ).run(
     input.name,
@@ -87,12 +90,9 @@ export function updateBrand(input: {
     statsUpdatedAt,
     input.monthlyShootAllowance,
     input.annualShootAllowance,
+    input.logoPath ?? null,
     input.id,
   );
-}
-
-export function updateBrandLogo(id: string, logoPath: string): void {
-  getDb().prepare("UPDATE brands SET logo_path = ? WHERE id = ?").run(logoPath, id);
 }
 
 export function deleteBrand(id: string): void {

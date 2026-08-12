@@ -31,7 +31,8 @@ import { listActivePeople } from "@/lib/repositories/people";
 import { listBrandPersonAssignments } from "@/lib/repositories/brandAssignments";
 import { listCalendarEvents } from "@/lib/repositories/calendarEvents";
 import { getBrandMonthlyProgress, listBrandMonthlyContributions } from "@/lib/repositories/progress";
-import { listContentTargetsForBrand } from "@/lib/repositories/socialPlan";
+import { getBrandMonthlyContentCompletion, listContentTargetsForBrand } from "@/lib/repositories/socialPlan";
+import { listTemplates } from "@/lib/repositories/templates";
 import { emptyKindRecord } from "@/lib/socialPlan";
 import type { ContentKind } from "@/lib/types";
 
@@ -43,6 +44,7 @@ export default async function BrandPage({
   params: Promise<{ brandId: string }>;
 }) {
   const me = await requirePageSession();
+  const canManageBrand = me.is_manager === 1;
   const { brandId } = await params;
   const brand = getBrand(brandId);
   if (!brand) notFound();
@@ -50,6 +52,7 @@ export default async function BrandPage({
   const items = listContentByBrand(brandId);
   const archivedItems = listArchivedContentByBrand(brandId);
   const people = listActivePeople();
+  const templates = listTemplates();
   const activity = listActivityForBrand(brandId);
   const clusters = listClusters();
   const clusterLabels = clusterLabelMap();
@@ -59,6 +62,7 @@ export default async function BrandPage({
   }
   const today = todayISO();
   const month = today.slice(0, 7);
+  const monthlyContentCompletion = getBrandMonthlyContentCompletion(brandId, month);
   const assignments = listBrandPersonAssignments(brandId);
   const progress = getBrandMonthlyProgress(brandId, month);
   const contributions = listBrandMonthlyContributions(brandId, month);
@@ -162,6 +166,8 @@ export default async function BrandPage({
                   brandId={brand.id}
                   brandName={brand.name}
                   targets={contentTargets}
+                  month={month}
+                  monthlyContentCompleted={Boolean(monthlyContentCompletion)}
                   compact
                 />
               </div>
@@ -202,7 +208,7 @@ export default async function BrandPage({
               defaultBrandId={brand.id}
               triggerLabel="Görev oluştur"
             />
-            <EditBrandForm brand={brand} clusters={clusters} />
+            {canManageBrand && <EditBrandForm brand={brand} clusters={clusters} />}
           </>
         }
       />
@@ -236,6 +242,7 @@ export default async function BrandPage({
               <NewContentForm
                 brandId={brand.id}
                 people={people}
+                templates={templates}
                 defaultAssigneeId={me?.id ?? null}
               />
             </div>

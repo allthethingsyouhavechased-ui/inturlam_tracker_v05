@@ -7,6 +7,7 @@ import { getBrand } from "@/lib/repositories/brands";
 import {
   setBrandAssetCount,
   setBrandContentTarget,
+  setBrandMonthlyContentCompletion,
   setBrandPlanEntry,
 } from "@/lib/repositories/socialPlan";
 import {
@@ -14,6 +15,7 @@ import {
   clampCount,
   isContentKind,
   isPlanCombo,
+  isValidPlanMonth,
   isValidPlanDate,
 } from "@/lib/socialPlan";
 import type { ContentKind } from "@/lib/types";
@@ -58,6 +60,29 @@ export async function setBrandAssetCountAction(
 
   setBrandAssetCount(brandId, kind, clampCount(value));
   revalidatePath("/", "layout");
+}
+
+export async function setBrandMonthlyContentCompletionAction(
+  brandId: string,
+  month: string,
+  completed: boolean,
+): Promise<void> {
+  const actor = await requireSession();
+  if (!isValidPlanMonth(month)) throw new Error("Geçersiz ay.");
+  const brand = getBrand(brandId);
+  if (!brand) throw new Error("Marka bulunamadı.");
+
+  setBrandMonthlyContentCompletion({ brandId, month, completed, actorId: actor.id });
+  await recordActivity({
+    action: completed ? "brand.monthly_content.completed" : "brand.monthly_content.reopened",
+    entityType: "brand",
+    entityId: brandId,
+    brandId,
+    summary: `“${brand.name}” markasının ${month} içerik teslimini ${completed ? "tamamlandı olarak işaretledi" : "yeniden açtı"}`,
+  });
+
+  revalidatePath(`/brands/${brandId}`);
+  revalidatePath("/social/varlik");
 }
 
 export async function setBrandPlanEntryAction(

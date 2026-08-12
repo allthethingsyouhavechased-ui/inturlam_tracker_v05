@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS task_template_items (
   priority        TEXT NOT NULL DEFAULT 'Normal' CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
   assignee_id     TEXT REFERENCES people(id) ON DELETE SET NULL,
   -- İçeriğin target_date'ine göre gün kayması: -3 = teslimden 3 gün önce.
-  -- NULL = tarihsiz görev.
+  -- Eski NULL kayıtlar uygulamada 0 (teslim günü) olarak yorumlanır.
   due_offset_days INTEGER,
   sort_order      INTEGER NOT NULL DEFAULT 0
 );
@@ -459,6 +459,17 @@ CREATE TABLE IF NOT EXISTS brand_asset_counts (
   ready_count INTEGER NOT NULL DEFAULT 0,
   updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (brand_id, kind)
+);
+
+-- Aylık üretimin teslim edildiğine dair kapanış işareti. Hazır varlık sayısı
+-- canlı stoktur ve paylaşımlar oldukça azalabilir; bu kayıt o sayaçtan
+-- bağımsız olarak ilgili ayın teslim kararını korur.
+CREATE TABLE IF NOT EXISTS brand_monthly_content_completions (
+  brand_id    TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  month       TEXT NOT NULL,
+  completed_by TEXT REFERENCES people(id) ON DELETE SET NULL,
+  completed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY (brand_id, month)
 );
 
 -- Paylaşım takvimi: marka × GÜN → o gün planlanan kombinasyon ("Post+Story").

@@ -1,8 +1,10 @@
 import AutoRefresh from "@/components/AutoRefresh";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import TaskExplorer from "@/components/TaskExplorer";
 import TaskPlanningQueue from "@/components/TaskPlanningQueue";
 import PageHeader from "@/components/ui/PageHeader";
+import Icon from "@/components/ui/Icon";
 import { isDepartmentId, NO_DEPARTMENT } from "@/lib/departments";
 import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
@@ -77,7 +79,18 @@ export default async function AllTasksPage({
         eyebrow="ÇALIŞMA ALANI"
         title="Görevler"
         description="Portföydeki tüm işleri ara, filtrele ve ekip ya da süreç bazında incele."
-        actions={<TaskPlanningQueue guestTasks={unplannedGuestTasks} legacyTasks={legacyUndatedTasks} />}
+        actions={
+          <>
+            <Link
+              href="/templates"
+              className="ui-press inline-flex min-h-10 items-center gap-2 rounded-[10px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary shadow-sm hover:bg-surface-hover hover:text-foreground"
+            >
+              <Icon name="templates" className="size-4 text-brand-500" />
+              Şablonlar
+            </Link>
+            <TaskPlanningQueue guestTasks={unplannedGuestTasks} legacyTasks={legacyUndatedTasks} />
+          </>
+        }
       />
       <TaskExplorer
         tasks={tasks}
@@ -86,6 +99,7 @@ export default async function AllTasksPage({
         initialAssigneeId={initialAssigneeId}
         initialDepartment={initialDepartment}
         initialView={initialView}
+        canDeleteTasks={me.is_manager === 1}
       />
     </div>
   );

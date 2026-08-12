@@ -40,6 +40,7 @@ export default async function TaskPage({
   params: Promise<{ taskId: string }>;
 }) {
   const me = await requirePageSession();
+  const canDeleteTask = me.is_manager === 1;
   const { taskId } = await params;
   const task = getTask(taskId);
   if (!task) notFound();
@@ -129,7 +130,7 @@ export default async function TaskPage({
             </label>
             <div className="flex items-center justify-between border-t border-border-subtle pt-4">
               <SubmitButton>Değişiklikleri kaydet</SubmitButton>
-              <DeleteTaskButton taskId={task.id} />
+              {canDeleteTask && <DeleteTaskButton taskId={task.id} />}
             </div>
           </form>
 

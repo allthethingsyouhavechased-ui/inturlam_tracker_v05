@@ -7,7 +7,8 @@ if (fs.existsSync(envPath)) loadEnvFile(envPath);
 const { runCalendarSync } = await import("@/lib/calendar/google");
 
 try {
-  const result = await runCalendarSync();
+  const source = process.argv.includes("--scheduled") ? "scheduled" : "manual";
+  const result = await runCalendarSync(source);
   process.stdout.write(`${JSON.stringify(result)}\n`);
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);

@@ -18,12 +18,12 @@ import path from "node:path";
 
 const DB_PATH =
   process.env.INTURLAM_DB_PATH ?? path.join(process.cwd(), "data", "inturlam.db");
-const RUNTIME_UPLOADS_DIR = path.join(process.cwd(), "data", "uploads");
+const RUNTIME_UPLOADS_DIR = process.env.INTURLAM_UPLOAD_ROOT ?? path.join(process.cwd(), "data", "uploads");
 const LEGACY_UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 const UPLOADS_DIR = fs.existsSync(RUNTIME_UPLOADS_DIR)
   ? RUNTIME_UPLOADS_DIR
   : LEGACY_UPLOADS_DIR;
-const LOCAL_BACKUP_ROOT = path.join(process.cwd(), "data", "backup");
+const LOCAL_BACKUP_ROOT = process.env.INTURLAM_BACKUP_ROOT ?? path.join(process.cwd(), "data", "backup");
 
 // Ofis PC ile paylaşılan Drive klasörü gibi ikinci bir hedef verilebilir:
 //   INTURLAM_BACKUP_DIR="G:\Drive'ım\INTURLAM_YEDEK" npm run db:backup

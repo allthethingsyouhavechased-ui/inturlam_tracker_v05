@@ -14,10 +14,12 @@ export default function ApplyTemplateForm({
   contentItemId,
   templates,
   defaultAssigneeId,
+  hasTargetDate,
 }: {
   contentItemId: string;
   templates: TaskTemplate[];
   defaultAssigneeId: string | null;
+  hasTargetDate: boolean;
 }) {
   const [templateId, setTemplateId] = useState("");
   const [pending, startTransition] = useTransition();
@@ -29,9 +31,10 @@ export default function ApplyTemplateForm({
   const selected = templates.find((t) => t.id === templateId);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       <select
         aria-label="Şablon"
+        disabled={!hasTargetDate}
         value={templateId}
         onChange={(e) => {
           setTemplateId(e.target.value);
@@ -50,7 +53,7 @@ export default function ApplyTemplateForm({
 
       <button
         type="button"
-        disabled={!templateId || pending}
+        disabled={!hasTargetDate || !templateId || pending}
         onClick={() => {
           if (!selected) return;
           setError(null);
@@ -76,6 +79,11 @@ export default function ApplyTemplateForm({
 
       {message && <span className="text-xs text-emerald-600">{message}</span>}
       {error && <span role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</span>}
+      {!hasTargetDate && (
+        <span className="basis-full text-right text-[11px] text-amber-700 dark:text-amber-300">
+          Şablon uygulamak için önce içerik hedef tarihini belirle.
+        </span>
+      )}
     </div>
   );
 }

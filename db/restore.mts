@@ -16,7 +16,8 @@ import path from "node:path";
 
 const DB_PATH =
   process.env.INTURLAM_DB_PATH ?? path.join(process.cwd(), "data", "inturlam.db");
-const BACKUP_ROOT = path.join(process.cwd(), "data", "backup");
+const BACKUP_ROOT = process.env.INTURLAM_BACKUP_ROOT ?? path.join(process.cwd(), "data", "backup");
+const UPLOADS_DIR = process.env.INTURLAM_UPLOAD_ROOT ?? path.join(process.cwd(), "data", "uploads");
 
 const args = process.argv.slice(2);
 const force = args.includes("--force");
@@ -102,7 +103,7 @@ fs.copyFileSync(source, DB_PATH);
 
 const uploads = path.join(BACKUP_ROOT, name, "uploads");
 if (fs.existsSync(uploads)) {
-  fs.cpSync(uploads, path.join(process.cwd(), "data", "uploads"), { recursive: true });
+  fs.cpSync(uploads, UPLOADS_DIR, { recursive: true });
   console.log("Dosya ekleri de geri yüklendi.");
 }
 

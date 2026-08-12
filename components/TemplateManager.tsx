@@ -23,11 +23,11 @@ import SubmitButton from "./SubmitButton";
 // Fark, şablonların iki seviyeli olması (şablon → görev satırları).
 
 const inputClass =
-  "rounded-md border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+  "min-h-10 rounded-lg border border-border-default bg-background px-3 py-2 text-sm outline-none focus:border-brand-500";
 
 // "Teslimden N gün önce/sonra" ofsetini insan diline çevirir.
 function offsetLabel(days: number | null): string {
-  if (days === null) return "tarihsiz";
+  if (days === null) return "teslim günü";
   if (days === 0) return "teslim günü";
   return days < 0 ? `${Math.abs(days)} gün önce` : `${days} gün sonra`;
 }
@@ -35,16 +35,18 @@ function offsetLabel(days: number | null): string {
 function TemplateCard({
   template,
   onError,
+  canDeleteTemplates,
 }: {
   template: TaskTemplateWithItems;
   onError: (message: string | null) => void;
+  canDeleteTemplates: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const itemFormRef = useRef<HTMLFormElement>(null);
 
   return (
-    <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900">
+    <article className="rounded-xl border border-border-default bg-surface p-4">
       {editing ? (
         <form
           action={async (fd) => {
@@ -105,24 +107,26 @@ function TemplateCard({
           >
             Düzenle
           </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              onError(null);
-              if (!confirm(`“${template.name}” şablonu silinsin mi?`)) return;
-              startTransition(async () => {
-                try {
-                  await deleteTemplateAction(template.id);
-                } catch (e) {
-                  onError(getActionErrorMessage(e));
-                }
-              });
-            }}
-            className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-50"
-          >
-            {pending ? "…" : "Sil"}
-          </button>
+          {canDeleteTemplates && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                onError(null);
+                if (!confirm(`“${template.name}” şablonu silinsin mi?`)) return;
+                startTransition(async () => {
+                  try {
+                    await deleteTemplateAction(template.id);
+                  } catch (e) {
+                    onError(getActionErrorMessage(e));
+                  }
+                });
+              }}
+              className="text-xs font-medium text-muted hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-50"
+            >
+              {pending ? "…" : "Sil"}
+            </button>
+          )}
         </div>
       )}
 
@@ -142,15 +146,17 @@ function TemplateCard({
             <span className="w-28 shrink-0 text-right text-xs text-zinc-500 dark:text-zinc-400">
               {offsetLabel(item.due_offset_days)}
             </span>
-            <form action={deleteTemplateItemAction.bind(null, item.id)}>
-              <button
-                type="submit"
-                className="touch-target text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400"
-                aria-label={`${item.title} satırını sil`}
-              >
-                ×
-              </button>
-            </form>
+            {canDeleteTemplates && (
+              <form action={deleteTemplateItemAction.bind(null, item.id)}>
+                <button
+                  type="submit"
+                  className="touch-target text-xs font-medium text-muted hover:text-rose-600 dark:hover:text-rose-400"
+                  aria-label={`${item.title} satırını sil`}
+                >
+                  ×
+                </button>
+              </form>
+            )}
           </li>
         ))}
         {template.items.length === 0 && (
@@ -169,7 +175,7 @@ function TemplateCard({
             onError(getActionErrorMessage(e));
           }
         }}
-        className="mt-3 flex flex-wrap items-end gap-2 border-t border-black/10 pt-3 dark:border-white/10"
+        className="mt-3 flex flex-wrap items-end gap-2 border-t border-border-subtle pt-3"
       >
         <input type="hidden" name="templateId" value={template.id} />
         <label className="grid flex-1 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -196,21 +202,23 @@ function TemplateCard({
           <input
             name="dueOffsetDays"
             type="number"
-            placeholder="-3"
-            title="İçeriğin teslim tarihine göre: -3 = üç gün önce, 0 = teslim günü. Boş bırakılırsa görev tarihsiz açılır."
+            placeholder="0"
+            title="İçeriğin teslim tarihine göre: -3 = üç gün önce, 0 = teslim günü. Boş bırakılırsa teslim günü kullanılır."
             className={`${inputClass} w-28`}
           />
         </label>
         <SubmitButton>Satır ekle</SubmitButton>
       </form>
-    </div>
+    </article>
   );
 }
 
 export default function TemplateManager({
   templates,
+  canDeleteTemplates,
 }: {
   templates: TaskTemplateWithItems[];
+  canDeleteTemplates: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const newFormRef = useRef<HTMLFormElement>(null);
@@ -220,7 +228,12 @@ export default function TemplateManager({
       {error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
 
       {templates.map((t) => (
-        <TemplateCard key={t.id} template={t} onError={setError} />
+        <TemplateCard
+          key={t.id}
+          template={t}
+          onError={setError}
+          canDeleteTemplates={canDeleteTemplates}
+        />
       ))}
 
       <form
@@ -234,7 +247,7 @@ export default function TemplateManager({
             setError(getActionErrorMessage(e));
           }
         }}
-        className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-black/15 p-4 dark:border-white/15"
+        className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-border-default bg-surface-subtle p-4"
       >
         <label className="grid flex-1 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
           Yeni şablon adı

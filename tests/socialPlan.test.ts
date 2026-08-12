@@ -14,14 +14,16 @@ const { getDb } = await import("@/lib/db/client");
 const {
   listBrandAssetCounts,
   listBrandContentTargets,
+  getBrandMonthlyContentCompletion,
   listBrandVarlikRows,
   listPlanEntriesInRange,
   setBrandAssetCount,
   setBrandContentTarget,
+  setBrandMonthlyContentCompletion,
   setBrandPlanEntry,
 } = await import("@/lib/repositories/socialPlan");
 const { deleteBrand } = await import("@/lib/repositories/brands");
-const { clampCount, countKindsInCombos, isPlanCombo, parseCountInput } =
+const { clampCount, countKindsInCombos, isPlanCombo, isValidPlanMonth, parseCountInput } =
   await import("@/lib/socialPlan");
 
 function resetDb(): void {
@@ -96,17 +98,43 @@ describe("listBrandVarlikRows", () => {
     setBrandAssetCount("arkay", "Story", 5);
     setBrandAssetCount("arkay", "Reels", 2);
 
-    const rows = listBrandVarlikRows();
+    const rows = listBrandVarlikRows("2026-08");
     assert.equal(rows.length, 2, "yalnızca arşivlenmemiş 2 marka");
     assert.ok(!rows.some((r) => r.brand_id === "eski"), "arşivli marka görünmemeli");
 
     const arkay = rows.find((r) => r.brand_id === "arkay");
     assert.deepEqual(arkay?.targets, { Post: 15, Story: 15, Reels: 4 });
     assert.deepEqual(arkay?.ready, { Post: 7, Story: 5, Reels: 2 });
+    assert.equal(arkay?.monthly_content_completed, false);
 
     const tersan = rows.find((r) => r.brand_id === "tersan");
     assert.deepEqual(tersan?.targets, { Post: 0, Story: 0, Reels: 0 });
     assert.deepEqual(tersan?.ready, { Post: 0, Story: 0, Reels: 0 });
+  });
+
+  it("aylık teslim kapanışını canlı hazır varlık sayısından bağımsız tutar", () => {
+    setBrandAssetCount("arkay", "Post", 15);
+    setBrandMonthlyContentCompletion({
+      brandId: "arkay",
+      month: "2026-08",
+      completed: true,
+      actorId: null,
+    });
+    setBrandAssetCount("arkay", "Post", 3);
+
+    const august = listBrandVarlikRows("2026-08").find((row) => row.brand_id === "arkay");
+    const september = listBrandVarlikRows("2026-09").find((row) => row.brand_id === "arkay");
+    assert.equal(august?.ready.Post, 3, "hazır stok paylaşım oldukça azalabilir");
+    assert.equal(august?.monthly_content_completed, true, "aylık teslim kapanışı korunmalı");
+    assert.equal(september?.monthly_content_completed, false, "kapanış yalnızca seçili aya aittir");
+
+    setBrandMonthlyContentCompletion({
+      brandId: "arkay",
+      month: "2026-08",
+      completed: false,
+      actorId: null,
+    });
+    assert.equal(getBrandMonthlyContentCompletion("arkay", "2026-08"), undefined);
   });
 });
 
@@ -146,16 +174,18 @@ describe("brand_plan_entries (paylaşım takvimi)", () => {
 });
 
 describe("marka silinince plan verileri de silinir (ON DELETE CASCADE)", () => {
-  it("üç tablo da boşalır, FK ihlali kalmaz", () => {
+  it("aylık teslim kapanışı dahil plan verileri boşalır, FK ihlali kalmaz", () => {
     setBrandContentTarget("arkay", "Post", 15);
     setBrandAssetCount("arkay", "Post", 7);
     setBrandPlanEntry("arkay", "2026-08-10", "Post");
+    setBrandMonthlyContentCompletion({ brandId: "arkay", month: "2026-08", completed: true, actorId: null });
 
     deleteBrand("arkay");
 
     assert.equal(listBrandContentTargets().filter((r) => r.brand_id === "arkay").length, 0);
     assert.equal(listBrandAssetCounts().filter((r) => r.brand_id === "arkay").length, 0);
     assert.equal(listPlanEntriesInRange("2026-08-01", "2026-08-31").length, 0);
+    assert.equal(getBrandMonthlyContentCompletion("arkay", "2026-08"), undefined);
     assert.deepEqual(getDb().prepare("PRAGMA foreign_key_check").all(), []);
   });
 });
@@ -185,5 +215,22 @@ describe("saf yardımcı fonksiyonlar (lib/socialPlan.ts)", () => {
     assert.equal(parseCountInput("abc"), null);
     assert.equal(parseCountInput("  12 "), 12);
     assert.equal(parseCountInput("99999"), 999);
+  });
+
+  it("aylık kapanış yalnızca gerçek YYYY-MM değerini kabul eder", () => {
+    assert.equal(isValidPlanMonth("2026-08"), true);
+    assert.equal(isValidPlanMonth("2026-13"), false);
+    assert.equal(isValidPlanMonth("2026-8"), false);
+    assert.equal(isValidPlanMonth("Ağustos 2026"), false);
+  });
+
+  it("marka ve varlık arayüzü canlı stok ile aylık teslimi açıkça ayırır", () => {
+    const brandSection = fs.readFileSync(path.join(process.cwd(), "components/BrandContentTargetsSection.tsx"), "utf8");
+    const assetPage = fs.readFileSync(path.join(process.cwd(), "app/social/varlik/page.tsx"), "utf8");
+    assert.match(brandSection, /Aylık içerikler tamamlandı/);
+    assert.match(brandSection, /aria-pressed/);
+    assert.match(assetPage, /canlı stoktur/);
+    assert.match(assetPage, /eksik teslim anlamına gelmez/);
+    assert.match(assetPage, /monthly_content_completed/);
   });
 });

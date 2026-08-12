@@ -4,16 +4,15 @@ import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { resolveClusterFromForm } from "@/lib/clusters";
 import { todayISO } from "@/lib/date";
-import { requireSession } from "@/lib/identity";
+import { requireManager } from "@/lib/identity";
 import {
   createBrand,
   deleteBrand,
   getBrand,
   setBrandArchived,
   updateBrand,
-  updateBrandLogo,
 } from "@/lib/repositories/brands";
-import { deleteUploadedFile, deleteUploadedFiles, saveBrandLogo } from "@/lib/uploads";
+import { deleteUploadedFile, deleteUploadedFiles, replaceBrandLogo } from "@/lib/uploads";
 import { listUploadPathsForBrand } from "@/lib/repositories/uploadReferences";
 
 function extractLogoFile(formData: FormData): File | null {
@@ -45,23 +44,22 @@ function cleanNonNegativeInt(value: FormDataEntryValue | null, label: string): n
 }
 
 export async function createBrandAction(formData: FormData) {
-  await requireSession();
+  await requireManager();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Marka adı zorunlu.");
   if (name.length > 120) throw new Error("Marka adı en fazla 120 karakter olabilir.");
   const cluster = await resolveClusterFromForm(formData);
 
-  const id = createBrand({
+  const logo = extractLogoFile(formData);
+  const create = (logoPath?: string) => createBrand({
     name,
     cluster,
     instagramHandle: cleanValue(formData.get("instagramHandle")),
+    logoPath,
   });
-
-  const logo = extractLogoFile(formData);
-  if (logo) {
-    const logoPath = await saveBrandLogo(logo, id);
-    updateBrandLogo(id, logoPath);
-  }
+  const id = logo
+    ? await replaceBrandLogo(logo, null, (logoPath) => create(logoPath))
+    : create();
 
   await recordActivity({
     action: "brand.create",
@@ -75,18 +73,20 @@ export async function createBrandAction(formData: FormData) {
 }
 
 export async function updateBrandAction(formData: FormData) {
-  await requireSession();
+  await requireManager();
   const id = String(formData.get("brandId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
 
   if (!id) throw new Error("Marka bulunamadı.");
   if (!name) throw new Error("Marka adı zorunlu.");
   if (name.length > 120) throw new Error("Marka adı en fazla 120 karakter olabilir.");
+  const current = getBrand(id);
+  if (!current) throw new Error("Marka bulunamadı.");
   const keyFinding = cleanValue(formData.get("keyFinding"));
   if ((keyFinding?.length ?? 0) > 1000) throw new Error("Marka özeti en fazla 1000 karakter olabilir.");
   const cluster = await resolveClusterFromForm(formData);
 
-  updateBrand({
+  const update = (logoPath?: string) => updateBrand({
     id,
     name,
     cluster,
@@ -98,13 +98,13 @@ export async function updateBrandAction(formData: FormData) {
     monthlyShootAllowance: cleanNonNegativeInt(formData.get("monthlyShootAllowance"), "Aylık çekim hakkı"),
     annualShootAllowance: cleanNonNegativeInt(formData.get("annualShootAllowance"), "Yıllık çekim hakkı"),
     today: todayISO(),
+    logoPath,
   });
 
   const logo = extractLogoFile(formData);
   if (logo) {
-    const logoPath = await saveBrandLogo(logo, id);
-    updateBrandLogo(id, logoPath);
-  }
+    await replaceBrandLogo(logo, current.logo_path, (logoPath) => update(logoPath));
+  } else update();
 
   await recordActivity({
     action: "brand.update",
@@ -118,7 +118,7 @@ export async function updateBrandAction(formData: FormData) {
 }
 
 export async function archiveBrandAction(brandId: string) {
-  await requireSession();
+  await requireManager();
   const brand = getBrand(brandId);
   setBrandArchived(brandId, true);
   await recordActivity({
@@ -136,7 +136,7 @@ export async function archiveBrandAction(brandId: string) {
 // olarak kaybetmeyi zorlaştıran bilinçli bir güvenlik adımı (bkz. arşivle
 // önce deseni, DeleteBrandButton yalnızca arşiv listesinde gösteriliyor).
 export async function deleteBrandAction(brandId: string) {
-  await requireSession();
+  await requireManager();
   const brand = getBrand(brandId);
   if (!brand) return;
   if (brand.archived !== 1) {
@@ -159,7 +159,7 @@ export async function deleteBrandAction(brandId: string) {
 }
 
 export async function unarchiveBrandAction(brandId: string) {
-  await requireSession();
+  await requireManager();
   const brand = getBrand(brandId);
   setBrandArchived(brandId, false);
   await recordActivity({

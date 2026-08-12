@@ -12,8 +12,9 @@
 1. Ayrı bir test Google takvimi oluşturun.
 2. Google Cloud service account oluşturun ve takvimi service account e-posta adresiyle düzenleme yetkisi vererek paylaşın.
 3. `config/google-calendar.env.example` içeriğini `.env.local` dosyasına kopyalayıp gerçek Calendar ID, e-posta ve private key değerlerini yalnızca burada saklayın.
-4. Tek seferlik doğrulama için `npm run calendar:sync` çalıştırın.
-5. Başarılı testten sonra yönetici PowerShell oturumunda `powershell -ExecutionPolicy Bypass -File scripts/install-calendar-sync-task.ps1` ile beş dakikalık yerel görevi kurun.
+4. Tek seferlik doğrulama için `npm run calendar:sync` çalıştırın. Takvim sayfasındaki yöneticiye özel senkron sağlık alanında son başarı, bekleyen/hatalı kayıtlar ve scheduler durumu görünür.
+5. Başarılı testten sonra yönetici PowerShell oturumunda `powershell -ExecutionPolicy Bypass -File scripts/install-calendar-sync-task.ps1` ile beş dakikalık yerel görevi kurun. Kurulum, `.env.local` içindeki üç zorunlu değişkeni denetler ve gizli PowerShell runner'ını kullanır.
+6. Görevi bir kez elle çalıştırıp sağlık alanında “5 dk görevi aktif” yazdığını doğrulayın. Ayrıntılı çıktı `data/logs/calendar-sync.log` dosyasındadır ve Git'e girmez.
 
 Görev oluşturma/düzenleme işlemleri Google'a hemen yazmayı dener. Bağlantı veya kimlik bilgisi yoksa kayıt yerel `pending/error` kuyruğunda kalır; beş dakikalık iş inbound değişiklikleri alır ve outbound kuyruğunu yeniden dener. Üretim takvimine geçiş ayrıca onaylanmalıdır.
 

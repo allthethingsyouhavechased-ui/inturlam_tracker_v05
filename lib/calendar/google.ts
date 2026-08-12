@@ -193,11 +193,28 @@ export async function pullGoogleCalendarChanges(): Promise<{ inserted: number; u
   return { inserted, updated, ignored };
 }
 
-export async function runCalendarSync(): Promise<{ pushed: number; failed: number; inserted: number; updated: number; ignored: number }> {
-  const pulled = await pullGoogleCalendarChanges();
-  let pushed = 0; let failed = 0;
-  for (const event of listPendingCalendarEvents()) {
-    if (await syncCalendarEventNow(event.id)) pushed += 1; else failed += 1;
+export async function runCalendarSync(source: "manual" | "scheduled" = "manual"): Promise<{ pushed: number; failed: number; inserted: number; updated: number; ignored: number }> {
+  const attemptedAt = new Date().toISOString();
+  setCalendarSyncState("calendar_last_attempt_at", attemptedAt);
+  if (source === "scheduled") {
+    setCalendarSyncState("calendar_scheduler_last_seen_at", attemptedAt);
   }
-  return { pushed, failed, ...pulled };
+  try {
+    const pulled = await pullGoogleCalendarChanges();
+    let pushed = 0; let failed = 0;
+    for (const event of listPendingCalendarEvents()) {
+      if (await syncCalendarEventNow(event.id)) pushed += 1; else failed += 1;
+    }
+    const result = { pushed, failed, ...pulled };
+    if (failed > 0) throw new Error(`${failed} etkinlik Google Calendar'a gönderilemedi.`);
+    setCalendarSyncState("calendar_last_success_at", new Date().toISOString());
+    setCalendarSyncState("calendar_last_error", "");
+    setCalendarSyncState("calendar_last_result", JSON.stringify(result));
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    setCalendarSyncState("calendar_last_failure_at", new Date().toISOString());
+    setCalendarSyncState("calendar_last_error", message.slice(0, 1000));
+    throw error;
+  }
 }

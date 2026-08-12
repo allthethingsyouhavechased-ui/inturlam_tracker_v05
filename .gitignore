@@ -45,6 +45,7 @@ next-env.d.ts
 /data/*.db-shm
 /data/*.db-wal
 /data/*.log
+/data/logs/
 /data/backup/
 /data/runtime/
 /data/uploads/

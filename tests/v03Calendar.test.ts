@@ -8,13 +8,14 @@ import { DatabaseSync } from "node:sqlite";
 const TMP_DB = path.join(os.tmpdir(), `inturlam-test-v03-calendar-${process.pid}.db`);
 process.env.INTURLAM_DB_PATH = TMP_DB;
 const { getDb } = await import("@/lib/db/client");
-const { applyInboundGoogleEvent, getCalendarEvent, listCalendarEvents, listGuestCalendarEvents, listPendingCalendarEvents, markCalendarEventSyncError, saveCalendarEvent } = await import("@/lib/repositories/calendarEvents");
+const { applyInboundGoogleEvent, getCalendarEvent, listCalendarEvents, listGuestCalendarEvents, listPendingCalendarEvents, markCalendarEventSyncError, saveCalendarEvent, setCalendarSyncState } = await import("@/lib/repositories/calendarEvents");
 const { notifyGuestCalendarEvent } = await import("@/lib/notifications");
 const { listNotificationsForRecipient } = await import("@/lib/repositories/notifications");
 const { calendarEventTone } = await import("@/lib/calendar/colors");
 const { calendarWeekEventSegments } = await import("@/lib/calendar/layout");
 const { calendarEventStartDate, eventOccursOnDate, normalizeCalendarFormRange } = await import("@/lib/calendar/time");
 const { calendarEventToGoogleBody } = await import("@/lib/calendar/google");
+const { getCalendarSyncHealth } = await import("@/lib/calendar/health");
 
 function resetDb() { globalThis.__inturlamDb?.close(); globalThis.__inturlamDb = undefined; for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(TMP_DB + suffix, { force: true }); }
 function seed() { const db = getDb(); db.prepare("INSERT INTO brands (id,name,cluster) VALUES ('b1','Bir','tek'),('b2','İki','tek')").run(); db.prepare("INSERT INTO people (id,name) VALUES ('p1','Ada')").run(); db.prepare("INSERT INTO accounts (id,kind,person_id) VALUES ('team:p1','team','p1')").run(); return db; }
@@ -44,6 +45,31 @@ describe("v03 etkinlik takvimi", () => {
     assert.deepEqual(listCalendarEvents({ rangeStart: "2026-08-01", rangeEnd: "2026-09-01", brandId: "b1", type: "Cekim" }).map((event) => event.title), ["Çekim"]);
     markCalendarEventSyncError(id, "geçici kesinti");
     assert.ok(listPendingCalendarEvents().some((event) => event.id === id));
+  });
+
+  it("senkron sağlığı kuyruk, hata ve scheduler heartbeat durumunu özetler", () => {
+    seed();
+    const pendingId = saveCalendarEvent({ brandId: "b1", type: "Toplanti", title: "Bekleyen", description: null, startAt: "2026-08-10T09:00:00Z", endAt: "2026-08-10T10:00:00Z", allDay: false, location: null, guestVisible: false, accountId: "team:p1" });
+    const errorId = saveCalendarEvent({ brandId: "b1", type: "Cekim", title: "Hatalı", description: null, startAt: "2026-08-11T09:00:00Z", endAt: "2026-08-11T10:00:00Z", allDay: false, location: null, guestVisible: false, accountId: "team:p1" });
+    markCalendarEventSyncError(errorId, "Google erişilemiyor");
+    setCalendarSyncState("calendar_last_attempt_at", "2026-08-12T09:58:00.000Z");
+    setCalendarSyncState("calendar_last_success_at", "2026-08-12T09:55:00.000Z");
+    setCalendarSyncState("calendar_scheduler_last_seen_at", "2026-08-12T09:58:00.000Z");
+
+    const health = getCalendarSyncHealth({ configured: true, now: new Date("2026-08-12T10:00:00.000Z") });
+    assert.equal(health.pendingCount, 1);
+    assert.equal(health.errorCount, 1);
+    assert.equal(health.schedulerStatus, "active");
+    assert.equal(health.overallStatus, "error");
+    assert.ok(listPendingCalendarEvents().some((event) => event.id === pendingId));
+  });
+
+  it("Google ayarları yoksa sağlık durumunu açıkça yapılandırılmamış gösterir", () => {
+    seed();
+    const health = getCalendarSyncHealth({ configured: false, now: new Date("2026-08-12T10:00:00.000Z") });
+    assert.equal(health.configured, false);
+    assert.equal(health.overallStatus, "unconfigured");
+    assert.equal(health.schedulerStatus, "unknown");
   });
 
   it("etkinlik rengini kaydeder, listeler ve Google inbound akışında korur", () => {
@@ -125,9 +151,11 @@ describe("v03 etkinlik takvimi", () => {
     assert.match(source, /showToday\s*&&/);
     assert.match(source, /preservedQuery/);
     assert.match(source, /minmax\(12rem,20rem\)/);
-    assert.match(source, /name="colorKey"/);
+    assert.match(source, /CalendarColorPicker/);
     assert.doesNotMatch(source, /CalendarBrandVisibilityFields/);
     assert.doesNotMatch(source, /xl:grid-cols-1/);
+    assert.match(source, /me\.is_manager === 1/);
+    assert.match(source, /CalendarSyncHealthCard/);
 
     const gridSource = fs.readFileSync(path.join(process.cwd(), "components/EventCalendarGrid.tsx"), "utf8");
     assert.match(gridSource, /günü için etkinlik oluştur/);
@@ -136,6 +164,28 @@ describe("v03 etkinlik takvimi", () => {
     assert.match(gridSource, /calendarWeekEventSegments/);
     const dateFieldsSource = fs.readFileSync(path.join(process.cwd(), "components/CalendarDateTimeFields.tsx"), "utf8");
     assert.match(dateFieldsSource, /Tüm gün[\s\S]*Guest ile paylaş/);
+    assert.match(dateFieldsSource, /<fieldset[\s\S]*data-calendar-section="timing"/);
+    assert.match(dateFieldsSource, /<legend[\s\S]*Zamanlama/);
+    assert.match(dateFieldsSource, /data-calendar-datetime-layout="stacked"/);
+    const colorPickerSource = fs.readFileSync(path.join(process.cwd(), "components/CalendarColorPicker.tsx"), "utf8");
+    assert.match(colorPickerSource, /data-calendar-color-palette/);
+    assert.match(colorPickerSource, /type="radio"/);
+    assert.match(colorPickerSource, /name="colorKey"/);
+    assert.match(colorPickerSource, /dotClass/);
+    assert.match(colorPickerSource, /has-\[:checked\]:border-brand-500/);
+  });
+
+  it("beş dakikalık görev scheduled kaynağını ve gizli runner'ı kullanır", () => {
+    const syncSource = fs.readFileSync(path.join(process.cwd(), "db/sync-calendar.mts"), "utf8");
+    const installerSource = fs.readFileSync(path.join(process.cwd(), "scripts/install-calendar-sync-task.ps1"), "utf8");
+    const runnerSource = fs.readFileSync(path.join(process.cwd(), "scripts/run-calendar-sync.ps1"), "utf8");
+    assert.match(syncSource, /--scheduled/);
+    assert.match(syncSource, /runCalendarSync\(source\)/);
+    assert.match(installerSource, /\.env\.local/);
+    assert.match(installerSource, /GOOGLE_CALENDAR_ID/);
+    assert.match(installerSource, /run-calendar-sync\.ps1/);
+    assert.match(installerSource, /New-TimeSpan -Minutes 5/);
+    assert.match(runnerSource, /calendar:sync -- --scheduled/);
   });
 
   it("paylaşılan marka etkinliğini aktif guest hesabına yalnızca bir kez bildirir", () => {

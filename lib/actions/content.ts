@@ -8,7 +8,7 @@ import {
   CONTENT_STATUSES,
   CONTENT_TYPES,
 } from "@/lib/constants";
-import { requireSession } from "@/lib/identity";
+import { requireManager, requireSession } from "@/lib/identity";
 import {
   createContentItem,
   deleteContentItem,
@@ -17,6 +17,7 @@ import {
   updateContentItem,
   updateContentStatus,
 } from "@/lib/repositories/content";
+import { applyTemplateToContent, getTemplate } from "@/lib/repositories/templates";
 import type { ContentStatus, ContentType } from "@/lib/types";
 import { listUploadPathsForContent } from "@/lib/repositories/uploadReferences";
 import { deleteUploadedFiles } from "@/lib/uploads";
@@ -42,19 +43,47 @@ export async function createContentItemAction(formData: FormData): Promise<strin
   const brandId = String(formData.get("brandId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "") as ContentType;
+  const targetDate = cleanDate(formData.get("targetDate"));
+  const assigneeId = cleanValue(formData.get("assigneeId"));
+  const templateId = cleanValue(formData.get("templateId"));
 
   if (!brandId) throw new Error("Marka bulunamadı.");
   if (!title) throw new Error("Başlık zorunlu.");
   if (title.length > 200) throw new Error("Başlık en fazla 200 karakter olabilir.");
   if (!CONTENT_TYPES.includes(type)) throw new Error("Geçersiz içerik türü.");
 
+  const template = templateId ? getTemplate(templateId) : null;
+  if (templateId && !template) throw new Error("Şablon bulunamadı.");
+  if (template?.content_type && template.content_type !== type) {
+    throw new Error("Bu şablon içerik türüyle uyumlu değil.");
+  }
+  if (template && !targetDate) {
+    throw new Error("Şablon kullanmak için hedef tarih zorunlu.");
+  }
+
   const id = createContentItem({
     brandId,
     title,
     type,
-    targetDate: cleanDate(formData.get("targetDate")),
-    assigneeId: cleanValue(formData.get("assigneeId")),
+    targetDate,
+    assigneeId,
   });
+
+  let templateTaskCount = 0;
+  if (template) {
+    try {
+      templateTaskCount = applyTemplateToContent({
+        templateId: template.id,
+        contentItemId: id,
+        defaultAssigneeId: assigneeId,
+      });
+    } catch (error) {
+      // Proje oluştu fakat şablon yarım kaldı durumunu bırakma. İçerik silinince
+      // FK cascade ile bu denemede açılan görevler de geri alınır.
+      deleteContentItem(id);
+      throw error;
+    }
+  }
 
   await recordActivity({
     action: "content.create",
@@ -63,6 +92,16 @@ export async function createContentItemAction(formData: FormData): Promise<strin
     brandId,
     summary: `“${title}” içeriğini oluşturdu`,
   });
+
+  if (template) {
+    await recordActivity({
+      action: "template.apply",
+      entityType: "content",
+      entityId: id,
+      brandId,
+      summary: `“${template.name}” şablonundan ${templateTaskCount} görev açtı`,
+    });
+  }
 
   revalidatePath("/", "layout");
   return id;
@@ -148,7 +187,7 @@ export async function unarchiveContentItemAction(contentId: string) {
 }
 
 export async function deleteContentItemAction(contentId: string) {
-  await requireSession();
+  await requireManager();
   const content = getContentItem(contentId);
   const uploadPaths = listUploadPathsForContent(contentId);
   deleteContentItem(contentId);

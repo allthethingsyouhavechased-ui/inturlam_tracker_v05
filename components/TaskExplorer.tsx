@@ -69,6 +69,7 @@ export default function TaskExplorer({
   initialAssigneeId = "",
   initialDepartment = "",
   initialView = "pano",
+  canDeleteTasks,
 }: {
   tasks: TaskWithContext[];
   brands: { id: string; name: string }[];
@@ -76,6 +77,7 @@ export default function TaskExplorer({
   initialAssigneeId?: string;
   initialDepartment?: string;
   initialView?: WorkspaceView;
+  canDeleteTasks: boolean;
 }) {
   const [brandId, setBrandId] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -552,7 +554,7 @@ export default function TaskExplorer({
       ) : view === "pano" ? (
         <TaskBoard tasks={filtered} sortKey={sortKey} boardId="gorevler" />
       ) : (
-        <TaskListView tasks={filtered} people={people} />
+        <TaskListView tasks={filtered} people={people} canDeleteTasks={canDeleteTasks} />
       )}
     </div>
   );

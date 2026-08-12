@@ -1,9 +1,10 @@
-import { getDb, plainList } from "@/lib/db/client";
+import { getDb, plainList, plainOne } from "@/lib/db/client";
 import { emptyKindRecord } from "@/lib/socialPlan";
 import type {
   Brand,
   BrandAssetCount,
   BrandContentTarget,
+  BrandMonthlyContentCompletion,
   BrandPlanEntry,
   BrandVarlikRow,
   ContentKind,
@@ -65,11 +66,45 @@ export function setBrandAssetCount(
     .run(brandId, kind, readyCount);
 }
 
+// ————— Aylık teslim kapanışı (canlı stoktan bağımsız) —————
+
+export function getBrandMonthlyContentCompletion(
+  brandId: string,
+  month: string,
+): BrandMonthlyContentCompletion | undefined {
+  return plainOne<BrandMonthlyContentCompletion>(
+    getDb()
+      .prepare(`SELECT * FROM brand_monthly_content_completions WHERE brand_id = ? AND month = ?`)
+      .get(brandId, month),
+  );
+}
+
+export function setBrandMonthlyContentCompletion(input: {
+  brandId: string;
+  month: string;
+  completed: boolean;
+  actorId: string | null;
+}): void {
+  const db = getDb();
+  if (!input.completed) {
+    db.prepare(`DELETE FROM brand_monthly_content_completions WHERE brand_id = ? AND month = ?`)
+      .run(input.brandId, input.month);
+    return;
+  }
+  db.prepare(
+    `INSERT INTO brand_monthly_content_completions (brand_id, month, completed_by)
+     VALUES (?, ?, ?)
+     ON CONFLICT(brand_id, month) DO UPDATE SET
+       completed_by = excluded.completed_by,
+       completed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
+  ).run(input.brandId, input.month, input.actorId);
+}
+
 // Varlık sayfasının okuduğu birleşik satır — aktif her marka için (hedefi/
 // sayacı hiç girilmemiş olsa bile) bir satır üretir. Portföy küçük (~19
 // marka) olduğu için üç ayrı sorgunun sonucu SQL'de değil burada, JS'te
 // birleştiriliyor — tek bir karmaşık JOIN yazmaktan daha okunur.
-export function listBrandVarlikRows(): BrandVarlikRow[] {
+export function listBrandVarlikRows(month: string): BrandVarlikRow[] {
   const db = getDb();
   const brands = plainList<Pick<Brand, "id" | "name" | "logo_path">>(
     db
@@ -93,12 +128,22 @@ export function listBrandVarlikRows(): BrandVarlikRow[] {
     readyByBrand.get(row.brand_id)![kind] = row.ready_count;
   }
 
+  const completions = new Map(
+    plainList<Pick<BrandMonthlyContentCompletion, "brand_id" | "completed_at">>(
+      db.prepare(
+        `SELECT brand_id, completed_at FROM brand_monthly_content_completions WHERE month = ?`,
+      ).all(month),
+    ).map((row) => [row.brand_id, row.completed_at]),
+  );
+
   return brands.map((brand) => ({
     brand_id: brand.id,
     brand_name: brand.name,
     logo_path: brand.logo_path,
     targets: targetsByBrand.get(brand.id) ?? emptyKindRecord(),
     ready: readyByBrand.get(brand.id) ?? emptyKindRecord(),
+    monthly_content_completed: completions.has(brand.id),
+    monthly_content_completed_at: completions.get(brand.id) ?? null,
   }));
 }
 

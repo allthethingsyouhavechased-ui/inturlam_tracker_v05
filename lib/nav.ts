@@ -73,6 +73,7 @@ export function routeContextForPathname(pathname: string): RouteContext {
   if (pathname.startsWith("/settings/profile")) return { section: "Ayarlar", label: "Profil bilgileri" };
   if (pathname.startsWith("/settings")) return { section: "Ayarlar", label: "Hesap" };
   if (pathname.startsWith("/tasks/")) return { section: "Görevler", label: "Görev detayı" };
+  if (pathname.startsWith("/templates")) return { section: "Görevler", label: "Görev şablonları" };
   if (pathname.startsWith("/requests/")) return { section: "Talepler", label: "Talep değerlendirme" };
   if (pathname.startsWith("/brands/") && pathname.includes("/content/")) {
     return { section: "Markalar", label: "İçerik detayı" };

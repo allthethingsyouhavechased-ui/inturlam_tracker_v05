@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { CONTENT_TYPES, TASK_PRIORITIES } from "@/lib/constants";
-import { requireSession } from "@/lib/identity";
+import { requireManager, requireSession } from "@/lib/identity";
 import { getContentItem } from "@/lib/repositories/content";
 import {
   addTemplateItem,
@@ -58,7 +58,7 @@ export async function renameTemplateAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteTemplateAction(id: string): Promise<void> {
-  await requireSession();
+  await requireManager();
   const template = getTemplate(id);
   if (!template) throw new Error("Şablon bulunamadı.");
 
@@ -82,10 +82,10 @@ export async function addTemplateItemAction(formData: FormData): Promise<void> {
   const priority = String(formData.get("priority") ?? "Normal") as TaskPriority;
   if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
 
-  // Boş bırakılırsa görev tarihsiz açılır. "0" geçerli bir değer (teslim günü),
-  // bu yüzden düz truthy kontrolü YAPILMAZ.
+  // Boş bırakılırsa teslim günü (0) kullanılır. Böylece şablondan açılan ekip
+  // görevleri de zorunlu teslim tarihi kuralını ihlal etmez.
   const rawOffset = String(formData.get("dueOffsetDays") ?? "").trim();
-  let dueOffsetDays: number | null = null;
+  let dueOffsetDays = 0;
   if (rawOffset !== "") {
     dueOffsetDays = Number(rawOffset);
     if (!Number.isInteger(dueOffsetDays)) throw new Error("Gün kayması tam sayı olmalı.");
@@ -96,7 +96,7 @@ export async function addTemplateItemAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteTemplateItemAction(id: string): Promise<void> {
-  await requireSession();
+  await requireManager();
   deleteTemplateItem(id);
   revalidatePath("/", "layout");
 }
@@ -113,6 +113,9 @@ export async function applyTemplateAction(
   if (!template) throw new Error("Şablon bulunamadı.");
   const content = getContentItem(contentItemId);
   if (!content) throw new Error("İçerik bulunamadı.");
+  if (template.content_type && template.content_type !== content.type) {
+    throw new Error("Bu şablon içerik türüyle uyumlu değil.");
+  }
 
   const count = applyTemplateToContent({
     templateId,

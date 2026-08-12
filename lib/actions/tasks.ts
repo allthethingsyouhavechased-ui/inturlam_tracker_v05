@@ -13,7 +13,7 @@ import {
 import { formatDateShort, todayISO } from "@/lib/date";
 import { announceGuestTaskPlanned, announceGuestTaskStatus } from "@/lib/guestTaskCommunications";
 import { assertWeightPoints } from "@/lib/progress";
-import { requireSession } from "@/lib/identity";
+import { requireManager, requireSession } from "@/lib/identity";
 import { notifyTaskUpdate } from "@/lib/notifications";
 import { setPersonalTaskTarget } from "@/lib/repositories/personalTargets";
 import { getPerson } from "@/lib/repositories/people";
@@ -327,7 +327,7 @@ export async function deleteTaskAttachmentAction(attachmentId: string) {
 }
 
 export async function deleteTaskAction(taskId: string) {
-  await requireSession();
+  await requireManager();
   const task = getTask(taskId);
   const uploadPaths = listUploadPathsForTaskIds([taskId]);
   deleteTask(taskId);
@@ -430,7 +430,7 @@ export async function bulkSetTaskAssigneeAction(
 }
 
 export async function bulkDeleteTasksAction(ids: string[]) {
-  await requireSession();
+  await requireManager();
   const clean = cleanIds(ids);
   const uploadPaths = listUploadPathsForTaskIds(clean);
   bulkDeleteTasks(clean);

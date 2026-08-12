@@ -85,9 +85,11 @@ function SortableTh({
 export default function TaskListView({
   tasks,
   people,
+  canDeleteTasks = false,
 }: {
   tasks: TaskWithContext[];
   people: Person[];
+  canDeleteTasks?: boolean;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [prevTasks, setPrevTasks] = useState(tasks);
@@ -219,22 +221,24 @@ export default function TaskListView({
             ))}
           </select>
 
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              if (
-                confirm(
-                  `${selected.size} görev kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`,
-                )
-              ) {
-                run(() => bulkDeleteTasksAction(ids));
-              }
-            }}
-            className="rounded-md px-2 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-100 disabled:opacity-50 dark:hover:bg-rose-950/40"
-          >
-            Sil
-          </button>
+          {canDeleteTasks && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                if (
+                  confirm(
+                    `${selected.size} görev kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`,
+                  )
+                ) {
+                  run(() => bulkDeleteTasksAction(ids));
+                }
+              }}
+              className="rounded-md px-2 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-100 disabled:opacity-50 dark:hover:bg-rose-950/40"
+            >
+              Sil
+            </button>
+          )}
 
           {pending && <span className="text-xs text-brand-600 dark:text-brand-400">İşleniyor…</span>}
 

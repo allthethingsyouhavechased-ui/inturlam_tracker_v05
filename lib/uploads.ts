@@ -113,25 +113,24 @@ export async function cloneUploadedFile(
   return { filePath: `/uploads/${subdir}/${targetName}`, originalName: null };
 }
 
-// Marka logoları `public/logos/<brandId>.<uzanti>` altında, `db/seed.mts`'in
-// beklediği ADLANDIRMAYLA AYNI yere yazılır — böylece bu yoldan yüklenen bir
-// logo, sonradan `db:seed` çalıştırıldığında da bulunur/korunur. Dosya adı
-// UUID değil brandId olduğu için tek marka için tek dosya olur; önceki logo
-// farklı bir uzantıdaysa (ör. .jpg -> .png değişimi) yetim kalmasın diye önce
-// aynı brandId ile başlayan dosyalar temizlenir.
-export async function saveBrandLogo(image: File, brandId: string): Promise<string> {
+// Repodaki `public/logos` dosyaları yalnızca başlangıç varlığıdır. Kullanıcının
+// sonradan yüklediği/değiştirdiği logolar diğer runtime ekleriyle aynı özel
+// depoda yaşar ve DB yedeğine birlikte girer. Yeni dosya önce UUID ile yazılır;
+// DB işlemi başarısızsa `withSavedImageFiles` onu geri alır. Eski runtime logo
+// ise ancak yeni DB referansı güvenceye alındıktan sonra silinir. `/logos/...`
+// biçimindeki repo varlıklarını deleteUploadedFile zaten bilinçli olarak korur.
+export async function replaceBrandLogo<T>(
+  image: File,
+  previousFilePath: string | null,
+  persist: (filePath: string) => T | Promise<T>,
+): Promise<T> {
   validateImageFiles([image]);
-  const logoDir = path.join(process.cwd(), "public", "logos");
-  await fs.mkdir(logoDir, { recursive: true });
-  const existing = await fs.readdir(logoDir).catch(() => [] as string[]);
-  for (const file of existing) {
-    if (file.startsWith(`${brandId}.`)) {
-      await fs.unlink(path.join(logoDir, file)).catch(() => {});
-    }
+  const saved = await withSavedImageFiles([image], "logos", async ([logo]) => ({
+    filePath: logo.filePath,
+    result: await persist(logo.filePath),
+  }));
+  if (previousFilePath && previousFilePath !== saved.filePath) {
+    await deleteUploadedFile(previousFilePath);
   }
-  const ext = ALLOWED_IMAGE_EXTENSIONS[image.type];
-  const fileName = `${brandId}.${ext}`;
-  const buffer = Buffer.from(await image.arrayBuffer());
-  await fs.writeFile(path.join(logoDir, fileName), buffer);
-  return `/logos/${fileName}`;
+  return saved.result;
 }

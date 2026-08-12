@@ -96,6 +96,13 @@ export function parseCountInput(raw: string): number | null {
 }
 
 const PLAN_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const PLAN_MONTH_RE = /^\d{4}-\d{2}$/;
+
+export function isValidPlanMonth(value: string): boolean {
+  if (!PLAN_MONTH_RE.test(value)) return false;
+  const parsed = new Date(`${value}-01T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 7) === value;
+}
 
 // personalTargets.ts'teki private isValidISODate ile aynı gerekçe/uygulama,
 // burada export ediliyor ki hem action hem test bağımsız çağırabilsin.

@@ -34,6 +34,13 @@ describe("marka başlığı bilgi hiyerarşisi", () => {
     assert.match(page, /xl:grid-cols-\[1\.1fr_1fr_0\.85fr\]/);
     assert.doesNotMatch(page, /operasyon özeti/);
   });
+
+  it("aylık teslim düğmesini kompakt hedef ızgarasının boş dördüncü hücresinde tutar", () => {
+    const targets = source("components/BrandContentTargetsSection.tsx");
+    assert.match(targets, /data-compact-target-grid/);
+    assert.match(targets, /compact && completionControl/);
+    assert.match(targets, /compact \? "✓ Tamamlandı" : "✓ Aylık içerikler tamamlandı"/);
+  });
 });
 
 describe("sayfa içerik ekseni", () => {

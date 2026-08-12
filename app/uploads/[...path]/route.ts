@@ -6,16 +6,16 @@ import { resolveRuntimeUpload } from "@/lib/runtimeUploads";
 
 export const dynamic = "force-dynamic";
 
-const UPLOAD_ROOT = path.join(process.cwd(), "data", "uploads");
+const UPLOAD_ROOT = process.env.INTURLAM_UPLOAD_ROOT ?? path.join(process.cwd(), "data", "uploads");
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ path: string[] }> },
 ) {
   const requestedPath = (await context.params).path;
-  const publicAvatar = requestedPath[0] === "people";
+  const publicAsset = requestedPath[0] === "people" || requestedPath[0] === "logos";
   const actor = await getCurrentActor();
-  if (!publicAvatar) {
+  if (!publicAsset) {
     if (!actor) return new Response(null, { status: 401 });
     if (actor.kind === "guest") {
       const filePath = `/uploads/${requestedPath.join("/")}`;
@@ -30,7 +30,7 @@ export async function GET(
     const file = await fs.readFile(resolved.absolutePath);
     return new Response(file, {
       headers: {
-        "Cache-Control": publicAvatar
+        "Cache-Control": publicAsset
           ? "public, max-age=3600, must-revalidate"
           : "private, no-store",
         "Content-Type": resolved.contentType,

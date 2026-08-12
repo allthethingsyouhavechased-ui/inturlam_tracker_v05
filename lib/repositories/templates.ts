@@ -17,6 +17,18 @@ export function listTemplates(): TaskTemplate[] {
   );
 }
 
+export function listTemplatesForContentType(contentType: ContentType): TaskTemplate[] {
+  return plainList<TaskTemplate>(
+    getDb()
+      .prepare(
+        `SELECT * FROM task_templates
+          WHERE content_type IS NULL OR content_type = ?
+          ORDER BY sort_order, name`,
+      )
+      .all(contentType),
+  );
+}
+
 export function listTemplateItems(templateId: string): TaskTemplateItem[] {
   return plainList<TaskTemplateItem>(
     getDb()
@@ -144,8 +156,8 @@ export function applyTemplateToContent(input: {
 // 'YYYY-MM-DD' + gün → 'YYYY-MM-DD'. UTC üzerinden hesaplanıyor: yerel saat
 // dilimi/DST kayması bir günlük hatalara yol açmasın.
 export function shiftDate(base: string | null, offsetDays: number | null): string | null {
-  // Şablon satırında ofset yoksa görev bilerek tarihsiz açılır; içeriğin tarihi
-  // yoksa da tarih uyduramayız.
+  // Saf yardımcı null ofseti null bırakır. Uygulama akışı eski null kayıtları
+  // teslim günü (0) olarak normalize eder; yeni tarihsiz görev oluşturulmaz.
   if (!base || offsetDays === null) return null;
   const d = new Date(`${base}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return null;
