@@ -50,6 +50,8 @@ export function updateBrand(input: {
   postCount: number | null;
   keyFinding: string | null;
   tier: string | null;
+  monthlyShootAllowance: number | null;
+  annualShootAllowance: number | null;
   today: string;
 }): void {
   const db = getDb();
@@ -71,7 +73,7 @@ export function updateBrand(input: {
     `UPDATE brands SET
        name = ?, cluster = ?, instagram_handle = ?,
        follower_count = ?, post_count = ?,
-       key_finding = ?, tier = ?, stats_updated_at = ?
+       key_finding = ?, tier = ?, stats_updated_at = ?, monthly_shoot_allowance = ?, annual_shoot_allowance = ?
      WHERE id = ?`,
   ).run(
     input.name,
@@ -82,6 +84,8 @@ export function updateBrand(input: {
     input.keyFinding,
     input.tier,
     statsUpdatedAt,
+    input.monthlyShootAllowance,
+    input.annualShootAllowance,
     input.id,
   );
 }

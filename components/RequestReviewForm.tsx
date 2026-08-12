@@ -170,7 +170,7 @@ export default function RequestReviewForm({
           </label>
           <label className="grid gap-1.5 text-xs font-medium text-secondary">
             Hedef teslim
-            <Input name="dueDate" type="date" defaultValue={dueDate ?? ""} />
+            <Input name="dueDate" type="date" required defaultValue={dueDate ?? ""} />
           </label>
         </div>
         <ReviewButtons assigneeName={selectedAssigneeName} />

@@ -333,6 +333,7 @@ export default function QuickAddModal({
                   Teslim tarihi
                   <input
                     type="date"
+                    required
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                     className={inputClass}

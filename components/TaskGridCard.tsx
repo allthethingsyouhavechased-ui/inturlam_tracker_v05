@@ -39,6 +39,9 @@ export default function TaskGridCard({
           <span className="shrink-0 rounded-md bg-brand-50 px-1.5 py-1 text-[9px] font-bold tracking-[0.055em] text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
             {CONTENT_TYPE_LABEL[task.content_type].toLocaleUpperCase("tr-TR")}
           </span>
+          <span title="Görev ağırlığı" className="shrink-0 rounded-md bg-surface-subtle px-1.5 py-1 text-[9px] font-bold tracking-[0.055em] text-secondary">
+            {task.weight_points} PUAN
+          </span>
           <span
             title={task.content_title}
             className="min-w-0 truncate text-[10px] font-medium text-muted"

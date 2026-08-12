@@ -9,9 +9,11 @@ import { IDENTITY_COOKIE } from "@/lib/auth/constants";
 import { getCurrentPerson } from "@/lib/identity";
 import {
   createAuthSession,
+  createGuestAuthSession,
   deleteAuthSession,
   deleteAuthSessionsForPerson,
 } from "@/lib/repositories/authSessions";
+import { getGuestCredentials } from "@/lib/repositories/accounts";
 import {
   getPersonCredentials,
   updatePersonPassword,
@@ -25,13 +27,13 @@ export interface IdentityActionState {
   error?: string;
 }
 
-async function replaceSession(personId: string): Promise<void> {
+async function replaceSession(createToken: () => string): Promise<void> {
   const store = await cookies();
   const previousToken = store.get(IDENTITY_COOKIE)?.value;
   if (previousToken) deleteAuthSession(previousToken);
   store.delete("inturlam_pid");
 
-  const token = createAuthSession(personId);
+  const token = createToken();
   store.set(IDENTITY_COOKIE, token, {
     httpOnly: true,
     sameSite: "strict",
@@ -59,9 +61,34 @@ export async function loginPerson(
   }
 
   loginThrottle.reset(personId);
-  await replaceSession(personId);
+  await replaceSession(() => createAuthSession(personId));
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+export async function loginGuest(
+  _state: IdentityActionState,
+  formData: FormData,
+): Promise<IdentityActionState> {
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const throttleKey = `guest:${username.toLocaleLowerCase("tr-TR")}`;
+  const credentials = getGuestCredentials(username);
+  if (!credentials || credentials.active !== 1 || !credentials.password_hash) {
+    return { error: "Kullanıcı adı veya şifre hatalı." };
+  }
+  if (loginThrottle.isBlocked(throttleKey)) {
+    return { error: "Çok fazla hatalı deneme yapıldı. 15 dakika sonra tekrar dene." };
+  }
+  if (!verifyPassword(password, credentials.password_hash)) {
+    loginThrottle.recordFailure(throttleKey);
+    return { error: "Kullanıcı adı veya şifre hatalı." };
+  }
+
+  loginThrottle.reset(throttleKey);
+  await replaceSession(() => createGuestAuthSession(credentials.id));
+  revalidatePath("/", "layout");
+  redirect("/guest");
 }
 
 export async function changePassword(
@@ -92,7 +119,7 @@ export async function changePassword(
   const store = await cookies();
   store.delete(IDENTITY_COOKIE);
   revalidatePath("/", "layout");
-  redirect("/whoami?changed=1");
+  redirect("/whoami/team?changed=1");
 }
 
 export async function clearIdentity() {

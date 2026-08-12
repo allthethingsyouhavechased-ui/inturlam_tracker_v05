@@ -75,13 +75,15 @@ function reviewInput(formData: FormData, reviewerId: string): ClientRequestRevie
   if (!department) throw new Error("Hedef departman zorunlu.");
   if (!assigneeId) throw new Error("Onay öncesinde görev sahibi seçilmeli.");
   if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
+  const dueDate = cleanDate(formData.get("dueDate"));
+  if (!dueDate) throw new Error("Onay ve planlama için teslim tarihi zorunlu.");
   return {
     id,
     reviewerId,
     department,
     assigneeId,
     priority,
-    dueDate: cleanDate(formData.get("dueDate")),
+    dueDate,
   };
 }
 

@@ -251,7 +251,7 @@ export default function TaskListView({
       {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
 
       <div className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-zinc-900">
-        <table className="w-full min-w-[1180px] text-sm">
+        <table className="w-full min-w-[1240px] text-sm">
           <thead>
             <tr className="border-b border-black/10 text-left text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:border-white/10">
               <th className="w-10 px-3 py-2">
@@ -270,6 +270,7 @@ export default function TaskListView({
               <SortableTh column="tur" label="Tür" sort={sort} onToggle={toggleSort} />
               <SortableTh column="marka" label="Marka" sort={sort} onToggle={toggleSort} />
               <SortableTh column="oncelik" label="Öncelik" sort={sort} onToggle={toggleSort} />
+              <th className="px-3 py-2 font-medium uppercase tracking-wider">Ağırlık</th>
               <SortableTh column="durum" label="Durum" sort={sort} onToggle={toggleSort} />
               <SortableTh column="atanan" label="Atanan" sort={sort} onToggle={toggleSort} />
               <SortableTh column="teslim" label="Teslim" sort={sort} onToggle={toggleSort} />
@@ -314,6 +315,7 @@ export default function TaskListView({
                   <td className="px-3 py-2">
                     <TaskPrioritySelect taskId={t.id} priority={t.priority} />
                   </td>
+                  <td className="px-3 py-2"><span className="whitespace-nowrap rounded-md bg-surface-subtle px-2 py-1 text-xs font-semibold tabular-nums text-secondary">{t.weight_points} puan</span></td>
                   <td className="px-3 py-2">
                     <TaskStatusSelect taskId={t.id} status={t.status} />
                   </td>

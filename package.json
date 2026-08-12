@@ -1,13 +1,13 @@
 {
-  "name": "inturlam-tracker-v02",
-  "version": "0.2.0",
+  "name": "inturlam-tracker-v03",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "predev": "node db/prepare.mts",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000",
+    "start": "next start -H 0.0.0.0 -p 3001",
     "prestart": "node db/prepare.mts",
     "lint": "eslint",
     "test": "node --import ./scripts/register.mjs --test \"tests/**/*.test.ts\"",
@@ -16,6 +16,8 @@
     "db:seed:demo": "node db/seed-demo.mts",
     "db:clear-work": "node db/clear-work.mts",
     "social:sync": "node --import ./scripts/register.mjs db/sync-instagram.mts",
+    "calendar:sync": "node --import ./scripts/register.mjs db/sync-calendar.mts",
+    "smoke:local": "node --import ./scripts/register.mjs scripts/smoke-local.mts",
     "db:backup": "node db/backup.mts",
     "db:restore": "node db/restore.mts"
   },

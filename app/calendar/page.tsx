@@ -1,110 +1,118 @@
 import Link from "next/link";
-import AutoRefresh from "@/components/AutoRefresh";
-import CalendarGrid from "@/components/CalendarGrid";
-import QuickAddModal from "@/components/QuickAddModal";
-import TaskListView from "@/components/TaskListView";
+import CalendarDateTimeFields from "@/components/CalendarDateTimeFields";
+import EventCalendarGrid from "@/components/EventCalendarGrid";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
-import { requirePageSession } from "@/lib/identity";
-import { listBrands } from "@/lib/repositories/brands";
-import { listAllContentSummaries } from "@/lib/repositories/content";
+import { cancelCalendarEventAction, saveCalendarEventAction } from "@/lib/actions/calendar";
 import {
   calendarGridDays,
-  formatDateLong,
   formatMonthLabel,
   monthParamISO,
   monthParamToDate,
   shiftMonthParam,
+  shouldShowTodayShortcut,
   todayISO,
+  validISODateParam,
 } from "@/lib/date";
-import { listActivePeople } from "@/lib/repositories/people";
-import { listTasksDueInRange } from "@/lib/repositories/tasks";
-import type { TaskWithContext } from "@/lib/types";
+import { requirePageSession } from "@/lib/identity";
+import { listBrands } from "@/lib/repositories/brands";
+import { getCalendarEvent, listCalendarEvents } from "@/lib/repositories/calendarEvents";
+import type { CalendarEventType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const DAY_PARAM_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TYPES: Array<{ value: CalendarEventType; label: string }> = [
+  { value: "Toplanti", label: "Toplantı" },
+  { value: "Cekim", label: "Çekim" },
+  { value: "Diger", label: "Diğer" },
+];
+
+function localDateTime(value: string | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date).replace(" ", "T");
+}
+
+function calendarHref(input: {
+  month: string;
+  brandId?: string | null;
+  type?: CalendarEventType | null;
+  day?: string | null;
+}): string {
+  const query = new URLSearchParams({ month: input.month });
+  if (input.brandId) query.set("brand", input.brandId);
+  if (input.type) query.set("type", input.type);
+  if (input.day) query.set("day", input.day);
+  return `/calendar?${query}`;
+}
 
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; day?: string; yeni?: string }>;
+  searchParams: Promise<{ month?: string; brand?: string; type?: string; event?: string; day?: string }>;
 }) {
-  const me = await requirePageSession();
+  await requirePageSession();
   const sp = await searchParams;
   const monthDate = monthParamToDate(sp.month);
-  const monthParam = monthParamISO(monthDate);
-  const selectedDay = sp.day && DAY_PARAM_RE.test(sp.day) ? sp.day : null;
-  // Izgaradaki "+" kısayolu buraya gelir: gün detayı açılırken hızlı görev
-  // formu da o tarihle birlikte açılsın.
-  const wantsNewTask = selectedDay !== null && sp.yeni === "1";
-
-  // Aralık, görüntülenen AYIN değil IZGARANIN sınırlarına göre çekiliyor:
-  // ızgara başta/sonda bir önceki/sonraki aydan dolgu günleri gösteriyor
-  // (bkz. CalendarGrid) ve o hücrelerde de gerçek görevler görünsün istiyoruz
-  // — yoksa "soluk" günler her zaman boş görünür, oysa komşu ayda iş olabilir.
+  const month = monthParamISO(monthDate);
   const gridDays = calendarGridDays(monthDate);
-  const rangeStart = gridDays[0].date;
-  const rangeEnd = gridDays[gridDays.length - 1].date;
-  const tasks = listTasksDueInRange(rangeStart, rangeEnd);
-  const people = listActivePeople();
-  const today = todayISO();
-  // Gün panelindeki hızlı görev formu için (marka → içerik → görev), header'daki
-  // "+ Yeni" ile aynı bileşen.
   const brands = listBrands();
-  const contents = listAllContentSummaries();
-
-  const tasksByDate = new Map<string, TaskWithContext[]>();
-  for (const t of tasks) {
-    if (!t.due_date) continue;
-    const list = tasksByDate.get(t.due_date);
-    if (list) list.push(t);
-    else tasksByDate.set(t.due_date, [t]);
-  }
-
-  // Boş ay kontrolü ızgaranın dolgu günlerini SAYMAZ: bir önceki/sonraki aydan
-  // taşan 1-6 gün dolu olsa bile "bu ay boş" mesajı görüntülenen ay için doğru
-  // kalmalı.
-  const hasTasksThisMonth = tasks.some((t) => t.due_date?.startsWith(monthParam));
-
-  const prevMonthParam = shiftMonthParam(monthParam, -1);
-  const nextMonthParam = shiftMonthParam(monthParam, 1);
-  const isCurrentMonth = monthParam === monthParamISO(new Date());
-
-  const dayTasks = selectedDay ? (tasksByDate.get(selectedDay) ?? []) : [];
+  const brandId = brands.some((brand) => brand.id === sp.brand) ? sp.brand! : null;
+  const type = TYPES.some((item) => item.value === sp.type) ? sp.type as CalendarEventType : null;
+  const events = listCalendarEvents({
+    rangeStart: gridDays[0].date,
+    rangeEnd: `${gridDays.at(-1)!.date}T23:59:59Z`,
+    brandId,
+    type,
+  });
+  const selected = sp.event ? getCalendarEvent(sp.event) : undefined;
+  const today = todayISO();
+  const todayMonth = today.slice(0, 7);
+  const requestedDay = validISODateParam(sp.day);
+  const selectedDay = requestedDay && gridDays.some((day) => day.date === requestedDay)
+    ? requestedDay
+    : null;
+  const showToday = shouldShowTodayShortcut(month, selectedDay, today);
+  const preservedQuery = new URLSearchParams();
+  if (brandId) preservedQuery.set("brand", brandId);
+  if (type) preservedQuery.set("type", type);
 
   return (
     <div>
-      <AutoRefresh />
       <PageHeader
-        eyebrow="PLANLAMA"
+        eyebrow="OPERASYON TAKVİMİ"
         title="Takvim"
-        description="Teslim tarihlerini aylık görünümde izle ve gün bazında planla."
+        description="Toplantı, çekim ve diğer etkinlikleri merkezi takvimde planla. Görev teslim tarihleri bu takvimde gösterilmez."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {!isCurrentMonth && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {showToday && (
               <Link
-                href="/calendar"
-                className="ui-press inline-flex min-h-10 items-center rounded-[10px] px-3 text-sm font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950"
+                href={calendarHref({ month: todayMonth, brandId, type, day: today })}
+                className="ui-press inline-flex min-h-10 items-center rounded-[10px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover hover:text-foreground"
               >
                 Bugün
               </Link>
             )}
-            <nav aria-label="Aylar arasında gezin" className="flex items-center rounded-[10px] border border-border-default bg-surface p-0.5">
+            <nav aria-label="Takvim ayı" className="flex items-center rounded-[10px] border border-border-default bg-surface p-0.5">
               <Link
-                href={`/calendar?month=${prevMonthParam}`}
+                href={calendarHref({ month: shiftMonthParam(month, -1), brandId, type })}
                 aria-label="Önceki ay"
-                className="ui-press grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
+                className="grid size-9 place-items-center rounded-lg hover:bg-surface-hover"
               >
                 <Icon name="chevron-left" className="size-4" />
               </Link>
-              <h2 className="min-w-[12ch] px-2 text-center text-sm font-semibold text-foreground">
-                {formatMonthLabel(monthDate)}
-              </h2>
+              <span className="min-w-32 text-center text-sm font-semibold">{formatMonthLabel(monthDate)}</span>
               <Link
-                href={`/calendar?month=${nextMonthParam}`}
+                href={calendarHref({ month: shiftMonthParam(month, 1), brandId, type })}
                 aria-label="Sonraki ay"
-                className="ui-press grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
+                className="grid size-9 place-items-center rounded-lg hover:bg-surface-hover"
               >
                 <Icon name="chevron-right" className="size-4" />
               </Link>
@@ -113,70 +121,69 @@ export default async function CalendarPage({
         }
       />
 
-      <div className="space-y-3">
-      {!hasTasksThisMonth && (
-        <div className="rounded-xl border border-border-default bg-surface p-6 text-center">
-          <p className="text-sm font-medium text-foreground">
-            Bu ayda teslim tarihi olan görev yok.
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            Başka bir aya bakabilir ya da{" "}
-            <Link href="/tasks" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-              Görevler
-            </Link>{" "}
-            sayfasından bir göreve tarih atayabilirsin.
-          </p>
+      <form method="get" className="mb-4 grid items-end gap-2 rounded-xl border border-border-default bg-surface p-3 sm:grid-cols-[minmax(12rem,20rem)_minmax(9rem,13rem)_auto] sm:justify-start">
+        <input type="hidden" name="month" value={month} />
+        {selectedDay && <input type="hidden" name="day" value={selectedDay} />}
+        <label className="grid min-w-0 gap-1 text-xs text-muted">
+          Marka
+          <select name="brand" defaultValue={brandId ?? ""} className="min-h-9 min-w-0 w-full rounded-lg border border-border-default bg-background px-2 text-sm">
+            <option value="">Tüm markalar</option>
+            {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+          </select>
+        </label>
+        <label className="grid min-w-0 gap-1 text-xs text-muted">
+          Tür
+          <select name="type" defaultValue={type ?? ""} className="min-h-9 min-w-0 w-full rounded-lg border border-border-default bg-background px-2 text-sm">
+            <option value="">Tüm türler</option>
+            {TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          </select>
+        </label>
+        <button className="min-h-9 rounded-lg bg-surface-subtle px-3 text-xs font-semibold text-secondary hover:bg-surface-hover">Filtrele</button>
+      </form>
+
+      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+        <div className="min-w-0">
+          <EventCalendarGrid
+            gridDays={gridDays}
+            events={events}
+            preservedQuery={preservedQuery.toString()}
+            selectedDate={selectedDay}
+          />
         </div>
-      )}
-
-      <CalendarGrid
-        gridDays={gridDays}
-        tasksByDate={tasksByDate}
-        today={today}
-        monthParam={monthParam}
-        selectedDay={selectedDay}
-      />
-
-      {selectedDay && (
-        <section className="ui-enter space-y-3 rounded-xl border border-border-default bg-surface p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">
-              {formatDateLong(selectedDay)}{" "}
-              <span className="font-normal text-muted">
-                · {dayTasks.length > 0 ? `${dayTasks.length} görev` : "görev yok"}
-              </span>
-            </h2>
-            <div className="flex items-center gap-2">
-              {/* `key`: gün ya da "yeni" isteği değişince modal yeniden
-                  kurulsun — `initialOpen` yalnızca ilk render'da okunur. */}
-              <QuickAddModal
-                key={`${selectedDay}-${wantsNewTask}`}
-                brands={brands}
-                contents={contents}
-                people={people}
-                defaultAssigneeId={me?.id ?? null}
-                defaultDueDate={selectedDay}
-                initialOpen={wantsNewTask}
-                triggerLabel="Bu güne görev ekle"
-                triggerClassName="ui-press inline-flex min-h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-500"
-              />
-              <Link
-                href={`/calendar?month=${monthParam}`}
-                className="ui-press inline-flex min-h-10 items-center rounded-[10px] px-3 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground"
-              >
-                Kapat ×
-              </Link>
-            </div>
+        <form action={saveCalendarEventAction} className="min-w-0 w-full space-y-3 overflow-hidden rounded-xl border border-border-default bg-surface p-4 xl:sticky xl:top-20">
+          <h2 className="text-sm font-semibold text-foreground">{selected ? "Etkinliği düzenle" : "Yeni etkinlik"}</h2>
+          {selected && <input type="hidden" name="eventId" value={selected.id} />}
+          <label className="grid min-w-0 gap-1 text-xs text-secondary">
+            Başlık
+            <input name="title" required maxLength={200} defaultValue={selected?.title ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm" />
+          </label>
+          <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <label className="grid min-w-0 gap-1 text-xs text-secondary">
+              Tür
+              <select name="type" defaultValue={selected?.type ?? "Toplanti"} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-2 text-sm">
+                {TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs text-secondary">
+              Marka
+              <select name="brandId" defaultValue={selected?.brand_id ?? brandId ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-2 text-sm">
+                <option value="">Ajans geneli</option>
+                {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+              </select>
+            </label>
           </div>
-          {dayTasks.length > 0 ? (
-            <TaskListView tasks={dayTasks} people={people} />
-          ) : (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Bu günde teslim tarihi olan görev yok.
-            </p>
-          )}
-        </section>
-      )}
+          <CalendarDateTimeFields
+            key={selected?.id ?? selectedDay ?? "new-event"}
+            initialAllDay={selected?.all_day === 1}
+            initialStart={selected?.all_day === 1 ? selected.start_at.slice(0, 10) : selected ? localDateTime(selected.start_at) : selectedDay ? `${selectedDay}T09:00` : ""}
+            initialEnd={selected?.all_day === 1 ? selected.end_at.slice(0, 10) : selected ? localDateTime(selected.end_at) : selectedDay ? `${selectedDay}T10:00` : ""}
+          />
+          <label className="grid min-w-0 gap-1 text-xs text-secondary">Konum<input name="location" maxLength={300} defaultValue={selected?.location ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm" /></label>
+          <label className="grid min-w-0 gap-1 text-xs text-secondary">Açıklama<textarea name="description" maxLength={5000} rows={3} defaultValue={selected?.description ?? ""} className="min-w-0 w-full rounded-lg border border-border-default bg-background px-3 py-2 text-sm" /></label>
+          <label className="inline-flex items-center gap-2 text-xs font-medium text-secondary"><input type="checkbox" name="guestVisible" value="1" defaultChecked={selected?.guest_visible === 1} />Guest ile paylaş</label>
+          <button className="min-h-10 w-full rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700">{selected ? "Değişiklikleri kaydet" : "Etkinlik oluştur"}</button>
+          {selected && <button formAction={cancelCalendarEventAction.bind(null, selected.id)} className="min-h-9 w-full rounded-lg border border-red-200 text-xs font-semibold text-red-700">Etkinliği iptal et</button>}
+        </form>
       </div>
     </div>
   );

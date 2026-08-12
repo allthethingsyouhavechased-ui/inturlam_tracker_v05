@@ -11,6 +11,7 @@ import {
   TASK_STATUSES,
 } from "@/lib/constants";
 import { formatDateShort, todayISO } from "@/lib/date";
+import { assertWeightPoints } from "@/lib/progress";
 import { requireSession } from "@/lib/identity";
 import { notifyTaskUpdate } from "@/lib/notifications";
 import { setPersonalTaskTarget } from "@/lib/repositories/personalTargets";
@@ -36,6 +37,7 @@ import {
   updateTaskPriority,
   updateTaskRepeat,
   updateTaskStatus,
+  updateTaskWeight,
 } from "@/lib/repositories/tasks";
 import type { TaskPriority, TaskStatus } from "@/lib/types";
 import {
@@ -61,6 +63,12 @@ function cleanDate(value: FormDataEntryValue | string | null): string | null {
   return date;
 }
 
+function requiredDate(value: FormDataEntryValue | string | null): string {
+  const date = cleanDate(value);
+  if (!date) throw new Error("Teslim tarihi zorunlu.");
+  return date;
+}
+
 export async function createTaskAction(formData: FormData): Promise<string> {
   await requireSession();
   const contentItemId = String(formData.get("contentItemId") ?? "").trim();
@@ -76,7 +84,7 @@ export async function createTaskAction(formData: FormData): Promise<string> {
     contentItemId,
     title,
     assigneeId: cleanText(formData.get("assigneeId")),
-    dueDate: cleanDate(formData.get("dueDate")),
+    dueDate: requiredDate(formData.get("dueDate")),
     priority,
   });
 
@@ -131,6 +139,7 @@ export async function setTaskRepeatAction(taskId: string, repeatDays: number) {
   }
   const task = getTask(taskId);
   if (!task) throw new Error("Görev bulunamadı.");
+  if (repeatDays > 0 && !task.due_date) throw new Error("Tekrar eklemeden önce teslim tarihi atanmalı.");
 
   updateTaskRepeat(taskId, repeatDays > 0 ? repeatDays : null);
   const label = REPEAT_OPTIONS.find((o) => o.days === repeatDays)!.label;
@@ -186,16 +195,14 @@ export async function setTaskAssigneeAction(
 export async function setTaskDueDateAction(taskId: string, dueDate: string | null) {
   await requireSession();
   const task = getTask(taskId);
-  const cleanDueDate = cleanDate(dueDate);
+  const cleanDueDate = requiredDate(dueDate);
   updateTaskDueDate(taskId, cleanDueDate);
   await recordActivity({
     action: "task.duedate",
     entityType: "task",
     entityId: taskId,
     brandId: task?.brand_id ?? null,
-    summary: cleanDueDate
-      ? `“${task?.title ?? "Görev"}” teslim tarihini ${formatDateShort(cleanDueDate)} yaptı`
-      : `“${task?.title ?? "Görev"}” teslim tarihini kaldırdı`,
+    summary: `“${task?.title ?? "Görev"}” teslim tarihini ${formatDateShort(cleanDueDate)} yaptı`,
   });
   revalidatePath("/", "layout");
 }
@@ -232,7 +239,7 @@ export async function updateTaskDetailsAction(formData: FormData) {
   updateTaskDetails({
     id,
     title,
-    dueDate: cleanDate(formData.get("dueDate")),
+    dueDate: requiredDate(formData.get("dueDate")),
     notes,
   });
 
@@ -258,6 +265,22 @@ export async function updateTaskDetailsAction(formData: FormData) {
     message: notifyMessage,
   });
 
+  revalidatePath("/", "layout");
+}
+
+export async function setTaskWeightAction(taskId: string, weightPoints: number) {
+  const actor = await requireSession();
+  if (actor.is_manager !== 1) throw new Error("Görev ağırlığını yalnızca yöneticiler değiştirebilir.");
+  const task = getTask(taskId);
+  if (!task) throw new Error("Görev bulunamadı.");
+  updateTaskWeight(taskId, assertWeightPoints(weightPoints));
+  await recordActivity({
+    action: "task.weight",
+    entityType: "task",
+    entityId: taskId,
+    brandId: task.brand_id,
+    summary: `“${task.title}” görev ağırlığını ${weightPoints} puan yaptı`,
+  });
   revalidatePath("/", "layout");
 }
 

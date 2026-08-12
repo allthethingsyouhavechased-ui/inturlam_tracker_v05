@@ -46,7 +46,7 @@ describe("sayfa oturum sınırı", () => {
     const unguarded: string[] = [];
 
     for (const filePath of pageFiles(APP_DIRECTORY)) {
-      if (filePath === path.join(APP_DIRECTORY, "whoami", "page.tsx")) continue;
+      if (filePath.startsWith(path.join(APP_DIRECTORY, "whoami"))) continue;
       const source = fs.readFileSync(filePath, "utf8");
       const sourceFile = ts.createSourceFile(
         filePath,
@@ -57,7 +57,7 @@ describe("sayfa oturum sınırı", () => {
       );
       const page = defaultPageFunction(sourceFile);
       const guard = page ? firstGuardName(page) : null;
-      if (guard !== "requirePageSession" && guard !== "requireReportAccess") {
+      if (guard !== "requirePageSession" && guard !== "requireReportAccess" && guard !== "requireGuestSession") {
         unguarded.push(path.relative(process.cwd(), filePath));
       }
     }

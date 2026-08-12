@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server.js";
 import { IDENTITY_COOKIE } from "@/lib/auth/constants";
-import { getPersonForSession } from "@/lib/repositories/authSessions";
+import { getActorForSession } from "@/lib/repositories/authSessions";
 import { canReviewClientRequests } from "@/lib/requestAccess";
 
-const PUBLIC_PATHS = ["/whoami"];
+const PUBLIC_PATHS = ["/whoami", "/inturlam-logo.jpg", "/logos"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
@@ -26,6 +26,10 @@ function isReportPath(pathname: string): boolean {
   return pathname === "/reports" || pathname.startsWith("/reports/");
 }
 
+function isGuestPath(pathname: string): boolean {
+  return pathname === "/guest" || pathname.startsWith("/guest/");
+}
+
 function forbiddenClientRequestResponse(request: NextRequest): NextResponse {
   return request.method === "GET" || request.method === "HEAD"
     ? NextResponse.redirect(new URL("/", request.url))
@@ -36,8 +40,18 @@ export function proxy(request: NextRequest): NextResponse {
   if (isPublicPath(request.nextUrl.pathname)) return NextResponse.next();
 
   const token = request.cookies.get(IDENTITY_COOKIE)?.value;
-  const person = token ? getPersonForSession(token) : undefined;
-  if (person) {
+  const actor = token ? getActorForSession(token) : undefined;
+  if (actor?.kind === "guest") {
+    if (isGuestPath(request.nextUrl.pathname)) return NextResponse.next();
+    return request.method === "GET" || request.method === "HEAD"
+      ? NextResponse.redirect(new URL("/guest", request.url))
+      : NextResponse.json({ error: "Bu alan için yetkin yok." }, { status: 403 });
+  }
+  if (actor?.kind === "team") {
+    const person = actor.person;
+    if (isGuestPath(request.nextUrl.pathname)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     if (isReportPath(request.nextUrl.pathname) && person.is_manager !== 1) {
       return forbiddenClientRequestResponse(request);
     }

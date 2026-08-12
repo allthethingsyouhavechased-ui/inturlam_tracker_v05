@@ -1,5 +1,7 @@
 import { extractMentionedPeople } from "@/lib/mentions";
 import { createNotification } from "@/lib/repositories/notifications";
+import { notificationExistsForCalendarEvent } from "@/lib/repositories/notifications";
+import { getActiveGuestAccountForBrand } from "@/lib/repositories/accounts";
 import { getPerson, listActivePeople } from "@/lib/repositories/people";
 import type { Person } from "@/lib/types";
 
@@ -120,5 +122,30 @@ export function notifyTaskUpdate(input: {
     }
   } catch {
     // yut — bildirim en iyi çabadır, asıl güncellemeyi asla düşürmez.
+  }
+}
+
+export function notifyGuestCalendarEvent(input: {
+  actor: Person;
+  calendarEventId: string;
+  brandId: string;
+  title: string;
+  typeLabel: string;
+}): void {
+  try {
+    const guest = getActiveGuestAccountForBrand(input.brandId);
+    if (!guest || notificationExistsForCalendarEvent(guest.id, input.calendarEventId)) return;
+    createNotification({
+      recipientId: guest.id,
+      recipientName: guest.brand_name,
+      actorId: input.actor.id,
+      actorName: input.actor.name,
+      taskId: null,
+      calendarEventId: input.calendarEventId,
+      brandId: input.brandId,
+      summary: `${input.actor.name}, “${input.title}” ${input.typeLabel.toLocaleLowerCase("tr-TR")} etkinliğini sizinle paylaştı`,
+    });
+  } catch {
+    // Bildirim en iyi çabadır; takvim kaydının oluşmasını engellemez.
   }
 }

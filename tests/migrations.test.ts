@@ -168,13 +168,13 @@ describe("brands migration zinciri", () => {
 
     const stored = db.prepare("SELECT * FROM brands WHERE id = ?").get("sihirliolta");
     // Eski 15 sütunun hepsi aynen duruyor; sonradan ALTER ile eklenen
-    // `stats_updated_at` boş geliyor (migrateBrandsStatsUpdatedIfNeeded).
+    // `stats_updated_at` ve v03 aylık çekim hakkı boş geliyor.
     // Bu satır bilerek TÜM satırı karşılaştırıyor: brands'e yeni bir sütun
     // eklenirse test kırılır ve eklenen sütunun rebuild'de düşmediği
     // bilinçli olarak doğrulanmış olur.
     assert.deepEqual(
       { ...(stored as Record<string, unknown>) },
-      { ...brand, stats_updated_at: null },
+      { ...brand, stats_updated_at: null, monthly_shoot_allowance: null, annual_shoot_allowance: null },
     );
 
     assert.equal(

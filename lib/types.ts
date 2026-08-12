@@ -28,6 +28,8 @@ export type TaskStatus =
   | "Yayinlandi";
 
 export type TaskPriority = "Dusuk" | "Normal" | "Yuksek" | "Acil";
+export type AccountKind = "team" | "guest";
+export type CalendarEventType = "Toplanti" | "Cekim" | "Diger";
 
 export type ClientRequestStatus =
   | "Beklemede"
@@ -95,6 +97,8 @@ export interface Brand {
   tier: string | null;
   // Takipçi/gönderi sayılarının son güncellendiği gün (YYYY-MM-DD).
   stats_updated_at: string | null;
+  monthly_shoot_allowance: number | null;
+  annual_shoot_allowance: number | null;
   // NOT: `brands` tablosunda ayrıca `median_reel_views`, `cover_test_verdict`,
   // `cover_test_note` ve `first_action` sütunları da var. Eski marka denetimi
   // verisi; arayüzden kaldırıldılar ve artık okunmuyorlar, bu yüzden bilerek
@@ -112,6 +116,49 @@ export interface Person {
   department: string | null;
   is_manager: number;
   active: number;
+}
+
+export interface Account {
+  id: string;
+  kind: AccountKind;
+  person_id: string | null;
+  brand_id: string | null;
+  username: string | null;
+  active: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamActor {
+  kind: "team";
+  account_id: string;
+  person: Person;
+}
+
+export interface GuestActor {
+  kind: "guest";
+  account_id: string;
+  brand: Pick<Brand, "id" | "name" | "logo_path">;
+  username: string;
+}
+
+export type Actor = TeamActor | GuestActor;
+
+export interface PersonBrandAssignment {
+  person_id: string;
+  brand_id: string;
+  brand_name: string;
+  brand_logo_path: string | null;
+  created_at: string;
+}
+
+export interface BrandPersonAssignment {
+  person_id: string;
+  person_name: string;
+  person_avatar_path: string | null;
+  person_title: string | null;
+  brand_id: string;
+  created_at: string;
 }
 
 export interface PersonActiveWork {
@@ -143,6 +190,11 @@ export interface Task {
   assignee_id: string | null;
   due_date: string | null;
   notes: string | null;
+  weight_points: number;
+  origin: "team" | "guest";
+  requested_date: string | null;
+  guest_brief: string | null;
+  created_by_account_id: string | null;
   // Kaç günde bir tekrarlayacağı. null/0 = tekrar yok.
   repeat_days: number | null;
   completed_at: string | null;
@@ -153,6 +205,74 @@ export interface Task {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SharedTaskComment {
+  id: string;
+  task_id: string;
+  account_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SharedTaskAttachment {
+  id: string;
+  task_id: string;
+  account_id: string;
+  file_path: string;
+  original_name: string | null;
+  created_at: string;
+}
+
+export interface GuestTaskDTO {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  requested_date: string;
+  brief: string;
+  content_title: string;
+  content_type: ContentType;
+  brand_id: string;
+  brand_name: string;
+  editable: boolean;
+  comments: SharedTaskComment[];
+  attachments: SharedTaskAttachment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MonthlyProgress {
+  month: string;
+  weighted_total: number;
+  weighted_earned: number;
+  percent: number | null;
+  task_count: number;
+}
+
+export interface CalendarEvent {
+  id: string;
+  brand_id: string | null;
+  brand_name?: string | null;
+  type: CalendarEventType;
+  title: string;
+  description: string | null;
+  start_at: string;
+  end_at: string;
+  all_day: number;
+  location: string | null;
+  guest_visible: number;
+  google_event_id: string | null;
+  google_etag: string | null;
+  google_updated_at: string | null;
+  sync_status: "pending" | "synced" | "error";
+  sync_error: string | null;
+  deleted_at: string | null;
+  created_by_account_id: string | null;
+  created_at: string;
+  updated_at: string;
+  last_synced_at: string | null;
 }
 
 // Görev şablonu: bir içerik türü için standart iş akışı.
@@ -238,6 +358,8 @@ export interface Notification {
   actor_id: string | null;
   actor_name: string | null;
   task_id: string | null;
+  calendar_event_id: string | null;
+  calendar_event_start_at?: string | null;
   brand_id: string | null;
   summary: string;
   read: number;

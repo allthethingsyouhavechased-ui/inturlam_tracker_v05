@@ -72,7 +72,7 @@ export default function NewTaskForm({
       </label>
       <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         Teslim
-        <input type="date" name="dueDate" className={inputClass} />
+        <input type="date" name="dueDate" required className={inputClass} />
       </label>
       <SubmitButton>Ekle</SubmitButton>
       {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400 sm:col-span-5">{error}</p>}

@@ -269,9 +269,10 @@ export function createTask(input: {
   contentItemId: string;
   title: string;
   assigneeId: string | null;
-  dueDate: string | null;
+  dueDate: string;
   priority?: TaskPriority;
 }): string {
+  if (!input.dueDate) throw new Error("Teslim tarihi zorunlu.");
   const id = crypto.randomUUID();
   getDb()
     .prepare(
@@ -297,8 +298,10 @@ export function updateTaskRepeat(id: string, repeatDays: number | null): void {
 // Tekrar eden görevin bir sonraki örneğini açar. Tarih, ESKİ görevin teslim
 // tarihine göre kayar (bugüne göre değil) — geç tamamlanan haftalık iş takvimi
 // kaydırmasın. Tarihi yoksa bugünden itibaren hesaplanır.
-export function createNextOccurrence(task: Task, today: string): string {
-  const base = task.due_date ?? today;
+export function createNextOccurrence(task: Task, _today: string): string {
+  void _today;
+  const base = task.due_date;
+  if (!base) throw new Error("Tekrar eden görev için önce teslim tarihi atanmalı.");
   const d = new Date(`${base}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + (task.repeat_days ?? 0));
   const id = crypto.randomUUID();
@@ -397,7 +400,8 @@ export function updateTaskPriority(id: string, priority: TaskPriority): void {
     .run(priority, id);
 }
 
-export function updateTaskDueDate(id: string, dueDate: string | null): void {
+export function updateTaskDueDate(id: string, dueDate: string): void {
+  if (!dueDate) throw new Error("Teslim tarihi zorunlu.");
   getDb()
     .prepare("UPDATE tasks SET due_date = ?, updated_at = datetime('now') WHERE id = ?")
     .run(dueDate, id);
@@ -428,14 +432,21 @@ export function updateTaskAssignee(id: string, assigneeId: string | null): void 
 export function updateTaskDetails(input: {
   id: string;
   title: string;
-  dueDate: string | null;
+  dueDate: string;
   notes: string | null;
 }): void {
+  if (!input.dueDate) throw new Error("Teslim tarihi zorunlu.");
   getDb()
     .prepare(
       "UPDATE tasks SET title = ?, due_date = ?, notes = ?, updated_at = datetime('now') WHERE id = ?",
     )
     .run(input.title, input.dueDate, input.notes, input.id);
+}
+
+export function updateTaskWeight(id: string, weightPoints: number): void {
+  getDb().prepare(
+    "UPDATE tasks SET weight_points = ?, updated_at = datetime('now') WHERE id = ?",
+  ).run(weightPoints, id);
 }
 
 // ---- Arşiv ----

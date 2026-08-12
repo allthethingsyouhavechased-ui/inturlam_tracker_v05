@@ -235,6 +235,39 @@ export default function EditBrandForm({
             </label>
           </div>
 
+          <div className="space-y-4 border-t border-border-subtle pt-4">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-secondary">Çekim hakları</h3>
+              <p className="mt-1 text-xs text-muted">Sözleşmedeki aylık ve yıllık çekim kotalarını ayrı ayrı tanımla. Boş bırakılan hak tanımlanmamış görünür.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className={labelClass}>
+                Aylık çekim hakkı
+                <input
+                  name="monthlyShootAllowance"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  defaultValue={brand.monthly_shoot_allowance ?? ""}
+                  placeholder="Örn. 2"
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                Yıllık çekim hakkı
+                <input
+                  name="annualShootAllowance"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  defaultValue={brand.annual_shoot_allowance ?? ""}
+                  placeholder="Örn. 24"
+                  className={inputClass}
+                />
+              </label>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-4">
             <SubmitButton>Kaydet</SubmitButton>
             <button

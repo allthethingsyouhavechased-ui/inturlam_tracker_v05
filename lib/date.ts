@@ -23,6 +23,21 @@ export function todayISO(): string {
   return toISODate(new Date());
 }
 
+export function validISODateParam(value: string | undefined): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = parseISO(value);
+  if (Number.isNaN(parsed.getTime()) || toISODate(parsed) !== value) return null;
+  return value;
+}
+
+export function shouldShowTodayShortcut(
+  displayedMonth: string,
+  selectedDate: string | null,
+  today = todayISO(),
+): boolean {
+  return displayedMonth !== today.slice(0, 7) || (selectedDate !== null && selectedDate !== today);
+}
+
 export function shiftISODate(iso: string, days: number): string {
   return toISODate(addDays(parseISO(iso), days));
 }

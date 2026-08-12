@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getCurrentPerson } from "@/lib/identity";
+import { getCurrentActor } from "@/lib/identity";
+import { guestCanAccessUpload } from "@/lib/repositories/guestTasks";
 import { resolveRuntimeUpload } from "@/lib/runtimeUploads";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +14,13 @@ export async function GET(
 ) {
   const requestedPath = (await context.params).path;
   const publicAvatar = requestedPath[0] === "people";
-  if (!publicAvatar && !(await getCurrentPerson())) {
-    return new Response(null, { status: 401 });
+  const actor = await getCurrentActor();
+  if (!publicAvatar) {
+    if (!actor) return new Response(null, { status: 401 });
+    if (actor.kind === "guest") {
+      const filePath = `/uploads/${requestedPath.join("/")}`;
+      if (!guestCanAccessUpload(actor.brand.id, filePath)) return new Response(null, { status: 403 });
+    }
   }
 
   const resolved = resolveRuntimeUpload(UPLOAD_ROOT, requestedPath);

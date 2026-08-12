@@ -99,7 +99,7 @@ export function deleteTemplateItem(id: string): void {
 
 // Şablonu bir içeriğe uygular: her satır için görev açar. Tarihler içeriğin
 // target_date'ine göre kaydırılır (due_offset_days). İçeriğin tarihi yoksa
-// görevler tarihsiz açılır — uydurma bir tarih koymak takvimi kirletir.
+// şablon uygulanmaz; kullanıcıdan önce gerçek hedef tarih istenir.
 // Tek transaction: yarım uygulanmış bir şablon bırakmıyoruz.
 export function applyTemplateToContent(input: {
   templateId: string;
@@ -114,6 +114,7 @@ export function applyTemplateToContent(input: {
     db.prepare("SELECT target_date FROM content_items WHERE id = ?").get(input.contentItemId),
   );
   if (!content) throw new Error("İçerik bulunamadı.");
+  if (!content.target_date) throw new Error("Şablonu uygulamadan önce içerik hedef tarihini belirleyin.");
 
   const insert = db.prepare(
     `INSERT INTO tasks (id, content_item_id, title, priority, assignee_id, due_date)
@@ -129,7 +130,7 @@ export function applyTemplateToContent(input: {
         item.title,
         item.priority,
         item.assignee_id ?? input.defaultAssigneeId,
-        shiftDate(content.target_date, item.due_offset_days),
+        shiftDate(content.target_date, item.due_offset_days ?? 0),
       );
     }
     db.exec("COMMIT");

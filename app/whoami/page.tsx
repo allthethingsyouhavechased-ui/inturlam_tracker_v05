@@ -1,91 +1,42 @@
 import Link from "next/link";
-import IdentityLoginForm from "@/components/IdentityLoginForm";
-import PersonAvatar from "@/components/PersonAvatar";
+import Logo from "@/components/Logo";
 import Icon from "@/components/ui/Icon";
-import PageHeader from "@/components/ui/PageHeader";
-import { getCurrentPerson } from "@/lib/identity";
-import { listLoginPeople } from "@/lib/repositories/people";
 
 export const dynamic = "force-dynamic";
 
-export default async function WhoAmIPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ person?: string; changed?: string }>;
-}) {
-  const { person: selectedId, changed } = await searchParams;
-  const people = listLoginPeople();
-  const current = await getCurrentPerson();
-  const selected = selectedId ? people.find((person) => person.id === selectedId) : undefined;
-
-  if (selected) {
-    const needsPasswordSetup = selected.has_password !== 1;
-    return (
-      <div className="mx-auto max-w-lg py-4 sm:py-8">
-        <PageHeader
-          eyebrow="GÜVENLİ GİRİŞ"
-          title={selected.name}
-          description={selected.is_manager === 1 ? "Yönetici hesabı" : selected.title ?? "Ekip hesabı"}
-          breadcrumb={[{ label: "Hesaplar", href: "/whoami" }, { label: selected.name }]}
-          media={<PersonAvatar name={selected.name} avatarPath={selected.avatar_path} size="lg" />}
-        />
-
-        <section className="space-y-5 rounded-xl border border-border-default bg-surface p-5 sm:p-6">
-          {needsPasswordSetup ? (
-            <div className="flex gap-3 rounded-[10px] border border-border-default border-l-[3px] border-l-amber-500 bg-surface-subtle p-3 text-sm text-secondary">
-              <Icon name="shield" className="mt-0.5 size-[18px] shrink-0 text-warning" />
-              <div>
-                <p className="font-semibold text-foreground">Bu hesap henüz girişe açık değil.</p>
-                <p className="mt-1">Bir yönetici Hesap yönetimi ekranından ilk şifreyi belirledikten sonra giriş yapabilirsin.</p>
-              </div>
-            </div>
-          ) : (
-            <IdentityLoginForm personId={selected.id} />
-          )}
-        </section>
-      </div>
-    );
-  }
-
+export default function WhoAmIPage() {
   return (
-    <div className="mx-auto max-w-6xl py-4 sm:py-8">
-      <PageHeader
-        eyebrow="ÇALIŞMA KİMLİĞİ"
-        title="Hesabını seç"
-        description="Kendi hesabını seçip şifrenle giriş yap. Yetkiler ve kişisel panon bu kimliğe göre açılır."
-      />
-
-      {changed === "1" && (
-        <p role="status" className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-300">
-          Şifren değiştirildi. Yeni şifrenle tekrar giriş yap.
+    <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-4xl flex-col justify-center py-10">
+      <div className="mb-8 text-center">
+        <span className="mx-auto grid size-14 place-items-center rounded-xl border border-border-default bg-white text-zinc-900 shadow-sm">
+          <Logo className="size-9" />
+        </span>
+        <p className="mt-5 text-xs font-semibold tracking-[0.16em] text-brand-600">İNTURLAM TRACKER</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">Giriş türünü seç</h1>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-secondary">
+          Ekip çalışma alanı ile marka guest portalı birbirinden ayrı ve güvenli oturumlar kullanır.
         </p>
-      )}
-
-      <div className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-subtle grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {people.map((person) => (
-          <Link
-            key={person.id}
-            href={`/whoami?person=${encodeURIComponent(person.id)}`}
-            className={`group flex min-h-32 flex-col items-center justify-center gap-2.5 bg-surface p-3 text-center transition-colors hover:bg-surface-hover ${
-              current?.id === person.id ? "ring-2 ring-inset ring-brand-500" : ""
-            }`}
-          >
-            <PersonAvatar name={person.name} avatarPath={person.avatar_path} size="lg" />
-            <span className="min-w-0 max-w-full">
-              <span className="block truncate text-sm font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">{person.name}</span>
-              <span className="mt-0.5 block min-h-4 truncate text-[11px] text-muted">
-                {person.is_manager === 1 ? "Yönetici" : person.title ?? "Ekip üyesi"}
-              </span>
-            </span>
-          </Link>
-        ))}
       </div>
 
-      {people.length === 0 && (
-        <p className="rounded-xl border border-dashed border-border-default bg-surface-subtle px-5 py-10 text-center text-sm text-muted">
-          Aktif kullanıcı bulunamadı.
-        </p>
-      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link href="/whoami/team" className="group rounded-xl border border-border-default bg-surface p-6 shadow-sm transition hover:border-brand-300 hover:bg-surface-hover">
+          <span className="grid size-11 place-items-center rounded-[10px] bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+            <Icon name="team" className="size-5" />
+          </span>
+          <h2 className="mt-5 text-lg font-semibold text-foreground">Ekip girişi</h2>
+          <p className="mt-1 text-sm leading-6 text-secondary">Panom, görevler, markalar, raporlar ve iç operasyon alanı.</p>
+          <span className="mt-5 inline-flex text-sm font-semibold text-brand-600 group-hover:text-brand-700">Ekip hesabını seç →</span>
+        </Link>
+
+        <Link href="/whoami/guest" className="group rounded-xl border border-border-default bg-surface p-6 shadow-sm transition hover:border-brand-300 hover:bg-surface-hover">
+          <span className="grid size-11 place-items-center rounded-[10px] bg-surface-subtle text-secondary">
+            <Icon name="brands" className="size-5" />
+          </span>
+          <h2 className="mt-5 text-lg font-semibold text-foreground">Guest girişi</h2>
+          <p className="mt-1 text-sm leading-6 text-secondary">Markanızın ilerlemesini, taleplerini ve paylaşılan etkinliklerini görün.</p>
+          <span className="mt-5 inline-flex text-sm font-semibold text-brand-600 group-hover:text-brand-700">Guest hesabıyla giriş →</span>
+        </Link>
+      </div>
     </div>
   );
 }

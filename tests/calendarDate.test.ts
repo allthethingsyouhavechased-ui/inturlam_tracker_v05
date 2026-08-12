@@ -12,6 +12,8 @@ import {
   monthParamToDate,
   shiftMonthParam,
   shiftISODate,
+  shouldShowTodayShortcut,
+  validISODateParam,
 } from "@/lib/date";
 
 describe("calendarGridDays", () => {
@@ -82,5 +84,22 @@ describe("shiftISODate", () => {
   it("gün ufkunu ay ve yıl sınırlarında kaydırıyor", () => {
     assert.equal(shiftISODate("2026-08-30", 7), "2026-09-06");
     assert.equal(shiftISODate("2026-12-30", 3), "2027-01-02");
+  });
+});
+
+describe("takvim gün seçimi", () => {
+  it("yalnızca gerçek ISO günlerini kabul ediyor", () => {
+    assert.equal(validISODateParam("2026-02-28"), "2026-02-28");
+    for (const invalid of [undefined, "", "2026-02-31", "2026-13-01", "28.02.2026"]) {
+      assert.equal(validISODateParam(invalid), null);
+    }
+  });
+
+  it("Bugün kısayolunu yalnızca başka ay veya başka gün seçildiğinde gösteriyor", () => {
+    const today = "2026-08-12";
+    assert.equal(shouldShowTodayShortcut("2026-08", null, today), false);
+    assert.equal(shouldShowTodayShortcut("2026-08", today, today), false);
+    assert.equal(shouldShowTodayShortcut("2026-08", "2026-08-18", today), true);
+    assert.equal(shouldShowTodayShortcut("2026-09", null, today), true);
   });
 });

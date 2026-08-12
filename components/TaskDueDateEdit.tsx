@@ -18,12 +18,14 @@ export default function TaskDueDateEdit({
     return (
       <input
         type="date"
+        required
         autoFocus
         defaultValue={dueDate ?? ""}
         disabled={pending}
         onBlur={() => setEditing(false)}
         onChange={(e) => {
-          const next = e.target.value || null;
+          const next = e.target.value;
+          if (!next) return;
           startTransition(() => setTaskDueDateAction(taskId, next));
           setEditing(false);
         }}

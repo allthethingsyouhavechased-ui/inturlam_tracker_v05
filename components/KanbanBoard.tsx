@@ -92,6 +92,9 @@ function TaskCard({
         <span className="rounded-full bg-black/5 px-2 py-0.5 dark:bg-white/10">
           {CONTENT_TYPE_LABEL[task.content_type]}
         </span>
+        <span className="rounded-full bg-black/5 px-2 py-0.5 tabular-nums dark:bg-white/10">
+          {task.weight_points} puan
+        </span>
         <span className="min-w-0 truncate normal-case font-medium tracking-normal">
           {task.content_title}
         </span>

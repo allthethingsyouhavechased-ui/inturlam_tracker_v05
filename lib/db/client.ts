@@ -46,15 +46,86 @@ function createConnection(): DatabaseSync {
   migratePeopleProfilesIfNeeded(db);
   migratePeopleDepartmentIfNeeded(db);
   migratePeopleAuthIfNeeded(db);
+  migrateV03TaskColumnsIfNeeded(db);
+  migrateV03AccountsIfNeeded(db);
+  migrateV03NotificationColumnsIfNeeded(db);
   migrateSocialPostsUniqueIfNeeded(db);
   migrateClientRequestsArchiveIfNeeded(db);
   // SIRA ÖNEMLİ: yukarıdaki iki brands migration'ı tabloyu SABİT bir sütun
   // listesiyle yeniden kuruyor; bu ALTER onlardan sonra çalışmalı, yoksa
   // eklediği sütun rebuild sırasında düşer.
   migrateBrandsStatsUpdatedIfNeeded(db);
+  migrateBrandsOperationsIfNeeded(db);
   db.exec(schemaSql);
   seedTaskTemplatesIfNeeded(db);
   return db;
+}
+
+// v03 görev alanları düz/nullable ya da güvenli DEFAULT taşır. Eski v02
+// satırları ekip kaynaklı ve 1 puan kabul edilir; tarih veya sahiplik bilgisi
+// uydurulmaz.
+function migrateV03TaskColumnsIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'`)
+    .get();
+  if (!exists) return;
+
+  const columns = db.prepare(`PRAGMA table_info(tasks)`).all() as { name: string }[];
+  const additions: ReadonlyArray<readonly [string, string]> = [
+    ["weight_points", "INTEGER NOT NULL DEFAULT 1 CHECK (weight_points BETWEEN 1 AND 100)"],
+    ["origin", "TEXT NOT NULL DEFAULT 'team' CHECK (origin IN ('team','guest'))"],
+    ["requested_date", "TEXT"],
+    ["guest_brief", "TEXT"],
+    ["created_by_account_id", "TEXT REFERENCES accounts(id) ON DELETE SET NULL"],
+  ];
+  for (const [name, definition] of additions) {
+    if (!columns.some((column) => column.name === name)) {
+      db.exec(`ALTER TABLE tasks ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
+// Her mevcut person için kararlı bir team hesabı oluşturur. people tablosundaki
+// eski password_hash silinmez; v03 hesabı ilk kez oluşurken kayıpsız kopyalanır.
+function migrateV03AccountsIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='accounts'`)
+    .get();
+  if (!exists) return;
+
+  db.exec(`
+    INSERT OR IGNORE INTO accounts
+      (id, kind, person_id, brand_id, username, password_hash, active)
+    SELECT 'team:' || id, 'team', id, NULL, NULL, password_hash, active
+      FROM people
+  `);
+  db.exec(`
+    UPDATE accounts
+       SET password_hash = (
+             SELECT p.password_hash FROM people p WHERE p.id = accounts.person_id
+           ),
+           active = COALESCE((
+             SELECT p.active FROM people p WHERE p.id = accounts.person_id
+           ), active),
+           updated_at = datetime('now')
+     WHERE kind = 'team'
+       AND person_id IS NOT NULL
+       AND password_hash IS NULL
+  `);
+}
+
+// Guest etkinlik bildirimleri aynı bildirim tablosunda, alıcı olarak guest
+// account id'sini kullanır. Olay id'si ayrı sütundur; task_id alanını takvim
+// olayı için yeniden kullanıp iki kavramı birbirine karıştırmıyoruz.
+function migrateV03NotificationColumnsIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='notifications'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(notifications)`).all() as { name: string }[];
+  if (!columns.some((column) => column.name === "calendar_event_id")) {
+    db.exec(`ALTER TABLE notifications ADD COLUMN calendar_event_id TEXT`);
+  }
 }
 
 // Ön talep kayıtları onay/ret kararından yedi gün sonra listeden arşive
@@ -83,6 +154,22 @@ function migrateBrandsStatsUpdatedIfNeeded(db: DatabaseSync): void {
   const columns = db.prepare(`PRAGMA table_info(brands)`).all() as { name: string }[];
   if (columns.some((c) => c.name === "stats_updated_at")) return;
   db.exec(`ALTER TABLE brands ADD COLUMN stats_updated_at TEXT`);
+}
+
+// Aylık/yıllık çekim hakları eski snapshot'larda bulunmaz. NULL bilinçli bir
+// boş durumdur: kota tanımlanmamış markaya yapay bir 0 hakkı yazılmaz.
+function migrateBrandsOperationsIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='brands'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(brands)`).all() as { name: string }[];
+  if (!columns.some((column) => column.name === "monthly_shoot_allowance")) {
+    db.exec(`ALTER TABLE brands ADD COLUMN monthly_shoot_allowance INTEGER CHECK (monthly_shoot_allowance >= 0)`);
+  }
+  if (!columns.some((column) => column.name === "annual_shoot_allowance")) {
+    db.exec(`ALTER TABLE brands ADD COLUMN annual_shoot_allowance INTEGER CHECK (annual_shoot_allowance >= 0)`);
+  }
 }
 
 // tasks.repeat_days — tekrar eden görevler için. CHECK/FK içermediği için

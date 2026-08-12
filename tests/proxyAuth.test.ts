@@ -9,7 +9,7 @@ const TMP_DB = path.join(os.tmpdir(), `inturlam-test-proxy-auth-${process.pid}.d
 process.env.INTURLAM_DB_PATH = TMP_DB;
 
 const { getDb } = await import("@/lib/db/client");
-const { createAuthSession } = await import("@/lib/repositories/authSessions");
+const { createAuthSession, createGuestAuthSession } = await import("@/lib/repositories/authSessions");
 const { proxy } = await import("../proxy.ts");
 
 function resetDb(): void {
@@ -20,7 +20,7 @@ function resetDb(): void {
 
 function request(pathname: string, options?: { method?: string; token?: string }): NextRequest {
   const headers = new Headers();
-  if (options?.token) headers.set("cookie", `inturlam_session=${options.token}`);
+  if (options?.token) headers.set("cookie", `inturlam_v03_session=${options.token}`);
   return new NextRequest(`http://localhost${pathname}`, {
     method: options?.method ?? "GET",
     headers,
@@ -52,7 +52,7 @@ describe("merkezi oturum kapısı", () => {
     const response = proxy(request("/tasks", { token: "invalid-token" }));
 
     assert.equal(response.status, 307);
-    assert.match(response.headers.get("set-cookie") ?? "", /inturlam_session=;/);
+    assert.match(response.headers.get("set-cookie") ?? "", /inturlam_v03_session=;/);
   });
 
   it("yalnızca geçerli veritabanı oturumuyla paneli geçirir", () => {
@@ -70,6 +70,28 @@ describe("merkezi oturum kapısı", () => {
 
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("x-middleware-next"), "1");
+  });
+});
+
+describe("guest rota sınırı", () => {
+  it("guest yalnızca guest kabuğuna geçer ve ekip rotalarını reddeder", () => {
+    const db = getDb();
+    db.prepare("INSERT INTO brands (id, name, cluster) VALUES ('b1', 'Marka', 'tek')").run();
+    db.prepare("INSERT INTO accounts (id, kind, brand_id, username, password_hash) VALUES ('g1', 'guest', 'b1', 'marka', 'hash')").run();
+    const token = createGuestAuthSession("g1");
+    assert.equal(proxy(request("/guest/tasks", { token })).status, 200);
+    const page = proxy(request("/reports", { token }));
+    assert.equal(page.status, 307);
+    assert.equal(page.headers.get("location"), "http://localhost/guest");
+    assert.equal(proxy(request("/reports/export", { method: "POST", token })).status, 403);
+  });
+
+  it("giriş ve marka logolarını oturumsuz erişime açık bırakır", () => {
+    for (const pathname of ["/inturlam-logo.jpg", "/logos/marka.png"]) {
+      const response = proxy(request(pathname));
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("x-middleware-next"), "1");
+    }
   });
 });
 

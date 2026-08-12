@@ -5,6 +5,8 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import { SidebarProvider } from "@/components/SidebarContext";
 import SidebarMobileFrame from "@/components/SidebarMobileFrame";
+import GuestShell from "@/components/GuestShell";
+import { getCurrentActor } from "@/lib/identity";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,11 +23,12 @@ export const metadata: Metadata = {
   description: "İNTURLAM marka, içerik ve görev operasyon merkezi",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const actor = await getCurrentActor();
   return (
     <html
       lang="tr"
@@ -39,21 +42,23 @@ export default function RootLayout({
           }}
         />
         <a href="#main-content" className="skip-link">İçeriğe geç</a>
-        <SidebarProvider>
-          <div className="flex min-h-screen bg-background">
-            <SidebarMobileFrame>
-              <Sidebar />
-            </SidebarMobileFrame>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <Header />
-              <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
-                <div className="page-shell mx-auto w-full max-w-[var(--page-max)] px-4 py-6 sm:px-6 sm:py-8">
-                  {children}
-                </div>
-              </main>
+        {!actor ? (
+          <main id="main-content" tabIndex={-1} className="min-h-screen px-4 sm:px-6">{children}</main>
+        ) : actor.kind === "guest" ? (
+          <GuestShell actor={actor}>{children}</GuestShell>
+        ) : (
+          <SidebarProvider>
+            <div className="flex min-h-screen bg-background">
+              <SidebarMobileFrame><Sidebar /></SidebarMobileFrame>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <Header />
+                <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
+                  <div className="page-shell mx-auto w-full max-w-[var(--page-max)] px-4 py-6 sm:px-6 sm:py-8">{children}</div>
+                </main>
+              </div>
             </div>
-          </div>
-        </SidebarProvider>
+          </SidebarProvider>
+        )}
       </body>
     </html>
   );

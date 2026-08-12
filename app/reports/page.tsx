@@ -20,6 +20,7 @@ import {
   listWorkflowReport,
   type DateRange,
 } from "@/lib/repositories/reports";
+import { listTeamMonthlyProgress } from "@/lib/repositories/progress";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,7 @@ export default async function ReportsPage({
       : "all";
   const range = resolveRange(rangeKey, sp.start, sp.end);
   const today = todayISO();
+  const teamMonthlyProgress = listTeamMonthlyProgress(today.slice(0, 7));
 
   const summary = getReportSummary(range, today);
   const previousSummary = range ? getReportSummary(previousDateRange(range), today) : null;
@@ -136,6 +138,10 @@ export default async function ReportsPage({
         actions={<p className="text-xs font-semibold text-secondary">{reportLabel}</p>}
         className="print:hidden"
       />
+      <section className="mb-6 rounded-xl border border-border-default bg-surface p-4 print:hidden">
+        <div className="mb-3"><h2 className="text-sm font-semibold text-foreground">Ekip aylık puanı</h2><p className="mt-1 text-xs text-muted">Teslim tarihi bu ayda olan görevlerin ağırlıklı durum ilerlemesi.</p></div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{teamMonthlyProgress.map((row) => <div key={row.person_id} className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2"><div className="flex items-center justify-between gap-2 text-xs"><span className="font-semibold text-foreground">{row.person_name}</span><span className="text-muted">{row.progress.percent === null ? "Bu ay plan yok" : `%${row.progress.percent}`}</span></div>{row.progress.percent !== null && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-brand-600" style={{ width: `${row.progress.percent}%` }} /></div>}</div>)}</div>
+      </section>
       <ReportsClient
         summary={summary}
         previousSummary={previousSummary}

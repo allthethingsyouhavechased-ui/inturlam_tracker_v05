@@ -15,6 +15,9 @@ import {
   updatePersonProfile,
 } from "@/lib/repositories/people";
 import { deleteAuthSessionsForPerson } from "@/lib/repositories/authSessions";
+import { deleteAuthSessionsForAccount } from "@/lib/repositories/authSessions";
+import { setGuestAccountActive, upsertGuestAccount } from "@/lib/repositories/accounts";
+import { replacePersonBrandAssignments } from "@/lib/repositories/brandAssignments";
 import { saveImageFiles, validateImageFiles } from "@/lib/uploads";
 import type { Person } from "@/lib/types";
 
@@ -105,6 +108,45 @@ export async function resetPersonPasswordAction(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath("/team/manage");
   revalidatePath("/whoami");
+}
+
+export async function savePersonBrandAssignmentsAction(formData: FormData) {
+  const actor = await requireSession();
+  assertAccountManager(actor);
+  const personId = String(formData.get("personId") ?? "").trim();
+  if (!getPerson(personId)) throw new Error("Kişi bulunamadı.");
+  const brandIds = formData.getAll("brandId").map(String);
+  replacePersonBrandAssignments(personId, brandIds, actor.id);
+  revalidatePath("/panom");
+  revalidatePath("/team/manage");
+}
+
+export async function saveGuestAccountAction(formData: FormData) {
+  const actor = await requireSession();
+  assertAccountManager(actor);
+  const brandId = String(formData.get("brandId") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  if (!brandId) throw new Error("Marka zorunlu.");
+  if (!/^[a-zA-Z0-9._-]{3,40}$/.test(username)) {
+    throw new Error("Kullanıcı adı 3-40 karakter olmalı; yalnızca harf, rakam, nokta, tire ve alt çizgi kullanılabilir.");
+  }
+  const passwordError = validatePassword(password);
+  if (passwordError) throw new Error(passwordError);
+  if (password !== confirmPassword) throw new Error("Şifreler eşleşmiyor.");
+  const accountId = upsertGuestAccount({ brandId, username, passwordHash: hashPassword(password) });
+  deleteAuthSessionsForAccount(accountId);
+  revalidatePath("/team/manage");
+  revalidatePath("/whoami/guest");
+}
+
+export async function setGuestAccountActiveAction(accountId: string, active: boolean) {
+  const actor = await requireSession();
+  assertAccountManager(actor);
+  setGuestAccountActive(accountId, active);
+  if (!active) deleteAuthSessionsForAccount(accountId);
+  revalidatePath("/team/manage");
 }
 
 export async function updatePersonProfileAction(formData: FormData) {

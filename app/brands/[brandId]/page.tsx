@@ -5,6 +5,7 @@ import ArchiveContentButton from "@/components/ArchiveContentButton";
 import AutoRefresh from "@/components/AutoRefresh";
 import BrandContentTargetsSection from "@/components/BrandContentTargetsSection";
 import BrandLogo from "@/components/BrandLogo";
+import BrandOperationsOverview from "@/components/BrandOperationsOverview";
 import EditBrandForm from "@/components/EditBrandForm";
 import NewContentForm from "@/components/NewContentForm";
 import QuickAddModal from "@/components/QuickAddModal";
@@ -16,7 +17,7 @@ import {
   CONTENT_TYPE_LABEL,
   UNKNOWN_CLUSTER_LABEL,
 } from "@/lib/constants";
-import { daysAgoISO, formatDateShort, formatIsoDateTime, todayISO } from "@/lib/date";
+import { daysAgoISO, formatDateShort, formatIsoDateTime, shiftISODate, shiftMonthParam, todayISO } from "@/lib/date";
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
 import { classifySocial } from "@/lib/socialSilence";
@@ -27,6 +28,9 @@ import { listActivityForBrand } from "@/lib/repositories/activity";
 import { clusterLabelMap, listClusters } from "@/lib/repositories/clusters";
 import { listArchivedContentByBrand, listContentByBrand } from "@/lib/repositories/content";
 import { listActivePeople } from "@/lib/repositories/people";
+import { listBrandPersonAssignments } from "@/lib/repositories/brandAssignments";
+import { listCalendarEvents } from "@/lib/repositories/calendarEvents";
+import { getBrandMonthlyProgress, listBrandMonthlyContributions } from "@/lib/repositories/progress";
 import { listContentTargetsForBrand } from "@/lib/repositories/socialPlan";
 import { emptyKindRecord } from "@/lib/socialPlan";
 import type { ContentKind } from "@/lib/types";
@@ -53,6 +57,28 @@ export default async function BrandPage({
   for (const row of listContentTargetsForBrand(brandId)) {
     contentTargets[row.kind as ContentKind] = row.monthly_target;
   }
+  const today = todayISO();
+  const month = today.slice(0, 7);
+  const assignments = listBrandPersonAssignments(brandId);
+  const progress = getBrandMonthlyProgress(brandId, month);
+  const contributions = listBrandMonthlyContributions(brandId, month);
+  const monthlyContents = items.filter((item) => item.target_date?.slice(0, 7) === month);
+  const monthlyEvents = listCalendarEvents({
+    rangeStart: `${month}-01`,
+    rangeEnd: `${shiftMonthParam(month, 1)}-01`,
+    brandId,
+  });
+  const year = Number(month.slice(0, 4));
+  const annualEvents = listCalendarEvents({
+    rangeStart: `${year}-01-01`,
+    rangeEnd: `${year + 1}-01-01`,
+    brandId,
+  });
+  const upcomingEvents = listCalendarEvents({
+    rangeStart: today,
+    rangeEnd: `${shiftISODate(today, 90)}T23:59:59Z`,
+    brandId,
+  });
   // Sayılar haftalık tazeleniyor; 7 günden eskiyse (ya da hiç girilmemişse)
   // "tazelenmeli" uyarısı çıkar. Tarihler 'YYYY-MM-DD' olduğu için düz metin
   // karşılaştırması kronolojik sıralamayı doğru verir.
@@ -62,7 +88,7 @@ export default async function BrandPage({
   // rozet de çizilmez (yanlışlıkla "taranmadı" demek yerine hiç bahsetmemek).
   const socialRow = listBrandSocialRows().find((row) => row.brand_id === brandId) ?? null;
   const socialHealth = socialRow
-    ? classifySocial(socialRow, SOCIAL_SILENCE_DAYS, todayISO())
+    ? classifySocial(socialRow, SOCIAL_SILENCE_DAYS, today)
     : null;
   const instagramHandle = normalizeInstagramHandle(brand.instagram_handle);
   const instagramUrl = instagramProfileUrl(brand.instagram_handle);
@@ -179,6 +205,18 @@ export default async function BrandPage({
             <EditBrandForm brand={brand} clusters={clusters} />
           </>
         }
+      />
+
+      <BrandOperationsOverview
+        brand={brand}
+        month={month}
+        assignments={assignments}
+        progress={progress}
+        contributions={contributions}
+        monthlyContents={monthlyContents}
+        upcomingEvents={upcomingEvents}
+        monthlyShootCount={monthlyEvents.filter((event) => event.type === "Cekim").length}
+        annualShootCount={annualEvents.filter((event) => event.type === "Cekim").length}
       />
 
       <section className="space-y-2">

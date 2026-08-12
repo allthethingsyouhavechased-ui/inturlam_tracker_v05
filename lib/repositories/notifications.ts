@@ -7,6 +7,7 @@ export interface NewNotification {
   actorId: string | null;
   actorName: string | null;
   taskId: string | null;
+  calendarEventId?: string | null;
   brandId: string | null;
   summary: string;
 }
@@ -16,8 +17,8 @@ export function createNotification(input: NewNotification): string {
   getDb()
     .prepare(
       `INSERT INTO notifications
-         (id, recipient_id, recipient_name, actor_id, actor_name, task_id, brand_id, summary)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, recipient_id, recipient_name, actor_id, actor_name, task_id, calendar_event_id, brand_id, summary)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -26,6 +27,7 @@ export function createNotification(input: NewNotification): string {
       input.actorId,
       input.actorName,
       input.taskId,
+      input.calendarEventId ?? null,
       input.brandId,
       input.summary,
     );
@@ -36,26 +38,48 @@ export function listNotificationsForPerson(
   personId: string,
   limit = 20,
 ): Notification[] {
+  return listNotificationsForRecipient(personId, limit);
+}
+
+export function listNotificationsForRecipient(
+  recipientId: string,
+  limit = 20,
+): Notification[] {
   return plainList<Notification>(
     getDb()
       .prepare(
-        `SELECT * FROM notifications
-         WHERE recipient_id = ?
-         ORDER BY created_at DESC, rowid DESC LIMIT ?`,
+        `SELECT n.*, e.start_at AS calendar_event_start_at
+           FROM notifications n
+           LEFT JOIN calendar_events e ON e.id = n.calendar_event_id
+          WHERE n.recipient_id = ?
+          ORDER BY n.created_at DESC, n.rowid DESC LIMIT ?`,
       )
-      .all(personId, limit),
+      .all(recipientId, limit),
   );
 }
 
 export function countUnreadForPerson(personId: string): number {
+  return countUnreadForRecipient(personId);
+}
+
+export function countUnreadForRecipient(recipientId: string): number {
   const { n } = plainOne<{ n: number }>(
     getDb()
       .prepare(
         `SELECT COUNT(*) AS n FROM notifications WHERE recipient_id = ? AND read = 0`,
       )
-      .get(personId),
+      .get(recipientId),
   )!;
   return n;
+}
+
+export function notificationExistsForCalendarEvent(recipientId: string, calendarEventId: string): boolean {
+  return Boolean(
+    getDb().prepare(
+      `SELECT 1 FROM notifications
+        WHERE recipient_id = ? AND calendar_event_id = ? LIMIT 1`,
+    ).get(recipientId, calendarEventId),
+  );
 }
 
 export function markNotificationRead(id: string, personId: string): boolean {

@@ -27,7 +27,11 @@ CREATE TABLE IF NOT EXISTS brands (
   tier               TEXT,
   -- Takipçi/gönderi sayılarının son tazelenme tarihi (YYYY-MM-DD). Sayılar
   -- haftalık elle giriliyor; bu damga rakamın ne kadar bayat olduğunu gösterir.
-  stats_updated_at   TEXT
+  stats_updated_at   TEXT,
+  -- Markanın sözleşmesindeki aylık çekim kotası. NULL = henüz tanımlanmadı.
+  monthly_shoot_allowance INTEGER CHECK (monthly_shoot_allowance >= 0),
+  -- Yıllık toplam çekim kotası; aylık haktan bağımsız sözleşme alanı.
+  annual_shoot_allowance INTEGER CHECK (annual_shoot_allowance >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS brand_relations (
@@ -62,6 +66,42 @@ CREATE TABLE IF NOT EXISTS people (
   password_hash TEXT,
   is_manager  INTEGER NOT NULL DEFAULT 0,
   active      INTEGER NOT NULL DEFAULT 1
+);
+
+-- Ekip ve marka guest hesapları tek oturum altyapısında birleşir. Mevcut
+-- people.password_hash sütunu v02 geri uyumluluğu için korunur; v03 okumaları
+-- accounts.password_hash kullanır.
+CREATE TABLE IF NOT EXISTS accounts (
+  id            TEXT PRIMARY KEY,
+  kind          TEXT NOT NULL CHECK (kind IN ('team','guest')),
+  person_id     TEXT UNIQUE REFERENCES people(id) ON DELETE CASCADE,
+  brand_id      TEXT UNIQUE REFERENCES brands(id) ON DELETE CASCADE,
+  username      TEXT UNIQUE COLLATE NOCASE,
+  password_hash TEXT,
+  active        INTEGER NOT NULL DEFAULT 1,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  CHECK (
+    (kind = 'team' AND person_id IS NOT NULL AND brand_id IS NULL AND username IS NULL)
+    OR
+    (kind = 'guest' AND person_id IS NULL AND brand_id IS NOT NULL AND username IS NOT NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS account_sessions (
+  token_hash TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Ekip içi görsel sorumluluk listesi; erişim kısıtı değildir.
+CREATE TABLE IF NOT EXISTS person_brand_assignments (
+  person_id  TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  brand_id   TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  assigned_by TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (person_id, brand_id)
 );
 
 -- Tarayıcı yalnızca rastgele oturum anahtarını taşır; kişi kimliği veya rol
@@ -107,6 +147,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   assignee_id     TEXT REFERENCES people(id) ON DELETE SET NULL,
   due_date        TEXT,
   notes           TEXT,
+  weight_points   INTEGER NOT NULL DEFAULT 1 CHECK (weight_points BETWEEN 1 AND 100),
+  origin          TEXT NOT NULL DEFAULT 'team' CHECK (origin IN ('team','guest')),
+  requested_date  TEXT,
+  guest_brief     TEXT,
+  created_by_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
   -- Tekrar eden görev: kaç günde bir. NULL/0 = tekrar yok. Görev "Yayınlandı"
   -- durumuna alınınca bir sonraki örneği otomatik açılır (lib/actions/tasks.ts).
   repeat_days     INTEGER,
@@ -239,6 +284,56 @@ CREATE TABLE IF NOT EXISTS task_attachments (
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Guest ile paylaşılan konuşmalar iç yorumlardan fiziksel olarak ayrıdır;
+-- böylece bir DTO/filtre hatası iç notları dışarı sızdıramaz.
+CREATE TABLE IF NOT EXISTS task_shared_comments (
+  id         TEXT PRIMARY KEY,
+  task_id    TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+  author_name TEXT NOT NULL,
+  body       TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS task_shared_attachments (
+  id            TEXT PRIMARY KEY,
+  task_id       TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  account_id    TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+  file_path     TEXT NOT NULL,
+  original_name TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS calendar_events (
+  id                TEXT PRIMARY KEY,
+  brand_id          TEXT REFERENCES brands(id) ON DELETE SET NULL,
+  type              TEXT NOT NULL DEFAULT 'Toplanti' CHECK (type IN ('Toplanti','Cekim','Diger')),
+  title             TEXT NOT NULL,
+  description       TEXT,
+  start_at          TEXT NOT NULL,
+  end_at            TEXT NOT NULL,
+  all_day           INTEGER NOT NULL DEFAULT 0,
+  location          TEXT,
+  guest_visible     INTEGER NOT NULL DEFAULT 0,
+  google_event_id   TEXT UNIQUE,
+  google_etag       TEXT,
+  google_updated_at TEXT,
+  sync_status       TEXT NOT NULL DEFAULT 'pending' CHECK (sync_status IN ('pending','synced','error')),
+  sync_error        TEXT,
+  deleted_at        TEXT,
+  created_by_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  last_synced_at    TEXT
+);
+
+CREATE TABLE IF NOT EXISTS calendar_sync_state (
+  key        TEXT PRIMARY KEY,
+  value      TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Aktivite geçmişi: kim, ne zaman, hangi varlıkta ne yaptı. Denetlenebilirlik
 -- için append-only. actor_name/entity bilgileri anlık (snapshot) tutulur ki
 -- kişi/varlık sonradan silinse bile kayıt okunabilir kalsın — bu yüzden FK yok.
@@ -265,6 +360,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   actor_id       TEXT,
   actor_name     TEXT,
   task_id        TEXT,
+  calendar_event_id TEXT,
   brand_id       TEXT,
   summary        TEXT NOT NULL,
   read           INTEGER NOT NULL DEFAULT 0,
@@ -381,6 +477,11 @@ CREATE INDEX IF NOT EXISTS idx_brand_plan_entries_date ON brand_plan_entries(pla
 CREATE INDEX IF NOT EXISTS idx_brands_cluster      ON brands(cluster);
 CREATE INDEX IF NOT EXISTS idx_clusters_sort       ON clusters(sort_order);
 CREATE INDEX IF NOT EXISTS idx_person_active_work_brand ON person_active_work(brand_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_person ON accounts(person_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_brand ON accounts(brand_id);
+CREATE INDEX IF NOT EXISTS idx_account_sessions_account ON account_sessions(account_id);
+CREATE INDEX IF NOT EXISTS idx_account_sessions_expiry ON account_sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_person_brand_assignments_brand ON person_brand_assignments(brand_id);
 CREATE INDEX IF NOT EXISTS idx_content_items_brand    ON content_items(brand_id);
 CREATE INDEX IF NOT EXISTS idx_content_items_assignee ON content_items(assignee_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_content_item  ON tasks(content_item_id);
@@ -410,6 +511,11 @@ CREATE INDEX IF NOT EXISTS idx_comments_task       ON comments(task_id);
 CREATE INDEX IF NOT EXISTS idx_template_items_template ON task_template_items(template_id);
 CREATE INDEX IF NOT EXISTS idx_comment_attachments_comment ON comment_attachments(comment_id);
 CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_shared_comments_task ON task_shared_comments(task_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_task_shared_attachments_task ON task_shared_attachments(task_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_range ON calendar_events(start_at, end_at);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_brand ON calendar_events(brand_id, start_at);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_sync ON calendar_events(sync_status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_brand_relations_brand   ON brand_relations(brand_id);
 CREATE INDEX IF NOT EXISTS idx_brand_relations_related ON brand_relations(related_brand_id);
 CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_log(created_at);
@@ -417,3 +523,4 @@ CREATE INDEX IF NOT EXISTS idx_activity_brand   ON activity_log(brand_id);
 CREATE INDEX IF NOT EXISTS idx_activity_entity  ON activity_log(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_read ON notifications(recipient_id, read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created        ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_calendar_event ON notifications(calendar_event_id);

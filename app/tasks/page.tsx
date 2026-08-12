@@ -8,6 +8,7 @@ import { listBrands } from "@/lib/repositories/brands";
 import { listPersonalTaskTargets } from "@/lib/repositories/personalTargets";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listAllTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
+import { listLegacyUndatedTasks, listUnplannedGuestTasks } from "@/lib/repositories/guestTasks";
 import { archiveCountdownBadge } from "@/lib/taskArchive";
 import { TASKS_VIEW_PREFERENCE, parseWorkspaceView } from "@/lib/uiPreferences";
 
@@ -55,6 +56,8 @@ export default async function AllTasksPage({
   });
   const brands = listBrands();
   const people = listActivePeople();
+  const unplannedGuestTasks = listUnplannedGuestTasks();
+  const legacyUndatedTasks = me.is_manager === 1 ? listLegacyUndatedTasks() : [];
 
   const initialAssigneeId =
     sp.assignee && people.some((person) => person.id === sp.assignee) ? sp.assignee : "";
@@ -74,6 +77,7 @@ export default async function AllTasksPage({
         title="Görevler"
         description="Portföydeki tüm işleri ara, filtrele ve ekip ya da süreç bazında incele."
       />
+      {(unplannedGuestTasks.length > 0 || legacyUndatedTasks.length > 0) && <section className="mb-5 grid gap-3 lg:grid-cols-2">{unplannedGuestTasks.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900 dark:bg-amber-950/20"><h2 className="text-sm font-semibold text-foreground">Planlanacak guest görevleri · {unplannedGuestTasks.length}</h2><div className="mt-2 space-y-1">{unplannedGuestTasks.map((task) => <a key={task.id} href={`/tasks/${task.id}`} className="flex justify-between gap-3 py-1 text-xs text-secondary hover:text-brand-600"><span className="truncate">{task.brand_name} · {task.title}</span><span className="shrink-0">İstenen {task.requested_date}</span></a>)}</div></div>}{legacyUndatedTasks.length > 0 && <div className="rounded-xl border border-border-default bg-surface-subtle p-4"><h2 className="text-sm font-semibold text-foreground">Tarih bekleyen eski görevler · {legacyUndatedTasks.length}</h2><div className="mt-2 space-y-1">{legacyUndatedTasks.map((task) => <a key={task.id} href={`/tasks/${task.id}`} className="block truncate py-1 text-xs text-secondary hover:text-brand-600">{task.brand_name} · {task.title}</a>)}</div></div>}</section>}
       <TaskExplorer
         tasks={tasks}
         brands={brands}

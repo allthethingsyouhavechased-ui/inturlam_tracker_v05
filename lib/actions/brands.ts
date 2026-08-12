@@ -34,6 +34,15 @@ function cleanInt(value: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function cleanNonNegativeInt(value: FormDataEntryValue | null, label: string): number | null {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  if (!/^\d+$/.test(text)) throw new Error(`${label} sıfır veya pozitif tam sayı olmalı.`);
+  const parsed = Number(text);
+  if (!Number.isSafeInteger(parsed)) throw new Error(`${label} geçersiz.`);
+  return parsed;
+}
+
 export async function createBrandAction(formData: FormData) {
   await requireSession();
   const name = String(formData.get("name") ?? "").trim();
@@ -85,6 +94,8 @@ export async function updateBrandAction(formData: FormData) {
     postCount: cleanInt(formData.get("postCount")),
     keyFinding,
     tier: cleanValue(formData.get("tier")),
+    monthlyShootAllowance: cleanNonNegativeInt(formData.get("monthlyShootAllowance"), "Aylık çekim hakkı"),
+    annualShootAllowance: cleanNonNegativeInt(formData.get("annualShootAllowance"), "Yıllık çekim hakkı"),
     today: todayISO(),
   });
 

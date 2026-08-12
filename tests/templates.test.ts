@@ -97,20 +97,18 @@ describe("applyTemplateToContent", () => {
     assert.equal(cekim.status, "Beklemede");
   });
 
-  it("içeriğin hedef tarihi yoksa görevler tarihsiz açılıyor", () => {
+  it("içeriğin hedef tarihi yoksa şablonu uygulamayı reddediyor", () => {
     const db = getDb();
     db.prepare(
       "INSERT INTO content_items (id, brand_id, title, type) VALUES (?,?,?,?)",
     ).run("tarihsiz-icerik", BRAND_ID, "Tarihsiz", "Reel");
 
-    applyTemplateToContent({
+    assert.throws(() => applyTemplateToContent({
       templateId: "reel-akisi",
       contentItemId: "tarihsiz-icerik",
       defaultAssigneeId: null,
-    });
-    const tasks = listTasksByContent("tarihsiz-icerik");
-    assert.equal(tasks.length, 5);
-    assert.ok(tasks.every((t) => t.due_date === null), "hepsi tarihsiz olmalı");
+    }), /hedef tarihini belirleyin/);
+    assert.equal(listTasksByContent("tarihsiz-icerik").length, 0);
   });
 
   it("boş şablon uygulanınca hiç görev açmıyor", () => {
@@ -137,8 +135,8 @@ describe("applyTemplateToContent", () => {
 
     const db = getDb();
     db.prepare(
-      "INSERT INTO content_items (id, brand_id, title, type) VALUES (?,?,?,?)",
-    ).run("atama-icerik", BRAND_ID, "Atama", "Reel");
+      "INSERT INTO content_items (id, brand_id, title, type, target_date) VALUES (?,?,?,?,?)",
+    ).run("atama-icerik", BRAND_ID, "Atama", "Reel", "2026-08-10");
 
     applyTemplateToContent({
       templateId,
@@ -174,14 +172,13 @@ describe("tekrar eden görev", () => {
     assert.equal(next.status, "Beklemede", "yeni örnek açık başlamalı (döngü yok)");
   });
 
-  it("teslim tarihi yoksa bugünden itibaren hesaplanıyor", () => {
+  it("eski tarihsiz tekrar için yeni görev açmayı reddediyor", () => {
     const db = getDb();
     db.prepare(
       `INSERT INTO tasks (id, content_item_id, title, status, repeat_days)
        VALUES (?,?,?,?,?)`,
     ).run("tarihsiz-tekrar", CONTENT_ID, "Tarihsiz tekrar", "Yayinlandi", 30);
 
-    const nextId = createNextOccurrence(getTask("tarihsiz-tekrar")!, "2026-08-01");
-    assert.equal(getTask(nextId)!.due_date, "2026-08-31");
+    assert.throws(() => createNextOccurrence(getTask("tarihsiz-tekrar")!, "2026-08-01"), /önce teslim tarihi/);
   });
 });

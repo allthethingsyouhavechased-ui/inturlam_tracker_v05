@@ -4,6 +4,8 @@ import type { Person } from "@/lib/types";
 
 const PUBLIC_PERSON_COLUMNS =
   "id, name, title, bio, avatar_path, department, is_manager, active";
+const PUBLIC_PERSON_COLUMNS_WITH_ALIAS =
+  "p.id, p.name, p.title, p.bio, p.avatar_path, p.department, p.is_manager, p.active";
 
 export interface LoginPerson extends Person {
   has_password: number;
@@ -89,11 +91,12 @@ export function listLoginPeople(): LoginPerson[] {
   return plainList<LoginPerson>(
     getDb()
       .prepare(
-        `SELECT ${PUBLIC_PERSON_COLUMNS},
-                CASE WHEN password_hash IS NULL THEN 0 ELSE 1 END AS has_password
-           FROM people
-          WHERE active = 1
-          ORDER BY name`,
+        `SELECT ${PUBLIC_PERSON_COLUMNS_WITH_ALIAS},
+                CASE WHEN a.password_hash IS NULL THEN 0 ELSE 1 END AS has_password
+           FROM people p
+           LEFT JOIN accounts a ON a.kind = 'team' AND a.person_id = p.id
+          WHERE p.active = 1
+          ORDER BY p.name`,
       )
       .all(),
   );
@@ -102,7 +105,13 @@ export function listLoginPeople(): LoginPerson[] {
 export function getPersonCredentials(id: string): PersonCredentials | undefined {
   return plainOne<PersonCredentials>(
     getDb()
-      .prepare("SELECT id, password_hash, active FROM people WHERE id = ?")
+      .prepare(
+        `SELECT p.id, COALESCE(a.password_hash, p.password_hash) AS password_hash,
+                CASE WHEN p.active = 1 AND COALESCE(a.active, 1) = 1 THEN 1 ELSE 0 END AS active
+           FROM people p
+           LEFT JOIN accounts a ON a.kind = 'team' AND a.person_id = p.id
+          WHERE p.id = ?`,
+      )
       .get(id),
   );
 }
@@ -113,16 +122,40 @@ export function createPerson(
   passwordHash: string,
 ): string {
   const id = crypto.randomUUID();
-  getDb()
-    .prepare(
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
       "INSERT INTO people (id, name, department, password_hash) VALUES (?, ?, ?, ?)",
-    )
-    .run(id, name, department, passwordHash);
+    ).run(id, name, department, passwordHash);
+    db.prepare(
+      `INSERT INTO accounts
+         (id, kind, person_id, brand_id, username, password_hash, active)
+       VALUES (?, 'team', ?, NULL, NULL, ?, 1)`,
+    ).run(`team:${id}`, id, passwordHash);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
   return id;
 }
 
 export function updatePersonPassword(id: string, passwordHash: string): void {
-  getDb().prepare("UPDATE people SET password_hash = ? WHERE id = ?").run(passwordHash, id);
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare("UPDATE people SET password_hash = ? WHERE id = ?").run(passwordHash, id);
+    db.prepare(
+      `UPDATE accounts
+          SET password_hash = ?, updated_at = datetime('now')
+        WHERE kind = 'team' AND person_id = ?`,
+    ).run(passwordHash, id);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function updatePersonProfile(input: {
@@ -150,9 +183,18 @@ export function updatePersonProfile(input: {
 }
 
 export function setPersonActive(id: string, active: boolean): void {
-  getDb()
-    .prepare("UPDATE people SET active = ? WHERE id = ?")
-    .run(active ? 1 : 0, id);
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare("UPDATE people SET active = ? WHERE id = ?").run(active ? 1 : 0, id);
+    db.prepare(
+      "UPDATE accounts SET active = ?, updated_at = datetime('now') WHERE kind = 'team' AND person_id = ?",
+    ).run(active ? 1 : 0, id);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function setPersonManager(id: string, isManager: boolean): void {

@@ -32,15 +32,15 @@ function startsWithSessionGuard(node: ts.FunctionDeclaration & { body: ts.Block 
   const [firstStatement] = node.body.statements;
   if (!firstStatement) return false;
   if (ts.isExpressionStatement(firstStatement)) {
-    return awaitedCallName(firstStatement.expression) === "requireSession";
+    return ["requireSession", "requireTeamSession", "requireGuestSession"].includes(awaitedCallName(firstStatement.expression) ?? "");
   }
   if (!ts.isVariableStatement(firstStatement)) return false;
   const [declaration] = firstStatement.declarationList.declarations;
-  return awaitedCallName(declaration?.initializer) === "requireSession";
+  return ["requireSession", "requireTeamSession", "requireGuestSession"].includes(awaitedCallName(declaration?.initializer) ?? "");
 }
 
 describe("mutasyon Server Action oturum koruması", () => {
-  it("hedeflenen tüm action'ları ilk işlem olarak requireSession ile korur", () => {
+  it("tüm action'ları ilk işlem olarak actor türüne uygun session guard ile korur", () => {
     const foundActions: string[] = [];
     const unguardedActions: string[] = [];
 

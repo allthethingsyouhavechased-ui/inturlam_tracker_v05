@@ -12,10 +12,12 @@ import TaskNotesAttachments from "@/components/TaskNotesAttachments";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
 import TaskRepeatSelect from "@/components/TaskRepeatSelect";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
+import TaskWeightSelect from "@/components/TaskWeightSelect";
 import PageHeader from "@/components/ui/PageHeader";
 import { controlClass } from "@/components/ui/Input";
 import { CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { updateTaskDetailsAction } from "@/lib/actions/tasks";
+import { addTeamSharedCommentAction } from "@/lib/actions/guestTasks";
 import { requirePageSession } from "@/lib/identity";
 import { canReviewClientRequests } from "@/lib/requestAccess";
 import { listActivityForEntity } from "@/lib/repositories/activity";
@@ -24,6 +26,7 @@ import { getClientRequestByTask } from "@/lib/repositories/clientRequests";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listAttachmentsByTask } from "@/lib/repositories/taskAttachments";
 import { getTask } from "@/lib/repositories/tasks";
+import { listSharedAttachments, listSharedComments } from "@/lib/repositories/guestTasks";
 import { markTaskNotificationsReadForPerson } from "@/lib/repositories/notifications";
 import { daysUntilArchive } from "@/lib/taskArchive";
 
@@ -45,6 +48,8 @@ export default async function TaskPage({
   const comments = listCommentsByTask(taskId);
   const activity = listActivityForEntity("task", taskId);
   const attachments = listAttachmentsByTask(taskId);
+  const sharedComments = task.origin === "guest" ? listSharedComments(taskId) : [];
+  const sharedAttachments = task.origin === "guest" ? listSharedAttachments(taskId) : [];
   const sourceRequest = canReviewClientRequests(me)
     ? getClientRequestByTask(taskId)
     : undefined;
@@ -68,6 +73,8 @@ export default async function TaskPage({
           { label: "Görev" },
         ]}
       />
+
+      {task.origin === "guest" && <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm dark:border-amber-900 dark:bg-amber-950/20"><p className="font-semibold text-foreground">Guest tarafından açıldı · İstenen tarih {task.requested_date}</p><p className="mt-1 whitespace-pre-wrap text-xs text-secondary">{task.guest_brief}</p>{!task.due_date && <p className="mt-2 text-xs font-semibold text-amber-800 dark:text-amber-300">Planlanacak: iç teslim tarihini ve görev sahibini atayın.</p>}</div>}
 
       {(task.status === "Yayinlandi" || task.archived_at !== null) && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-default bg-surface-subtle px-4 py-3 text-sm">
@@ -107,7 +114,7 @@ export default async function TaskPage({
               </label>
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Teslim tarihi
-                <input type="date" name="dueDate" defaultValue={task.due_date ?? ""} className={inputClass} />
+                <input type="date" name="dueDate" required defaultValue={task.due_date ?? ""} className={inputClass} />
               </label>
             </div>
             <label className="grid gap-1.5 text-xs font-medium text-secondary">
@@ -144,6 +151,8 @@ export default async function TaskPage({
               )}
             </div>
           </section>
+
+          {task.origin === "guest" && <section className="rounded-xl border border-border-default bg-surface"><div className="border-b border-border-subtle px-4 py-3 sm:px-5"><h2 className="text-sm font-semibold text-foreground">Guest ile paylaşılan konuşma</h2></div><div className="space-y-3 p-4 sm:p-5">{sharedComments.map((comment) => <div key={comment.id} className="rounded-lg bg-surface-subtle px-3 py-2"><p className="text-xs font-semibold text-foreground">{comment.author_name}</p><p className="mt-1 whitespace-pre-wrap text-sm text-secondary">{comment.body}</p></div>)}{sharedAttachments.length > 0 && <div className="flex flex-wrap gap-2">{sharedAttachments.map((attachment) => <a key={attachment.id} href={attachment.file_path} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-600">{attachment.original_name ?? "Ek görsel"}</a>)}</div>}<form action={addTeamSharedCommentAction} className="space-y-2 border-t border-border-subtle pt-3"><input type="hidden" name="taskId" value={task.id} /><textarea name="body" required maxLength={2000} rows={3} placeholder="Guest’in göreceği yorumu yaz…" className={inputClass} /><input name="images" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple className="text-xs" /><SubmitButton>Guest’e gönder</SubmitButton></form></div></section>}
         </main>
 
         <aside className="space-y-4 xl:sticky xl:top-20">
@@ -153,6 +162,7 @@ export default async function TaskPage({
               <label className="grid gap-1.5 text-xs font-medium text-muted">Durum<TaskStatusSelect taskId={task.id} status={task.status} /></label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Atanan<AssigneeSelect taskId={task.id} assigneeId={task.assignee_id} people={people} /></label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Öncelik<TaskPrioritySelect taskId={task.id} priority={task.priority} /></label>
+              {me.is_manager === 1 && <label className="grid gap-1.5 text-xs font-medium text-muted">Ağırlık puanı<TaskWeightSelect taskId={task.id} weight={task.weight_points} /></label>}
               <div className="grid gap-1.5 text-xs font-medium text-muted"><span>Tekrar</span><TaskRepeatSelect taskId={task.id} repeatDays={task.repeat_days} /></div>
             </div>
             {(task.repeat_days ?? 0) > 0 && (
