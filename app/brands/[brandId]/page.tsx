@@ -26,6 +26,7 @@ import { classifySocial } from "@/lib/socialSilence";
 import { requirePageSession } from "@/lib/identity";
 import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
 import { getBrand } from "@/lib/repositories/brands";
+import { countIdeasForBrand } from "@/lib/repositories/ideas";
 import { listActivityForBrand } from "@/lib/repositories/activity";
 import { clusterLabelMap, listClusters } from "@/lib/repositories/clusters";
 import { listArchivedContentByBrand, listContentByBrand } from "@/lib/repositories/content";
@@ -52,6 +53,7 @@ export default async function BrandPage({
   const [{ brandId }, sp] = await Promise.all([params, searchParams]);
   const brand = getBrand(brandId);
   if (!brand) notFound();
+  const brandIdeaCount = countIdeasForBrand(brandId);
 
   const items = listContentByBrand(brandId);
   const archivedItems = listArchivedContentByBrand(brandId);
@@ -199,8 +201,8 @@ export default async function BrandPage({
         }
         actions={
           <>
-            <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}`} className={buttonClass({ variant: "secondary" })}>
-              <Icon name="ideas" className="size-4" /> Fikirler
+            <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary" })}>
+              <Icon name="ideas" className="size-4" /> Fikirler · {brandIdeaCount}
             </Link>
             <QuickAddModal
               brands={[{ id: brand.id, name: brand.name }]}

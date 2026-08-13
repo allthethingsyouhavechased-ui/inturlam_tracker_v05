@@ -31,6 +31,7 @@ try {
   const rows = db.prepare(`
     SELECT file_path FROM task_attachments
     UNION SELECT file_path FROM comment_attachments
+    UNION SELECT file_path FROM task_delivery_attachments
     UNION SELECT file_path FROM task_shared_attachments
     UNION SELECT file_path FROM client_request_attachments
     UNION SELECT avatar_path AS file_path FROM people WHERE avatar_path IS NOT NULL

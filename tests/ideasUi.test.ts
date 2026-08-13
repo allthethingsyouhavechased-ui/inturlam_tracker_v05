@@ -32,4 +32,20 @@ describe("Fikir Bankası ürün bağlantıları", () => {
     assert.match(explorer, /idea\.category !== category/);
     assert.match(explorer, /idea\.status !== status/);
   });
+
+  it("marka dizinini kategori grupları, fikir sayıları ve ofis alanıyla kurar", () => {
+    const explorer = source("components/IdeaBankExplorer.tsx");
+    assert.match(explorer, /Fikir alanları/);
+    assert.match(explorer, /Ofis &amp; Genel/);
+    assert.match(explorer, /ideaCountByBrand/);
+    assert.match(explorer, /group\.label\.toLocaleUpperCase\("tr-TR"\)/);
+    assert.match(explorer, /chooseScope\(brand\.id\)/);
+  });
+
+  it("marka detayındaki fikir kısayolu sayacı korur ve filtrelenmiş akışa iner", () => {
+    const brandPage = source("app/brands/[brandId]/page.tsx");
+    assert.match(brandPage, /countIdeasForBrand\(brandId\)/);
+    assert.match(brandPage, /ideas\?brand=\$\{encodeURIComponent\(brand\.id\)\}#fikir-akisi/);
+    assert.match(brandPage, /Fikirler · \{brandIdeaCount\}/);
+  });
 });

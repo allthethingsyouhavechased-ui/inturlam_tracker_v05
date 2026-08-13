@@ -47,6 +47,7 @@ next-env.d.ts
 /data/*.log
 /data/logs/
 /data/backup/
+/data/recovery/
 /data/runtime/
 /data/uploads/
 

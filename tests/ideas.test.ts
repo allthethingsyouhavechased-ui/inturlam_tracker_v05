@@ -11,6 +11,7 @@ const { getDb } = await import("@/lib/db/client");
 const { ideaTags, normalizeIdeaSourceUrl, normalizeIdeaTags } = await import("@/lib/ideas");
 const {
   createIdea,
+  countIdeasForBrand,
   getIdea,
   listIdeas,
   setIdeaArchived,
@@ -98,6 +99,17 @@ describe("fikir bankası veri sözleşmesi", () => {
     assert.throws(() => updateIdeaStatus(ideaId, "Kullanildi"), /arşivde/i);
     setIdeaArchived(ideaId, false);
     assert.equal(listIdeas().length, 1);
+  });
+
+  it("marka detayındaki aktif ve arşiv fikir sayılarını ayrı hesaplar", () => {
+    seedBase();
+    const activeId = addIdea();
+    const archivedId = addIdea();
+    setIdeaArchived(archivedId, true);
+
+    assert.equal(countIdeasForBrand("b1"), 1);
+    assert.equal(countIdeasForBrand("b1", true), 1);
+    assert.ok(getIdea(activeId));
   });
 });
 

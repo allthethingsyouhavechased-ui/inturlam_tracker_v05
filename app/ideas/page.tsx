@@ -5,6 +5,7 @@ import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
+import { listClusters } from "@/lib/repositories/clusters";
 import { countArchivedIdeas, listIdeas } from "@/lib/repositories/ideas";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function IdeasPage({
   const sp = await searchParams;
   const archived = sp.view === "archive";
   const brands = listBrands();
+  const clusters = listClusters();
   const ideas = listIdeas(archived);
   const archivedCount = countArchivedIdeas();
   const initialBrandId = brands.some((brand) => brand.id === sp.brand) ? sp.brand : "";
@@ -45,6 +47,7 @@ export default async function IdeasPage({
       <IdeaBankExplorer
         ideas={ideas}
         brands={brands}
+        clusters={clusters}
         archived={archived}
         initialBrandId={initialBrandId}
         newOpen={sp.new === "1"}

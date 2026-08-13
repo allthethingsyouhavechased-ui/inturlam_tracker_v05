@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import ActionForm from "@/components/ActionForm";
+import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
 import SubmitButton from "@/components/SubmitButton";
 import Badge from "@/components/ui/Badge";
@@ -21,7 +22,7 @@ import {
   IDEA_STATUS_TONE,
   ideaTags,
 } from "@/lib/ideas";
-import type { Brand, IdeaCategory, IdeaStatus, IdeaWithContext } from "@/lib/types";
+import type { Brand, ClusterRow, IdeaCategory, IdeaStatus, IdeaWithContext } from "@/lib/types";
 
 const ALL = "__all__";
 const OFFICE = "__office__";
@@ -44,12 +45,14 @@ function IdeaScopeBadge({ idea }: { idea: IdeaWithContext }) {
 export default function IdeaBankExplorer({
   ideas,
   brands,
+  clusters,
   archived,
   initialBrandId = "",
   newOpen = false,
 }: {
   ideas: IdeaWithContext[];
   brands: Brand[];
+  clusters: ClusterRow[];
   archived: boolean;
   initialBrandId?: string;
   newOpen?: boolean;
@@ -71,11 +74,45 @@ export default function IdeaBankExplorer({
     });
   }, [category, ideas, query, scope, status]);
 
+  const scopedIdeas = ideas.filter((idea) => {
+    if (scope === OFFICE) return idea.scope_type === "office";
+    if (scope !== ALL) return idea.brand_id === scope;
+    return true;
+  });
   const counts = new Map(IDEA_STATUSES.map((value) => [
     value,
-    ideas.filter((idea) => idea.status === value).length,
+    scopedIdeas.filter((idea) => idea.status === value).length,
   ]));
   const filterCount = [query.trim(), scope !== ALL, category !== ALL, status !== ALL].filter(Boolean).length;
+  const ideaCountByBrand = new Map(
+    brands.map((brand) => [brand.id, ideas.filter((idea) => idea.brand_id === brand.id).length]),
+  );
+  const officeIdeaCount = ideas.filter((idea) => idea.scope_type === "office").length;
+  const knownClusters = new Set(clusters.map((cluster) => cluster.id));
+  const brandGroups = [
+    ...clusters.map((cluster) => ({
+      id: cluster.id,
+      label: cluster.label,
+      brands: brands.filter((brand) => brand.cluster === cluster.id),
+    })),
+    {
+      id: "__unknown__",
+      label: "Kategorisiz",
+      brands: brands.filter((brand) => !knownClusters.has(brand.cluster)),
+    },
+  ].filter((group) => group.brands.length > 0);
+  const selectedScopeLabel = scope === ALL
+    ? "Tüm fikirler"
+    : scope === OFFICE
+      ? "Ofis & Genel"
+      : brands.find((brand) => brand.id === scope)?.name ?? "Fikirler";
+
+  function chooseScope(nextScope: string): void {
+    setScope(nextScope);
+    window.requestAnimationFrame(() => {
+      document.getElementById("fikir-akisi")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   function resetFilters(): void {
     setQuery("");
@@ -85,15 +122,80 @@ export default function IdeaBankExplorer({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
+      <aside aria-labelledby="idea-spaces-title" className="overflow-hidden rounded-xl border border-border-default bg-surface lg:sticky lg:top-20">
+        <div className="border-b border-border-subtle px-3.5 py-3">
+          <h2 id="idea-spaces-title" className="text-sm font-semibold text-foreground">Fikir alanları</h2>
+          <p className="mt-0.5 text-[11px] text-muted">Marka veya genel alan seç.</p>
+        </div>
+        <div className="max-h-[min(24rem,52vh)] overflow-y-auto p-2 lg:max-h-[calc(100vh-12rem)]">
+          <button
+            type="button"
+            onClick={() => chooseScope(ALL)}
+            aria-pressed={scope === ALL}
+            className={`ui-press flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left ${scope === ALL ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-200" : "text-secondary hover:bg-surface-hover"}`}
+          >
+            <Icon name="ideas" className="size-4" />
+            <span className="min-w-0 flex-1 truncate text-xs font-semibold">Tüm fikirler</span>
+            <span className="text-[10px] tabular-nums text-muted">{ideas.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => chooseScope(OFFICE)}
+            aria-pressed={scope === OFFICE}
+            className={`ui-press mt-0.5 flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left ${scope === OFFICE ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-200" : "text-secondary hover:bg-surface-hover"}`}
+          >
+            <Icon name="team" className="size-4" />
+            <span className="min-w-0 flex-1 truncate text-xs font-semibold">Ofis &amp; Genel</span>
+            <span className="text-[10px] tabular-nums text-muted">{officeIdeaCount}</span>
+          </button>
+
+          {brandGroups.map((group) => (
+            <div key={group.id} className="mt-3 border-t border-border-subtle pt-2">
+              <h3 className="px-2 pb-1 text-[9px] font-semibold tracking-[0.08em] text-faint">{group.label.toLocaleUpperCase("tr-TR")}</h3>
+              {group.brands.map((brand) => {
+                const ideaCount = ideaCountByBrand.get(brand.id) ?? 0;
+                return (
+                  <button
+                    key={brand.id}
+                    type="button"
+                    onClick={() => chooseScope(brand.id)}
+                    aria-pressed={scope === brand.id}
+                    className={`group mt-0.5 flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors ${scope === brand.id ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-200" : "text-secondary hover:bg-surface-hover"}`}
+                  >
+                    <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
+                    <span className="min-w-0 flex-1 truncate text-xs font-semibold">{brand.name}</span>
+                    <span className="text-[10px] tabular-nums text-muted">{ideaCount}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      <main className="min-w-0 space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">SEÇİLİ ALAN</p>
+            <h2 className="mt-1 text-lg font-semibold text-foreground">{selectedScopeLabel}</h2>
+            <p className="mt-0.5 text-xs text-muted">{scopedIdeas.length} fikir · durum ve filtrelere göre incele</p>
+          </div>
+          {scope !== ALL && (
+            <button type="button" onClick={() => chooseScope(ALL)} className="ui-press min-h-9 rounded-[9px] px-3 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30">
+              Tüm alanlara dön
+            </button>
+          )}
+        </div>
+
       {!archived && (
-        <section className="grid grid-cols-2 border-y border-border-subtle sm:grid-cols-4" aria-label="Fikir durumu özeti">
+        <section className="grid grid-cols-2 overflow-hidden rounded-xl border border-border-default bg-surface sm:grid-cols-4" aria-label="Fikir durumu özeti">
           {IDEA_STATUSES.map((ideaStatus, index) => (
             <button
               key={ideaStatus}
               type="button"
               onClick={() => setStatus(status === ideaStatus ? ALL : ideaStatus)}
-              className={`ui-press px-3 py-3.5 text-left transition-colors hover:bg-surface-hover sm:px-4 ${index > 0 ? "border-l border-border-subtle" : ""} ${status === ideaStatus ? "bg-surface-subtle" : ""}`}
+              className={`ui-press px-3 py-3 text-left transition-colors hover:bg-surface-hover sm:px-4 ${(index % 2) > 0 ? "border-l border-border-subtle" : ""} ${index > 1 ? "border-t border-border-subtle sm:border-t-0" : ""} ${index > 0 ? "sm:border-l sm:border-border-subtle" : ""} ${status === ideaStatus ? "bg-surface-subtle" : ""}`}
             >
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">{IDEA_STATUS_LABEL[ideaStatus]}</span>
               <span className="mt-1 block text-xl font-semibold tabular-nums text-foreground">{counts.get(ideaStatus)}</span>
@@ -156,7 +258,7 @@ export default function IdeaBankExplorer({
       )}
 
       <section className="rounded-xl border border-border-default bg-surface p-3 sm:p-4" aria-label="Fikir filtreleri">
-        <div className="grid gap-3 lg:grid-cols-[minmax(14rem,1fr)_13rem_11rem_11rem_auto] lg:items-end">
+        <div className="grid gap-3 lg:grid-cols-[minmax(14rem,1fr)_11rem_11rem_auto] lg:items-end">
           <label className="grid gap-1.5 text-xs font-medium text-secondary">
             Ara
             <div className="relative">
@@ -164,7 +266,7 @@ export default function IdeaBankExplorer({
               <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Başlık, açıklama, marka veya etiket…" className="pl-9" />
             </div>
           </label>
-          <label className="grid gap-1.5 text-xs font-medium text-secondary">
+          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:hidden">
             Kapsam
             <Select value={scope} onChange={(event) => setScope(event.target.value)}>
               <option value={ALL}>Tüm kapsamlar</option>
@@ -192,7 +294,7 @@ export default function IdeaBankExplorer({
         </div>
       </section>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div id="fikir-akisi" className="flex scroll-mt-20 flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-foreground">{archived ? "Fikir arşivi" : "Fikir akışı"}</h2>
           <p className="mt-0.5 text-xs text-muted"><strong className="text-secondary">{filtered.length}</strong> / {ideas.length} kayıt gösteriliyor</p>
@@ -254,6 +356,7 @@ export default function IdeaBankExplorer({
           ))}
         </div>
       )}
+      </main>
     </div>
   );
 }

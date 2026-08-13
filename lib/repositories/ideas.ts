@@ -49,6 +49,18 @@ export function countArchivedIdeas(): number {
   );
 }
 
+export function countIdeasForBrand(brandId: string, archived = false): number {
+  const row = plainOne<{ count: number }>(
+    getDb()
+      .prepare(
+        `SELECT COUNT(*) AS count FROM ideas
+          WHERE brand_id = ? AND ${archived ? "archived_at IS NOT NULL" : "archived_at IS NULL"}`,
+      )
+      .get(brandId),
+  );
+  return row?.count ?? 0;
+}
+
 export function createIdea(input: {
   brandId: string | null;
   category: IdeaCategory;
