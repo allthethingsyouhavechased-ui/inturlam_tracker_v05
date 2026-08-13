@@ -28,6 +28,7 @@ export type TaskStatus =
   | "Yayinlandi";
 
 export type TaskPriority = "Dusuk" | "Normal" | "Yuksek" | "Acil";
+export type TaskDifficulty = "Kolay" | "Orta" | "Zor" | "Ozel";
 export type AccountKind = "team" | "guest";
 export type CalendarEventType = "Toplanti" | "Cekim" | "Diger";
 export type CalendarEventColor = "auto" | "purple" | "blue" | "cyan" | "green" | "amber" | "rose" | "slate";
@@ -188,6 +189,7 @@ export interface Task {
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
+  difficulty: TaskDifficulty | null;
   assignee_id: string | null;
   due_date: string | null;
   notes: string | null;
@@ -307,6 +309,7 @@ export interface TaskTemplateItem {
   template_id: string;
   title: string;
   priority: TaskPriority;
+  difficulty: TaskDifficulty;
   assignee_id: string | null;
   // İçeriğin target_date'ine göre gün kayması (-3 = teslimden 3 gün önce).
   due_offset_days: number | null;
@@ -401,6 +404,12 @@ export interface TaskWithContext extends Task {
   comment_count: number;
   last_comment_body: string | null;
   last_comment_author: string | null;
+  revision_count: number;
+  active_revision_id: string | null;
+  active_revision_started_at: string | null;
+  active_revision_target_minutes: number | null;
+  active_revision_elapsed_minutes: number | null;
+  total_revision_minutes: number;
   // Panom'un birleşik board'unda bir görevin "neden burada" olduğunu gösteren
   // rozetler (Benim/Gecikmiş/Bu hafta gibi) — sunucuda hesaplanıp düz veri
   // olarak taşınır (Server→Client Component sınırında fonksiyon geçirilemez).
@@ -495,6 +504,23 @@ export interface BrandAssetCount {
   brand_id: string;
   kind: string;
   ready_count: number;
+  updated_at: string;
+}
+
+export interface TaskRevisionRound {
+  id: string;
+  task_id: string;
+  round_number: number;
+  target_minutes: number;
+  note: string | null;
+  started_at: string;
+  completed_at: string | null;
+  created_by: string | null;
+  completed_by: string | null;
+  created_by_name: string | null;
+  completed_by_name: string | null;
+  elapsed_minutes: number;
+  created_at: string;
   updated_at: string;
 }
 

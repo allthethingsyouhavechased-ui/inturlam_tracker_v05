@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 
 const source = fs.readFileSync(path.join(process.cwd(), "app", "page.tsx"), "utf8");
 const progressSource = fs.readFileSync(path.join(process.cwd(), "components", "HomeBrandProgress.tsx"), "utf8");
+const focusSource = fs.readFileSync(path.join(process.cwd(), "components", "HomeFocusPanel.tsx"), "utf8");
 
 describe("Bugün sayfası bilgi akışı", () => {
   it("üst operasyon göstergelerini ve sosyal uyarı şeridini koruyor", () => {
@@ -25,5 +26,16 @@ describe("Bugün sayfası bilgi akışı", () => {
     assert.match(progressSource, /AYLIK ÜRETİM AKIŞI/);
     assert.match(progressSource, /Atanmış markalar toplamı/);
     assert.doesNotMatch(source, /TaskPanel|ActivityPanel|listRecentActivity/);
+  });
+
+  it("kişisel teslim, revize ve inceleme odağını aylık kişisel/genel analizle birleştiriyor", () => {
+    assert.match(source, /<HomeFocusPanel/);
+    assert.match(source, /getPersonMonthlyProgress/);
+    assert.match(focusSource, /Yakın teslimlerim/);
+    assert.match(focusSource, /Aktif revizeler/);
+    assert.match(focusSource, /İncelemedeki işler/);
+    assert.match(progressSource, /BENİM AYLIK İLERLEMEM/);
+    assert.match(progressSource, /ÜZERİMDEKİ MARKALAR/);
+    assert.match(progressSource, /PORTFÖY İLERLEMESİ/);
   });
 });

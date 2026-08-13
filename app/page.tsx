@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HomeBrandProgress from "@/components/HomeBrandProgress";
+import HomeFocusPanel from "@/components/HomeFocusPanel";
 import MonthNavigator from "@/components/MonthNavigator";
 import SilentAccountsCard from "@/components/SilentAccountsCard";
 import Icon from "@/components/ui/Icon";
@@ -18,6 +19,7 @@ import { listPersonBrandAssignments } from "@/lib/repositories/brandAssignments"
 import { listBrandsWithOpenCounts } from "@/lib/repositories/brands";
 import {
   getPortfolioMonthlyProgress,
+  getPersonMonthlyProgress,
   listBrandMonthlyProgress,
   listMonthlyTaskStatusCounts,
   listPersonMonthlyContributions,
@@ -93,6 +95,7 @@ export default async function HomePage({
   const portfolioStatusCounts = listMonthlyTaskStatusCounts(month);
   const portfolioById = new Map(portfolioBrands.map((brand) => [brand.brand_id, brand]));
   const personalContributions = listPersonMonthlyContributions(me.id, month);
+  const personalProgress = getPersonMonthlyProgress(me.id, month);
   const personalBrands = listPersonBrandAssignments(me.id).flatMap((assignment) => {
     const brand = portfolioById.get(assignment.brand_id);
     if (!brand) return [];
@@ -107,6 +110,19 @@ export default async function HomePage({
     month,
     personalBrands.map((brand) => brand.progress),
   );
+  const personalDeadlines = openTasks
+    .filter((task) => task.assignee_id === me.id && task.due_date !== null && task.due_date <= weekEnd)
+    .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
+  const revisionTasks = allTasks
+    .filter((task) => task.active_revision_id !== null && (me.is_manager === 1 || task.assignee_id === me.id))
+    .sort((a, b) => {
+      const aOver = (a.active_revision_elapsed_minutes ?? 0) > (a.active_revision_target_minutes ?? Infinity);
+      const bOver = (b.active_revision_elapsed_minutes ?? 0) > (b.active_revision_target_minutes ?? Infinity);
+      return Number(bOver) - Number(aOver) || (b.active_revision_elapsed_minutes ?? 0) - (a.active_revision_elapsed_minutes ?? 0);
+    });
+  const reviewTasks = allTasks
+    .filter((task) => task.status === "Incelemede" && (me.is_manager === 1 || task.assignee_id === me.id))
+    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
 
   const socialHealth = listBrandSocialRows().map((row) => ({
     row,
@@ -139,6 +155,12 @@ export default async function HomePage({
         syncBroken={lastSocialRun?.status === "error"}
       />
 
+      <HomeFocusPanel
+        personalDeadlines={personalDeadlines}
+        revisionTasks={revisionTasks}
+        reviewTasks={reviewTasks}
+      />
+
       <HomeBrandProgress
         month={month}
         personalBrands={personalBrands}
@@ -146,6 +168,7 @@ export default async function HomePage({
         portfolioBrands={portfolioBrands}
         portfolioProgress={portfolioProgress}
         portfolioStatusCounts={portfolioStatusCounts}
+        personalProgress={personalProgress}
       />
     </div>
   );

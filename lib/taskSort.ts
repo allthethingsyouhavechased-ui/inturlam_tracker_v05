@@ -1,4 +1,4 @@
-import { CONTENT_TYPE_LABEL, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
+import { CONTENT_TYPE_LABEL, TASK_DIFFICULTIES, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
 import type { TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
 
 // Liste görünümündeki tıklanabilir sütun sıralaması. Hem /tasks hem /panom
@@ -9,6 +9,8 @@ export type ListSortKey =
   | "tur"
   | "marka"
   | "oncelik"
+  | "zorluk"
+  | "revize"
   | "durum"
   | "atanan"
   | "teslim"
@@ -26,6 +28,8 @@ export const LIST_SORT_HINT: Record<ListSortKey, string> = {
   tur: "İçerik türüne göre sırala (A → Z)",
   marka: "Markaya göre sırala — aynı markanın görevleri alt alta",
   oncelik: "Önceliğe göre sırala (Acil → Düşük)",
+  zorluk: "Zorluğa göre sırala (Zor → Kolay; Özel ayrı kategori)",
+  revize: "Revize turu sayısına göre sırala",
   durum: "Duruma göre sırala (Beklemede → Yayınlandı)",
   atanan: "Atanana göre sırala — atanmamışlar en sonda",
   teslim: "Teslim tarihine göre sırala — tarihsizler en sonda",
@@ -52,6 +56,8 @@ function isEmpty(t: TaskWithContext, key: ListSortKey): boolean {
   if (key === "teslim") return !t.due_date;
   if (key === "hedef") return !t.personal_target_date;
   if (key === "yorum") return t.comment_count === 0;
+  if (key === "zorluk") return !t.difficulty;
+  if (key === "revize") return t.revision_count === 0;
   return false;
 }
 
@@ -71,6 +77,15 @@ function compare(a: TaskWithContext, b: TaskWithContext, key: ListSortKey): numb
       );
     case "oncelik":
       return priorityRank(a.priority) - priorityRank(b.priority);
+    case "zorluk": {
+      const rank = (value: TaskWithContext["difficulty"]) => {
+        if (value === "Ozel") return TASK_DIFFICULTIES.length;
+        return value ? TASK_DIFFICULTIES.length - 1 - TASK_DIFFICULTIES.indexOf(value) : 99;
+      };
+      return rank(a.difficulty) - rank(b.difficulty);
+    }
+    case "revize":
+      return b.revision_count - a.revision_count;
     case "durum":
       return statusRank(a.status) - statusRank(b.status);
     case "atanan":

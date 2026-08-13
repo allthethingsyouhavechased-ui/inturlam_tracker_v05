@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { hashPassword, validatePassword } from "@/lib/auth/password";
-import { assertCanManageRoles, ROLE_ADMIN_PERSON_ID } from "@/lib/auth/authorization";
+import {
+  assertCanDeactivatePerson,
+  assertCanManageRoles,
+  ROLE_ADMIN_PERSON_ID,
+} from "@/lib/auth/authorization";
 import { normalizeDepartment } from "@/lib/departments";
 import { requireSession } from "@/lib/identity";
 import {
@@ -56,7 +60,12 @@ export async function createPersonAction(formData: FormData) {
 export async function deactivatePersonAction(personId: string) {
   const actor = await requireSession();
   assertAccountManager(actor);
-  setPersonActive(personId, false);
+  const person = getPerson(personId);
+  if (!person) throw new Error("Kişi bulunamadı.");
+  assertCanDeactivatePerson(person.id);
+  if (person.active !== 1) return;
+  setPersonActive(person.id, false);
+  deleteAuthSessionsForPerson(person.id);
   revalidatePath("/", "layout");
   revalidatePath("/team/manage");
 }
@@ -64,7 +73,10 @@ export async function deactivatePersonAction(personId: string) {
 export async function reactivatePersonAction(personId: string) {
   const actor = await requireSession();
   assertAccountManager(actor);
-  setPersonActive(personId, true);
+  const person = getPerson(personId);
+  if (!person) throw new Error("Kişi bulunamadı.");
+  if (person.active === 1) return;
+  setPersonActive(person.id, true);
   revalidatePath("/", "layout");
   revalidatePath("/team/manage");
 }

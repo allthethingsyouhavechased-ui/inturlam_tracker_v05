@@ -30,6 +30,8 @@ describe("gerçek v02 snapshot v03 migrationı", () => {
     const migratedPasswords = db.prepare("SELECT p.id, a.password_hash FROM people p JOIN accounts a ON a.person_id = p.id ORDER BY p.id").all().map((row) => ({ ...row }));
     assert.deepEqual(migratedPasswords, passwords);
     assert.equal((db.prepare("SELECT COUNT(*) c FROM tasks WHERE weight_points = 1 AND origin = 'team'").get() as { c: number }).c, counts.tasks);
+    assert.equal((db.prepare("SELECT COUNT(*) c FROM tasks WHERE difficulty IS NULL").get() as { c: number }).c, counts.tasks);
+    assert.ok(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_revision_rounds'").get());
     assert.equal((db.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check, "ok");
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
   });

@@ -10,6 +10,8 @@ import { createTaskAction } from "@/lib/actions/tasks";
 import {
   CONTENT_TYPES,
   CONTENT_TYPE_LABEL,
+  TASK_DIFFICULTIES,
+  TASK_DIFFICULTY_LABEL,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABEL,
 } from "@/lib/constants";
@@ -93,6 +95,7 @@ export default function QuickAddModal({
   const [newContentType, setNewContentType] = useState(CONTENT_TYPES[0]);
   const [taskTitle, setTaskTitle] = useState("");
   const [priority, setPriority] = useState(TASK_PRIORITIES[1]);
+  const [difficulty, setDifficulty] = useState(TASK_DIFFICULTIES[1]);
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId ?? "");
   const [dueDate, setDueDate] = useState(defaultDueDate);
 
@@ -145,6 +148,7 @@ export default function QuickAddModal({
     setNewContentTitle("");
     setTaskTitle("");
     setPriority(TASK_PRIORITIES[1]);
+    setDifficulty(TASK_DIFFICULTIES[1]);
     setAssigneeId(defaultAssigneeId ?? "");
     setDueDate(defaultDueDate);
     setError(null);
@@ -172,6 +176,7 @@ export default function QuickAddModal({
         fd2.set("contentItemId", targetContentId);
         fd2.set("title", taskTitle.trim());
         fd2.set("priority", priority);
+        fd2.set("difficulty", difficulty);
         if (assigneeId) fd2.set("assigneeId", assigneeId);
         if (dueDate) fd2.set("dueDate", dueDate);
         await createTaskAction(fd2);
@@ -299,7 +304,7 @@ export default function QuickAddModal({
                 />
               </label>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <label className="grid gap-1.5 text-xs font-medium text-secondary">
                   Öncelik
                   <select
@@ -310,6 +315,20 @@ export default function QuickAddModal({
                     {TASK_PRIORITIES.map((p) => (
                       <option key={p} value={p}>
                         {TASK_PRIORITY_LABEL[p]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                  Zorluk
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value as (typeof TASK_DIFFICULTIES)[number])}
+                    className={inputClass}
+                  >
+                    {TASK_DIFFICULTIES.map((value) => (
+                      <option key={value} value={value}>
+                        {TASK_DIFFICULTY_LABEL[value]}
                       </option>
                     ))}
                   </select>

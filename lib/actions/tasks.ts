@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordActivity } from "@/lib/activity";
+import { activeAssigneeId } from "@/lib/assignees";
 import {
   REPEAT_OPTIONS,
+  TASK_DIFFICULTIES,
+  TASK_DIFFICULTY_LABEL,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABEL,
   TASK_STATUS_LABEL,
@@ -24,19 +27,22 @@ import {
   bulkUpdateTaskPriority,
   bulkUpdateTaskStatus,
   createNextOccurrence,
+  completeTaskRevision,
   createTask,
   deleteTask,
   getTask,
   setTaskArchived,
+  startTaskRevision,
   updateTaskAssignee,
   updateTaskDetails,
   updateTaskDueDate,
+  updateTaskDifficulty,
   updateTaskPriority,
   updateTaskRepeat,
   updateTaskStatus,
   updateTaskWeight,
 } from "@/lib/repositories/tasks";
-import type { TaskPriority, TaskStatus } from "@/lib/types";
+import type { TaskDifficulty, TaskPriority, TaskStatus } from "@/lib/types";
 import { listUploadPathsForTaskIds } from "@/lib/repositories/uploadReferences";
 import {
   deleteUploadedFile,
@@ -74,16 +80,19 @@ export async function createTaskAction(formData: FormData): Promise<string> {
   const title = String(formData.get("title") ?? "").trim();
   const priorityRaw = String(formData.get("priority") ?? "Normal") as TaskPriority;
   const priority = TASK_PRIORITIES.includes(priorityRaw) ? priorityRaw : "Normal";
+  const difficulty = String(formData.get("difficulty") ?? "") as TaskDifficulty;
 
   if (!contentItemId) throw new Error("İçerik bulunamadı.");
   if (!title) throw new Error("Görev başlığı zorunlu.");
   if (title.length > 200) throw new Error("Görev başlığı en fazla 200 karakter olabilir.");
+  if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Zorluk derecesi seçilmeli.");
 
   const id = createTask({
     contentItemId,
     title,
-    assigneeId: cleanText(formData.get("assigneeId")),
+    assigneeId: activeAssigneeId(cleanText(formData.get("assigneeId"))),
     dueDate: requiredDate(formData.get("dueDate")),
+    difficulty,
     priority,
   });
 
@@ -104,9 +113,10 @@ export async function setTaskStatusAction(taskId: string, status: TaskStatus) {
   const actor = await requireSession();
   if (!TASK_STATUSES.includes(status)) throw new Error("Geçersiz durum.");
   const task = getTask(taskId);
+  if (!task) throw new Error("Görev bulunamadı.");
   const changed = updateTaskStatus(taskId, status, actor.id);
   if (changed) {
-    if (task?.origin === "guest") {
+    if (task.origin === "guest") {
       await announceGuestTaskStatus({
         actor,
         taskId,
@@ -119,15 +129,15 @@ export async function setTaskStatusAction(taskId: string, status: TaskStatus) {
         action: "task.status",
         entityType: "task",
         entityId: taskId,
-        brandId: task?.brand_id ?? null,
-        summary: `“${task?.title ?? "Görev"}” görevini ${TASK_STATUS_LABEL[status]} durumuna aldı`,
+        brandId: task.brand_id,
+        summary: `“${task.title}” görevini ${TASK_STATUS_LABEL[status]} durumuna aldı`,
       });
     }
   }
 
   // Tekrar eden görev tamamlandıysa bir sonraki örneğini aç. Yeni görev
   // "Beklemede" başladığı için bu dal tekrar tetiklenmez (sonsuz döngü yok).
-  if (changed && status === "Yayinlandi" && task && (task.repeat_days ?? 0) > 0) {
+  if (changed && status === "Yayinlandi" && (task.repeat_days ?? 0) > 0) {
     createNextOccurrence(task, todayISO());
     await recordActivity({
       action: "task.repeat",
@@ -150,7 +160,10 @@ export async function setTaskRepeatAction(taskId: string, repeatDays: number) {
   if (!task) throw new Error("Görev bulunamadı.");
   if (repeatDays > 0 && !task.due_date) throw new Error("Tekrar eklemeden önce teslim tarihi atanmalı.");
 
-  updateTaskRepeat(taskId, repeatDays > 0 ? repeatDays : null);
+  const nextRepeatDays = repeatDays > 0 ? repeatDays : null;
+  if (task.repeat_days === nextRepeatDays) return;
+
+  updateTaskRepeat(taskId, nextRepeatDays);
   const label = REPEAT_OPTIONS.find((o) => o.days === repeatDays)!.label;
   await recordActivity({
     action: "task.repeat.set",
@@ -169,13 +182,14 @@ export async function setTaskPriorityAction(
   await requireSession();
   if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
   const task = getTask(taskId);
-  updateTaskPriority(taskId, priority);
+  if (!task) throw new Error("Görev bulunamadı.");
+  if (!updateTaskPriority(taskId, priority)) return;
   await recordActivity({
     action: "task.priority",
     entityType: "task",
     entityId: taskId,
-    brandId: task?.brand_id ?? null,
-    summary: `“${task?.title ?? "Görev"}” önceliğini ${TASK_PRIORITY_LABEL[priority]} yaptı`,
+    brandId: task.brand_id,
+    summary: `“${task.title}” önceliğini ${TASK_PRIORITY_LABEL[priority]} yaptı`,
   });
   revalidatePath("/", "layout");
 }
@@ -185,18 +199,19 @@ export async function setTaskAssigneeAction(
   assigneeId: string | null,
 ) {
   await requireSession();
-  const target = assigneeId && assigneeId.length > 0 ? assigneeId : null;
   const task = getTask(taskId);
-  updateTaskAssignee(taskId, target);
+  if (!task) throw new Error("Görev bulunamadı.");
+  const target = activeAssigneeId(assigneeId);
+  if (!updateTaskAssignee(taskId, target)) return;
   const name = target ? (getPerson(target)?.name ?? null) : null;
   await recordActivity({
     action: "task.assignee",
     entityType: "task",
     entityId: taskId,
-    brandId: task?.brand_id ?? null,
+    brandId: task.brand_id,
     summary: name
-      ? `“${task?.title ?? "Görev"}” görevini ${name} kişisine atadı`
-      : `“${task?.title ?? "Görev"}” görevinin atamasını kaldırdı`,
+      ? `“${task.title}” görevini ${name} kişisine atadı`
+      : `“${task.title}” görevinin atamasını kaldırdı`,
   });
   revalidatePath("/", "layout");
 }
@@ -206,6 +221,7 @@ export async function setTaskDueDateAction(taskId: string, dueDate: string | nul
   const task = getTask(taskId);
   if (!task) throw new Error("Görev bulunamadı.");
   const cleanDueDate = requiredDate(dueDate);
+  if (task.due_date === cleanDueDate) return;
   updateTaskDueDate(taskId, cleanDueDate);
   if (task.origin === "guest" && !task.due_date) {
     await announceGuestTaskPlanned({ actor, taskId, taskTitle: task.title, brandId: task.brand_id });
@@ -246,6 +262,7 @@ export async function updateTaskDetailsAction(formData: FormData) {
   const notifyMessage = cleanText(formData.get("notifyMessage"));
   if ((notifyMessage?.length ?? 0) > 1000) throw new Error("Bildirim notu en fazla 1000 karakter olabilir.");
   const task = getTask(id);
+  if (!task) throw new Error("Görev bulunamadı.");
 
   const images = extractImageFiles(formData);
   validateImageFiles(images);
@@ -255,14 +272,14 @@ export async function updateTaskDetailsAction(formData: FormData) {
     updateTaskDetails({ id, title, dueDate, notes }, saved),
   );
 
-  if (task?.origin === "guest" && !task.due_date) {
+  if (task.origin === "guest" && !task.due_date) {
     await announceGuestTaskPlanned({ actor, taskId: id, taskTitle: title, brandId: task.brand_id });
   } else {
     await recordActivity({
       action: "task.details",
       entityType: "task",
       entityId: id,
-      brandId: task?.brand_id ?? null,
+      brandId: task.brand_id,
       summary: `“${title}” görev detaylarını güncelledi`,
     });
   }
@@ -271,11 +288,65 @@ export async function updateTaskDetailsAction(formData: FormData) {
     actor,
     taskId: id,
     taskTitle: title,
-    brandId: task?.brand_id ?? null,
-    assigneeId: task?.assignee_id ?? null,
+    brandId: task.brand_id,
+    assigneeId: task.assignee_id,
     message: notifyMessage,
   });
 
+  revalidatePath("/", "layout");
+}
+
+export async function setTaskDifficultyAction(
+  taskId: string,
+  difficulty: TaskDifficulty,
+) {
+  await requireSession();
+  if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Geçersiz zorluk derecesi.");
+  const task = getTask(taskId);
+  if (!task) throw new Error("Görev bulunamadı.");
+  if (!updateTaskDifficulty(taskId, difficulty)) return;
+  await recordActivity({
+    action: "task.difficulty",
+    entityType: "task",
+    entityId: taskId,
+    brandId: task.brand_id,
+    summary: `“${task.title}” zorluk derecesini ${TASK_DIFFICULTY_LABEL[difficulty]} yaptı`,
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function startTaskRevisionAction(formData: FormData) {
+  const actor = await requireSession();
+  const taskId = String(formData.get("taskId") ?? "").trim();
+  const targetMinutes = Number(formData.get("targetMinutes"));
+  const note = cleanText(formData.get("note"));
+  if (!taskId) throw new Error("Görev bulunamadı.");
+  if ((note?.length ?? 0) > 1000) throw new Error("Revize notu en fazla 1000 karakter olabilir.");
+  const task = getTask(taskId);
+  if (!task) throw new Error("Görev bulunamadı.");
+  const round = startTaskRevision({ taskId, targetMinutes, note, actorId: actor.id });
+  await recordActivity({
+    action: "task.revision.start",
+    entityType: "task",
+    entityId: taskId,
+    brandId: task.brand_id,
+    summary: `“${task.title}” görevinin ${round.round_number}. revize turunu başlattı`,
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function completeTaskRevisionAction(revisionId: string) {
+  const actor = await requireSession();
+  const round = completeTaskRevision(revisionId, actor.id);
+  const task = getTask(round.task_id);
+  if (!task) throw new Error("Görev bulunamadı.");
+  await recordActivity({
+    action: "task.revision.complete",
+    entityType: "task",
+    entityId: task.id,
+    brandId: task.brand_id,
+    summary: `“${task.title}” görevinin ${round.round_number}. revize turunu tamamladı`,
+  });
   revalidatePath("/", "layout");
 }
 
@@ -284,7 +355,9 @@ export async function setTaskWeightAction(taskId: string, weightPoints: number) 
   if (actor.is_manager !== 1) throw new Error("Görev ağırlığını yalnızca yöneticiler değiştirebilir.");
   const task = getTask(taskId);
   if (!task) throw new Error("Görev bulunamadı.");
-  updateTaskWeight(taskId, assertWeightPoints(weightPoints));
+  const nextWeight = assertWeightPoints(weightPoints);
+  if (task.weight_points === nextWeight) return;
+  updateTaskWeight(taskId, nextWeight);
   await recordActivity({
     action: "task.weight",
     entityType: "task",
@@ -303,6 +376,7 @@ export async function setTaskArchivedAction(taskId: string, archived: boolean) {
   await requireSession();
   const task = getTask(taskId);
   if (!task) throw new Error("Görev bulunamadı.");
+  if ((task.archived_at !== null) === archived) return;
 
   setTaskArchived(taskId, archived);
   await recordActivity({
@@ -313,6 +387,31 @@ export async function setTaskArchivedAction(taskId: string, archived: boolean) {
     summary: archived
       ? `“${task.title}” görevini arşivledi`
       : `“${task.title}” görevini arşivden çıkardı`,
+  });
+  revalidatePath("/", "layout");
+}
+
+// Arşivdeki tamamlanmış işi yalnızca görünür yapmak, bir sonraki görev listesi
+// ziyaretinde otomatik arşiv süpürgesinin onu yeniden saklamasına yol açar.
+// Bu nedenle gerçek bir "yeniden aç" işlemi yayınlanmış görevi aktif akışa alır;
+// elle arşivlenmiş açık bir görevdeyse yalnızca arşiv damgasını kaldırır.
+export async function restoreArchivedTaskAction(taskId: string) {
+  const actor = await requireSession();
+  const task = getTask(taskId);
+  if (!task) throw new Error("Görev bulunamadı.");
+  if (task.archived_at === null) return;
+
+  if (task.status === "Yayinlandi") {
+    updateTaskStatus(taskId, "DevamEdiyor", actor.id);
+  } else {
+    setTaskArchived(taskId, false);
+  }
+  await recordActivity({
+    action: "task.restore",
+    entityType: "task",
+    entityId: taskId,
+    brandId: task.brand_id,
+    summary: `“${task.title}” görevini yeniden açtı`,
   });
   revalidatePath("/", "layout");
 }
@@ -329,6 +428,7 @@ export async function deleteTaskAttachmentAction(attachmentId: string) {
 export async function deleteTaskAction(taskId: string) {
   await requireManager();
   const task = getTask(taskId);
+  if (!task) throw new Error("Görev bulunamadı.");
   const uploadPaths = listUploadPathsForTaskIds([taskId]);
   deleteTask(taskId);
   await deleteUploadedFiles(uploadPaths);
@@ -336,14 +436,11 @@ export async function deleteTaskAction(taskId: string) {
     action: "task.delete",
     entityType: "task",
     entityId: null,
-    brandId: task?.brand_id ?? null,
-    summary: `“${task?.title ?? "Görev"}” görevini sildi`,
+    brandId: task.brand_id,
+    summary: `“${task.title}” görevini sildi`,
   });
   revalidatePath("/", "layout");
-  if (task) {
-    redirect(`/brands/${task.brand_id}/content/${task.content_item_id}`);
-  }
-  redirect("/");
+  redirect(`/brands/${task.brand_id}/content/${task.content_item_id}`);
 }
 
 // ---- Toplu görev işlemleri (Görevler > Liste görünümü) ----
@@ -393,14 +490,14 @@ export async function bulkSetTaskPriorityAction(
   await requireSession();
   if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
   const clean = cleanIds(ids);
-  bulkUpdateTaskPriority(clean, priority);
-  if (clean.length > 0) {
+  const changedCount = bulkUpdateTaskPriority(clean, priority);
+  if (changedCount > 0) {
     await recordActivity({
       action: "task.bulk.priority",
       entityType: "task",
       entityId: null,
       brandId: null,
-      summary: `${clean.length} görevin önceliğini ${TASK_PRIORITY_LABEL[priority]} yaptı`,
+      summary: `${changedCount} görevin önceliğini ${TASK_PRIORITY_LABEL[priority]} yaptı`,
     });
   }
   revalidatePath("/", "layout");
@@ -412,9 +509,10 @@ export async function bulkSetTaskAssigneeAction(
 ) {
   await requireSession();
   const clean = cleanIds(ids);
-  const target = assigneeId && assigneeId.length > 0 ? assigneeId : null;
-  bulkUpdateTaskAssignee(clean, target);
-  if (clean.length > 0) {
+  if (clean.length === 0) return;
+  const target = activeAssigneeId(assigneeId);
+  const changedCount = bulkUpdateTaskAssignee(clean, target);
+  if (changedCount > 0) {
     const name = target ? (getPerson(target)?.name ?? null) : null;
     await recordActivity({
       action: "task.bulk.assignee",
@@ -422,8 +520,8 @@ export async function bulkSetTaskAssigneeAction(
       entityId: null,
       brandId: null,
       summary: name
-        ? `${clean.length} görevi ${name} kişisine atadı`
-        : `${clean.length} görevin atamasını kaldırdı`,
+        ? `${changedCount} görevi ${name} kişisine atadı`
+        : `${changedCount} görevin atamasını kaldırdı`,
     });
   }
   revalidatePath("/", "layout");
@@ -433,15 +531,15 @@ export async function bulkDeleteTasksAction(ids: string[]) {
   await requireManager();
   const clean = cleanIds(ids);
   const uploadPaths = listUploadPathsForTaskIds(clean);
-  bulkDeleteTasks(clean);
+  const changedCount = bulkDeleteTasks(clean);
   await deleteUploadedFiles(uploadPaths);
-  if (clean.length > 0) {
+  if (changedCount > 0) {
     await recordActivity({
       action: "task.bulk.delete",
       entityType: "task",
       entityId: null,
       brandId: null,
-      summary: `${clean.length} görevi sildi`,
+      summary: `${changedCount} görevi sildi`,
     });
   }
   revalidatePath("/", "layout");

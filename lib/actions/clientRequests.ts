@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordActivity } from "@/lib/activity";
-import { CONTENT_TYPES, TASK_PRIORITIES } from "@/lib/constants";
+import { CONTENT_TYPES, TASK_DIFFICULTIES, TASK_PRIORITIES } from "@/lib/constants";
 import { normalizeDepartment } from "@/lib/departments";
 import { requireSession } from "@/lib/identity";
 import { notifyTaskUpdate } from "@/lib/notifications";
@@ -20,7 +20,7 @@ import {
   updateClientRequestReview,
   type ClientRequestReviewInput,
 } from "@/lib/repositories/clientRequests";
-import type { ContentType, Person, TaskPriority } from "@/lib/types";
+import type { ContentType, Person, TaskDifficulty, TaskPriority } from "@/lib/types";
 import {
   cloneUploadedFile,
   deleteUploadedFile,
@@ -71,10 +71,12 @@ function reviewInput(formData: FormData, reviewerId: string): ClientRequestRevie
   const department = normalizeDepartment(formData.get("department"));
   const assigneeId = String(formData.get("assigneeId") ?? "").trim();
   const priority = String(formData.get("priority") ?? "Normal") as TaskPriority;
+  const difficulty = String(formData.get("difficulty") ?? "Orta") as TaskDifficulty;
   if (!id) throw new Error("Talep bulunamadı.");
   if (!department) throw new Error("Hedef departman zorunlu.");
   if (!assigneeId) throw new Error("Onay öncesinde görev sahibi seçilmeli.");
   if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
+  if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Geçersiz zorluk derecesi.");
   const dueDate = cleanDate(formData.get("dueDate"));
   if (!dueDate) throw new Error("Onay ve planlama için teslim tarihi zorunlu.");
   return {
@@ -83,6 +85,7 @@ function reviewInput(formData: FormData, reviewerId: string): ClientRequestRevie
     department,
     assigneeId,
     priority,
+    difficulty,
     dueDate,
   };
 }

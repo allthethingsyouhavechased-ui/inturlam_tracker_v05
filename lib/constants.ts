@@ -2,6 +2,7 @@ import type {
   ContentStatus,
   ContentType,
   TaskPriority,
+  TaskDifficulty,
   TaskStatus,
 } from "./types";
 
@@ -136,6 +137,22 @@ export const REPEAT_OPTIONS: { days: number; label: string }[] = [
 ];
 
 export const TASK_PRIORITIES: TaskPriority[] = ["Dusuk", "Normal", "Yuksek", "Acil"];
+
+export const TASK_DIFFICULTIES: TaskDifficulty[] = ["Kolay", "Orta", "Zor", "Ozel"];
+
+export const TASK_DIFFICULTY_LABEL: Record<TaskDifficulty, string> = {
+  Kolay: "Kolay",
+  Orta: "Orta",
+  Zor: "Zor",
+  Ozel: "Özel",
+};
+
+export const TASK_DIFFICULTY_BADGE: Record<TaskDifficulty, string> = {
+  Kolay: "border border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+  Orta: "border border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200",
+  Zor: "border border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-200",
+  Ozel: "border border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200",
+};
 
 export const TASK_PRIORITY_LABEL: Record<TaskPriority, string> = {
   Dusuk: "Düşük",

@@ -93,7 +93,9 @@ export default async function TeamManagementPage() {
                     needsPassword={person.has_password !== 1}
                   />
                 )}
-                <DeactivatePersonButton personId={person.id} />
+                {person.id !== ROLE_ADMIN_PERSON_ID && (
+                  <DeactivatePersonButton personId={person.id} />
+                )}
               </div>
             </div>
           ))}

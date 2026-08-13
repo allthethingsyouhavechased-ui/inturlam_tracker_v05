@@ -16,6 +16,7 @@ function task(over: Partial<TaskWithContext> = {}): TaskWithContext {
     title: `Görev ${counter}`,
     status: "Beklemede" as TaskStatus,
     priority: "Normal" as TaskPriority,
+    difficulty: "Orta",
     assignee_id: null,
     due_date: null,
     notes: null,
@@ -39,6 +40,12 @@ function task(over: Partial<TaskWithContext> = {}): TaskWithContext {
     comment_count: 0,
     last_comment_body: null,
     last_comment_author: null,
+    revision_count: 0,
+    active_revision_id: null,
+    active_revision_started_at: null,
+    active_revision_target_minutes: null,
+    active_revision_elapsed_minutes: null,
+    total_revision_minutes: 0,
     personal_target_date: null,
     ...over,
   };
@@ -76,6 +83,19 @@ describe("sortTasksForList", () => {
     assert.deepEqual(
       sortTasksForList(rows, asc("durum")).map((t) => t.status),
       ["Beklemede", "DevamEdiyor", "Incelemede", "Onaylandi", "Yayinlandi"],
+    );
+  });
+
+  it("zorluk: Zor → Orta → Kolay sıralar, Özel'i ayrı ve sonda tutar", () => {
+    const rows = [
+      task({ difficulty: "Kolay" }),
+      task({ difficulty: "Ozel" }),
+      task({ difficulty: "Zor" }),
+      task({ difficulty: "Orta" }),
+    ];
+    assert.deepEqual(
+      sortTasksForList(rows, asc("zorluk")).map((t) => t.difficulty),
+      ["Zor", "Orta", "Kolay", "Ozel"],
     );
   });
 

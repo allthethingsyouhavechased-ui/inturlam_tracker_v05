@@ -48,7 +48,7 @@ describe("v03 guest görev sözleşmesi", () => {
     const db = seed();
     const id = createGuestTask({ brandId: "b1", accountId: "g1", title: "Çekim", brief: "Yeni ürün", requestedDate: "2026-08-20", attachments: [] });
     const dto = getGuestTask(id, "b1", "g1")! as unknown as Record<string, unknown>;
-    for (const forbidden of ["due_date", "assignee_id", "weight_points", "notes", "personal_target_date"]) assert.equal(forbidden in dto, false, forbidden);
+    for (const forbidden of ["due_date", "assignee_id", "weight_points", "difficulty", "revision_count", "active_revision_id", "notes", "personal_target_date"]) assert.equal(forbidden in dto, false, forbidden);
     assert.equal(updateGuestTask({ taskId: id, brandId: "b1", title: "Yeni", brief: "Yeni", requestedDate: "2026-08-21" }), true);
     db.prepare("UPDATE tasks SET status = 'DevamEdiyor' WHERE id = ?").run(id);
     assert.equal(updateGuestTask({ taskId: id, brandId: "b1", title: "Sızma", brief: "Sızma", requestedDate: "2026-08-22" }), false);

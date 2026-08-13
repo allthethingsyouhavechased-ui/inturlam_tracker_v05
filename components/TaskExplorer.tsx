@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import TaskBoard, { type SortKey } from "@/components/TaskBoard";
@@ -9,6 +10,8 @@ import Icon from "@/components/ui/Icon";
 import { controlClass } from "@/components/ui/Input";
 import {
   TASK_PRIORITIES,
+  TASK_DIFFICULTIES,
+  TASK_DIFFICULTY_LABEL,
   TASK_PRIORITY_DOT,
   TASK_PRIORITY_LABEL,
   TASK_STATUS_LABEL,
@@ -21,7 +24,12 @@ import {
   departmentKey,
   departmentLabel,
 } from "@/lib/departments";
-import type { Person, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
+import type { Person, TaskDifficulty, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
+import {
+  matchesTaskMetadataFilters,
+  type TaskDueFilter,
+  type TaskRevisionFilter,
+} from "@/lib/taskMetadata";
 import {
   matchesTaskFocus,
   TASK_FOCUS_LABEL,
@@ -78,6 +86,7 @@ export default function TaskExplorer({
   focusWeekEnd,
   initialView = "pano",
   canDeleteTasks,
+  archivedCount = 0,
 }: {
   tasks: TaskWithContext[];
   brands: { id: string; name: string }[];
@@ -89,10 +98,16 @@ export default function TaskExplorer({
   focusWeekEnd: string;
   initialView?: WorkspaceView;
   canDeleteTasks: boolean;
+  archivedCount?: number;
 }) {
   const [brandId, setBrandId] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priority, setPriority] = useState("");
+  const [difficulty, setDifficulty] = useState<TaskDifficulty | "" | "unset">("");
+  const [due, setDue] = useState<TaskDueFilter>("");
+  const [revision, setRevision] = useState<TaskRevisionFilter>("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [department, setDepartment] = useState(initialDepartment);
   const [assigneeId, setAssigneeId] = useState(initialAssigneeId);
   const [focus, setFocus] = useState<TaskFocus | "">(initialFocus);
@@ -105,17 +120,6 @@ export default function TaskExplorer({
     rememberWorkspaceView(TASKS_VIEW_PREFERENCE, next);
   }
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // Arşiv bir "ekle/çıkar" anahtarı DEĞİL, ayrı bir görünüm: kapalıyken arşiv
-  // tamamen gizli, açıkken SADECE arşiv listelenir. Karışık liste denenmişti —
-  // yüzlerce görevin arasına birkaç arşiv kaydı serpiştirmek onları bulunmaz
-  // yapıyordu, düğme de bir işe yaramıyordu.
-  const [archiveOnly, setArchiveOnly] = useState(false);
-
-  const archivedCount = useMemo(
-    () => tasks.filter((task) => task.archived_at !== null).length,
-    [tasks],
-  );
-
   // Departman görevin değil, görevi üstlenen kişinin özelliği: filtre
   // atanan üzerinden dolaylı çalışıyor. Bu yüzden atanmamış görevler bir
   // departman seçiliyken listeden düşer — hangi ekibe ait oldukları bilinmiyor.
@@ -137,13 +141,19 @@ export default function TaskExplorer({
   const withoutDepartment = useMemo(() => {
     const needle = q.trim().toLocaleLowerCase("tr-TR");
     return tasks.filter((task) => {
-      // Tek satırda iki mod: arşiv görünümünde yalnızca arşivlenenler,
-      // normal görünümde yalnızca arşivlenmemişler kalır.
-      if (archiveOnly !== (task.archived_at !== null)) return false;
       if (!matchesTaskFocus(task, focus, focusToday, focusWeekEnd)) return false;
       if (brandId && task.brand_id !== brandId) return false;
       if (statusFilter && task.status !== statusFilter) return false;
       if (priority && task.priority !== priority) return false;
+      if (!matchesTaskMetadataFilters(task, {
+        due,
+        difficulty,
+        revision,
+        today: focusToday,
+        weekEnd: focusWeekEnd,
+        dateFrom,
+        dateTo,
+      })) return false;
       if (assigneeId === UNASSIGNED && task.assignee_id) return false;
       if (
         assigneeId &&
@@ -152,12 +162,16 @@ export default function TaskExplorer({
       ) {
         return false;
       }
-      if (needle && !task.title.toLocaleLowerCase("tr-TR").includes(needle)) {
+      if (
+        needle &&
+        ![task.title, task.brand_name, task.content_title, task.assignee_name ?? ""]
+          .some((value) => value.toLocaleLowerCase("tr-TR").includes(needle))
+      ) {
         return false;
       }
       return true;
     });
-  }, [tasks, archiveOnly, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, assigneeId, q]);
+  }, [tasks, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, difficulty, due, revision, dateFrom, dateTo, assigneeId, q]);
 
   const departmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -180,11 +194,11 @@ export default function TaskExplorer({
   }, [withoutDepartment, department, departmentByPerson]);
 
   const hasFilter = Boolean(
-    brandId || statusFilter || priority || department || assigneeId || focus || q,
+    brandId || statusFilter || priority || difficulty || due || revision || dateFrom || dateTo || department || assigneeId || focus || q,
   );
   // Rozet, "Filtreler" panelinin içindekileri sayar; departman panelde değil,
   // her zaman görünen sekme satırında seçiliyor.
-  const filterCount = [brandId, statusFilter, priority, assigneeId].filter(Boolean).length;
+  const filterCount = [brandId, statusFilter, priority, difficulty, due, revision, dateFrom || dateTo, assigneeId].filter(Boolean).length;
   const selectedBrand = brands.find((brand) => brand.id === brandId);
   const selectedPerson = people.find((person) => person.id === assigneeId);
 
@@ -207,6 +221,11 @@ export default function TaskExplorer({
     setBrandId("");
     setStatusFilter("");
     setPriority("");
+    setDifficulty("");
+    setDue("");
+    setRevision("");
+    setDateFrom("");
+    setDateTo("");
     setDepartment("");
     setAssigneeId("");
     setFocus("");
@@ -323,26 +342,17 @@ export default function TaskExplorer({
               )}
             </button>
 
-            {/* Yayınlanan görevler panoda kalır, ARCHIVE_AFTER_DAYS gün sonra
-                arşive düşer. Düğme ayrı bir GÖRÜNÜM açar (bkz. `archiveOnly`) —
-                hiç arşivlenmiş iş yoksa görünmez. */}
+            {/* Arşiv artık ayrı, salt-okunur odaklı bir sayfa. Pano sütunları
+                arşiv kayıtları için anlamsız olduğu için aktif görevlerle karışmaz. */}
             {archivedCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setArchiveOnly((only) => !only)}
-                aria-pressed={archiveOnly}
-                className={`ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${
-                  archiveOnly
-                    ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-border-default bg-surface text-muted hover:bg-surface-hover"
-                }`}
+              <Link
+                href="/tasks/archive"
+                className="ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-default bg-surface px-3 text-sm font-medium text-muted hover:bg-surface-hover"
               >
                 <Icon name="archive" className="size-4" />
-                {archiveOnly ? "Arşivden çık" : "Arşiv"}
-                <span className={`tabular-nums ${archiveOnly ? "text-white/75" : "text-muted"}`}>
-                  {archivedCount}
-                </span>
-              </button>
+                Arşiv
+                <span className="tabular-nums text-muted">{archivedCount}</span>
+              </Link>
             )}
 
             <div className="inline-flex overflow-hidden rounded-[10px] border border-border-default bg-surface-subtle p-0.5 text-xs">
@@ -384,6 +394,43 @@ export default function TaskExplorer({
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
+              Zorluk
+              <select value={difficulty} onChange={(event) => setDifficulty(event.target.value as TaskDifficulty | "" | "unset")} className={selectClass}>
+                <option value="">Tüm zorluklar</option>
+                {TASK_DIFFICULTIES.map((value) => <option key={value} value={value}>{TASK_DIFFICULTY_LABEL[value]}</option>)}
+                <option value="unset">Belirlenmemiş</option>
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
+              Teslim zamanı
+              <select value={due} onChange={(event) => setDue(event.target.value as TaskDueFilter)} className={selectClass}>
+                <option value="">Tüm tarihler</option>
+                <option value="overdue">Gecikmiş</option>
+                <option value="today">Bugün</option>
+                <option value="week">Bu hafta</option>
+                <option value="undated">Tarih bekleyen</option>
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
+              Revize
+              <select value={revision} onChange={(event) => setRevision(event.target.value as TaskRevisionFilter)} className={selectClass}>
+                <option value="">Tüm revizeler</option>
+                <option value="none">Revizesiz</option>
+                <option value="active">Aktif revizede</option>
+                <option value="completed">Revizesi tamamlanmış</option>
+                <option value="overdue">Hedef süreyi aşmış</option>
+                <option value="three-plus">3+ tur</option>
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
+              Tarih aralığı · başlangıç
+              <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} className={selectClass} />
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
+              Tarih aralığı · bitiş
+              <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} className={selectClass} />
             </label>
             <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
               Durum
@@ -483,6 +530,10 @@ export default function TaskExplorer({
                 onRemove={() => setAssigneeId("")}
               />
             )}
+            {difficulty && <FilterChip label={difficulty === "unset" ? "Zorluk: Belirlenmemiş" : `Zorluk: ${TASK_DIFFICULTY_LABEL[difficulty]}`} onRemove={() => setDifficulty("")} />}
+            {due && <FilterChip label={{ overdue: "Gecikmiş", today: "Bugün", week: "Bu hafta", undated: "Tarih bekleyen" }[due]} onRemove={() => setDue("")} />}
+            {revision && <FilterChip label={{ none: "Revizesiz", active: "Aktif revize", completed: "Tamamlanmış revize", overdue: "Revize süresi aşılmış", "three-plus": "3+ revize" }[revision]} onRemove={() => setRevision("")} />}
+            {(dateFrom || dateTo) && <FilterChip label={`Teslim: ${dateFrom || "…"} – ${dateTo || "…"}`} onRemove={() => { setDateFrom(""); setDateTo(""); }} />}
             {focus && (
               <FilterChip
                 label={TASK_FOCUS_LABEL[focus]}
@@ -501,33 +552,12 @@ export default function TaskExplorer({
         )}
       </section>
 
-      {/* Arşiv görünümünde neye baktığın ve nasıl geri alacağın açıkça yazsın —
-          bu liste "kayıp görevler" değil, kasıtlı olarak kenara çekilmiş işler. */}
-      {archiveOnly && (
-        <div className="ui-enter flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/70 px-4 py-3 text-sm dark:border-brand-900 dark:bg-brand-950/25">
-          <p className="text-zinc-700 dark:text-zinc-200">
-            <strong className="font-semibold">Arşiv görünümü.</strong> Yayınlandıktan
-            sonra panodan çekilen görevler — silinmediler. Geri almak için kartı
-            başka bir duruma sürükle ya da görevi açıp{" "}
-            <strong className="font-semibold">“Arşivden çıkar”</strong> de.
-          </p>
-          <button
-            type="button"
-            onClick={() => setArchiveOnly(false)}
-            className="ui-press min-h-9 shrink-0 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-500"
-          >
-            Aktif görevlere dön
-          </button>
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted">
           <span className="font-semibold text-zinc-700 dark:text-zinc-200">
             {filtered.length}
           </span>{" "}
-          / {archiveOnly ? archivedCount : tasks.length - archivedCount}{" "}
-          {archiveOnly ? "arşivlenmiş görev" : "görev"}
+          / {tasks.length} görev
           {view === "pano" && sortKey !== "varsayilan" && (
             <span> · {SORT_LABEL[sortKey]} sıralaması</span>
           )}
@@ -554,9 +584,7 @@ export default function TaskExplorer({
       {filtered.length === 0 ? (
         <EmptyState
           title={
-            archiveOnly
-              ? "Bu filtrelerle eşleşen arşiv kaydı yok"
-              : hasFilter
+            hasFilter
                 ? "Bu filtrelerle eşleşen görev yok"
                 : "Henüz görev yok"
           }

@@ -3,7 +3,14 @@ import { NO_DEPARTMENT, type DepartmentKey } from "@/lib/departments";
 import { departmentPeopleCondition } from "@/lib/repositories/people";
 import { ARCHIVE_AFTER_DAYS } from "@/lib/taskArchive";
 import { plannedTaskCondition } from "@/lib/taskPlanning";
-import type { Task, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
+import type {
+  Task,
+  TaskDifficulty,
+  TaskPriority,
+  TaskRevisionRound,
+  TaskStatus,
+  TaskWithContext,
+} from "@/lib/types";
 
 // Acil→Düşük sıralaması için ORDER BY'da kullanılan CASE ifadesi.
 const PRIORITY_ORDER_SQL = `CASE t.priority
@@ -28,7 +35,25 @@ const WITH_CONTEXT_SELECT = `
            WHERE c.task_id = t.id ${LAST_COMMENT_ORDER}) AS last_comment_body,
          (SELECT cp.name FROM comments c
             JOIN people cp ON cp.id = c.author_id
-           WHERE c.task_id = t.id ${LAST_COMMENT_ORDER}) AS last_comment_author
+           WHERE c.task_id = t.id ${LAST_COMMENT_ORDER}) AS last_comment_author,
+         (SELECT COUNT(*) FROM task_revision_rounds rr
+           WHERE rr.task_id = t.id) AS revision_count,
+         (SELECT rr.id FROM task_revision_rounds rr
+           WHERE rr.task_id = t.id AND rr.completed_at IS NULL
+           ORDER BY rr.round_number DESC LIMIT 1) AS active_revision_id,
+         (SELECT rr.started_at FROM task_revision_rounds rr
+           WHERE rr.task_id = t.id AND rr.completed_at IS NULL
+           ORDER BY rr.round_number DESC LIMIT 1) AS active_revision_started_at,
+         (SELECT rr.target_minutes FROM task_revision_rounds rr
+           WHERE rr.task_id = t.id AND rr.completed_at IS NULL
+           ORDER BY rr.round_number DESC LIMIT 1) AS active_revision_target_minutes,
+         (SELECT MAX(0, CAST((unixepoch('now') - unixepoch(rr.started_at)) / 60 AS INTEGER))
+            FROM task_revision_rounds rr
+           WHERE rr.task_id = t.id AND rr.completed_at IS NULL
+           ORDER BY rr.round_number DESC LIMIT 1) AS active_revision_elapsed_minutes,
+         COALESCE((SELECT SUM(MAX(0, CAST((unixepoch(rr.completed_at) - unixepoch(rr.started_at)) / 60 AS INTEGER)))
+            FROM task_revision_rounds rr
+           WHERE rr.task_id = t.id AND rr.completed_at IS NOT NULL), 0) AS total_revision_minutes
   FROM tasks t
   JOIN content_items ci ON ci.id = t.content_item_id
   JOIN brands b ON b.id = ci.brand_id
@@ -272,13 +297,14 @@ export function createTask(input: {
   title: string;
   assigneeId: string | null;
   dueDate: string;
+  difficulty?: TaskDifficulty;
   priority?: TaskPriority;
 }): string {
   if (!input.dueDate) throw new Error("Teslim tarihi zorunlu.");
   const id = crypto.randomUUID();
   getDb()
     .prepare(
-      "INSERT INTO tasks (id, content_item_id, title, assignee_id, due_date, priority) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO tasks (id, content_item_id, title, assignee_id, due_date, difficulty, priority) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .run(
       id,
@@ -286,6 +312,7 @@ export function createTask(input: {
       input.title,
       input.assigneeId,
       input.dueDate,
+      input.difficulty ?? "Orta",
       input.priority ?? "Normal",
     );
   return id;
@@ -309,14 +336,15 @@ export function createNextOccurrence(task: Task, _today: string): string {
   const id = crypto.randomUUID();
   getDb()
     .prepare(
-      `INSERT INTO tasks (id, content_item_id, title, priority, assignee_id, due_date, notes, repeat_days)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, content_item_id, title, priority, difficulty, assignee_id, due_date, notes, repeat_days)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
       task.content_item_id,
       task.title,
       task.priority,
+      task.difficulty,
       task.assignee_id,
       d.toISOString().slice(0, 10),
       task.notes,
@@ -332,6 +360,24 @@ interface TaskStatusRow {
   due_date: string | null;
 }
 
+export function listArchivedTasks(): TaskWithContext[] {
+  return plainList<TaskWithContext>(
+    getDb()
+      .prepare(
+        `${WITH_CONTEXT_SELECT}
+         WHERE t.archived_at IS NOT NULL
+         ORDER BY t.archived_at DESC, b.name, t.title`,
+      )
+      .all(),
+  );
+}
+
+export function countArchivedTasks(): number {
+  return Number(
+    (getDb().prepare("SELECT COUNT(*) AS n FROM tasks WHERE archived_at IS NOT NULL").get() as { n: number }).n,
+  );
+}
+
 function applyTaskStatusChanges(
   tasks: TaskStatusRow[],
   status: TaskStatus,
@@ -342,6 +388,14 @@ function applyTaskStatusChanges(
     tasks.some((task) => task.origin === "guest" && task.due_date === null)
   ) {
     throw new Error("Guest görevi ilerletilmeden önce iç teslim tarihi atanmalı.");
+  }
+  if (status === "Yayinlandi") {
+    const activeRevision = getDb().prepare(
+      "SELECT 1 FROM task_revision_rounds WHERE task_id = ? AND completed_at IS NULL",
+    );
+    if (tasks.some((task) => activeRevision.get(task.id))) {
+      throw new Error("Görev yayınlanmadan önce aktif revize turu tamamlanmalı.");
+    }
   }
   const changed = tasks.filter((task) => task.status !== status);
   if (changed.length === 0) return 0;
@@ -402,12 +456,13 @@ export function updateTaskStatus(
   return applyTaskStatusChanges([task], status, actorId) > 0;
 }
 
-export function updateTaskPriority(id: string, priority: TaskPriority): void {
-  getDb()
+export function updateTaskPriority(id: string, priority: TaskPriority): boolean {
+  const result = getDb()
     .prepare(
-      "UPDATE tasks SET priority = ?, updated_at = datetime('now') WHERE id = ?",
+      "UPDATE tasks SET priority = ?, updated_at = datetime('now') WHERE id = ? AND priority <> ?",
     )
-    .run(priority, id);
+    .run(priority, id, priority);
+  return Number(result.changes) === 1;
 }
 
 export function updateTaskDueDate(id: string, dueDate: string): void {
@@ -417,7 +472,7 @@ export function updateTaskDueDate(id: string, dueDate: string): void {
     .run(dueDate, id);
 }
 
-export function updateTaskAssignee(id: string, assigneeId: string | null): void {
+export function updateTaskAssignee(id: string, assigneeId: string | null): boolean {
   const db = getDb();
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -426,13 +481,14 @@ export function updateTaskAssignee(id: string, assigneeId: string | null): void 
       | undefined;
     if (!current || current.assignee_id === assigneeId) {
       db.exec("COMMIT");
-      return;
+      return false;
     }
     db.prepare(
       "UPDATE tasks SET assignee_id = ?, updated_at = datetime('now') WHERE id = ?",
     ).run(assigneeId, id);
     db.prepare("DELETE FROM task_personal_targets WHERE task_id = ?").run(id);
     db.exec("COMMIT");
+    return true;
   } catch (error) {
     db.exec("ROLLBACK");
     throw error;
@@ -449,10 +505,11 @@ export function updateTaskDetails(input: {
   const db = getDb();
   db.exec("BEGIN IMMEDIATE");
   try {
-    db.prepare(
+    const result = db.prepare(
       "UPDATE tasks SET title = ?, due_date = ?, notes = ?, updated_at = datetime('now') WHERE id = ?",
     )
     .run(input.title, input.dueDate, input.notes, input.id);
+    if (Number(result.changes) !== 1) throw new Error("Görev bulunamadı.");
     const insertAttachment = db.prepare(
       "INSERT INTO task_attachments (id, task_id, file_path, original_name) VALUES (?, ?, ?, ?)",
     );
@@ -460,6 +517,105 @@ export function updateTaskDetails(input: {
       insertAttachment.run(crypto.randomUUID(), input.id, attachment.filePath, attachment.originalName);
     }
     db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function updateTaskDifficulty(id: string, difficulty: TaskDifficulty): boolean {
+  const result = getDb()
+    .prepare(
+      "UPDATE tasks SET difficulty = ?, updated_at = datetime('now') WHERE id = ? AND (difficulty IS NULL OR difficulty <> ?)",
+    )
+    .run(difficulty, id, difficulty);
+  return Number(result.changes) === 1;
+}
+
+export function listTaskRevisions(taskId: string): TaskRevisionRound[] {
+  return plainList<TaskRevisionRound>(
+    getDb()
+      .prepare(
+        `SELECT rr.*,
+                creator.name AS created_by_name,
+                completer.name AS completed_by_name,
+                MAX(0, CAST((unixepoch(COALESCE(rr.completed_at, 'now')) - unixepoch(rr.started_at)) / 60 AS INTEGER)) AS elapsed_minutes
+           FROM task_revision_rounds rr
+           LEFT JOIN people creator ON creator.id = rr.created_by
+           LEFT JOIN people completer ON completer.id = rr.completed_by
+          WHERE rr.task_id = ?
+          ORDER BY rr.round_number DESC`,
+      )
+      .all(taskId),
+  );
+}
+
+export function startTaskRevision(input: {
+  taskId: string;
+  targetMinutes: number;
+  note: string | null;
+  actorId: string;
+}): TaskRevisionRound {
+  if (!Number.isInteger(input.targetMinutes) || input.targetMinutes < 15 || input.targetMinutes > 10080) {
+    throw new Error("Revize hedef süresi 15 dakika ile 7 gün arasında olmalı.");
+  }
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const task = db
+      .prepare("SELECT status, archived_at, due_date FROM tasks WHERE id = ?")
+      .get(input.taskId) as {
+        status: TaskStatus;
+        archived_at: string | null;
+        due_date: string | null;
+      } | undefined;
+    if (!task) throw new Error("Görev bulunamadı.");
+    if (task.archived_at !== null) throw new Error("Arşivlenmiş görevde revize başlatılamaz.");
+    if (task.due_date === null) {
+      throw new Error("Revize başlamadan önce iç teslim tarihi atanmalı.");
+    }
+    if (task.status === "Yayinlandi") {
+      throw new Error("Revize başlatmadan önce görevi yeniden açın.");
+    }
+    const active = db
+      .prepare("SELECT 1 FROM task_revision_rounds WHERE task_id = ? AND completed_at IS NULL")
+      .get(input.taskId);
+    if (active) throw new Error("Bu görevde zaten aktif bir revize turu var.");
+    const next = db
+      .prepare("SELECT COALESCE(MAX(round_number), 0) + 1 AS n FROM task_revision_rounds WHERE task_id = ?")
+      .get(input.taskId) as { n: number };
+    const id = crypto.randomUUID();
+    db.prepare(
+      `INSERT INTO task_revision_rounds
+         (id, task_id, round_number, target_minutes, note, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(id, input.taskId, next.n, input.targetMinutes, input.note, input.actorId);
+    db.prepare("UPDATE tasks SET updated_at = datetime('now') WHERE id = ?").run(input.taskId);
+    db.exec("COMMIT");
+    return listTaskRevisions(input.taskId).find((round) => round.id === id)!;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function completeTaskRevision(revisionId: string, actorId: string): TaskRevisionRound {
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const current = db
+      .prepare("SELECT task_id, completed_at FROM task_revision_rounds WHERE id = ?")
+      .get(revisionId) as { task_id: string; completed_at: string | null } | undefined;
+    if (!current) throw new Error("Revize turu bulunamadı.");
+    if (current.completed_at !== null) throw new Error("Revize turu zaten tamamlandı.");
+    db.prepare(
+      `UPDATE task_revision_rounds
+          SET completed_at = datetime('now'), completed_by = ?, updated_at = datetime('now')
+        WHERE id = ?`,
+    ).run(actorId, revisionId);
+    db.prepare("UPDATE tasks SET updated_at = datetime('now') WHERE id = ?").run(current.task_id);
+    db.exec("COMMIT");
+    return listTaskRevisions(current.task_id).find((round) => round.id === revisionId)!;
   } catch (error) {
     db.exec("ROLLBACK");
     throw error;
@@ -504,7 +660,16 @@ export function sweepArchivablePublishedTasks(days = ARCHIVE_AFTER_DAYS): number
 // "Yayınlandı"dır, sadece panoda yeniden görünür (yanlış işaretlemeyi düzeltmek
 // için kullanıcı durumu ayrıca geri alır).
 export function setTaskArchived(id: string, archived: boolean): void {
-  getDb()
+  const db = getDb();
+  if (
+    archived &&
+    db.prepare(
+      "SELECT 1 FROM task_revision_rounds WHERE task_id = ? AND completed_at IS NULL",
+    ).get(id)
+  ) {
+    throw new Error("Görev arşivlenmeden önce aktif revize turu tamamlanmalı.");
+  }
+  db
     .prepare(
       `UPDATE tasks
           SET archived_at = CASE WHEN ? = 1 THEN datetime('now') ELSE NULL END,
@@ -542,18 +707,20 @@ export function bulkUpdateTaskStatus(
   return applyTaskStatusChanges(tasks, status, actorId);
 }
 
-export function bulkUpdateTaskPriority(ids: string[], priority: TaskPriority): void {
-  if (ids.length === 0) return;
+export function bulkUpdateTaskPriority(ids: string[], priority: TaskPriority): number {
+  if (ids.length === 0) return 0;
   const placeholders = ids.map(() => "?").join(", ");
-  getDb()
+  const result = getDb()
     .prepare(
-      `UPDATE tasks SET priority = ?, updated_at = datetime('now') WHERE id IN (${placeholders})`,
+      `UPDATE tasks SET priority = ?, updated_at = datetime('now')
+        WHERE id IN (${placeholders}) AND priority <> ?`,
     )
-    .run(priority, ...ids);
+    .run(priority, ...ids, priority);
+  return Number(result.changes);
 }
 
-export function bulkUpdateTaskAssignee(ids: string[], assigneeId: string | null): void {
-  if (ids.length === 0) return;
+export function bulkUpdateTaskAssignee(ids: string[], assigneeId: string | null): number {
+  if (ids.length === 0) return 0;
   const placeholders = ids.map(() => "?").join(", ");
   const db = getDb();
   db.exec("BEGIN IMMEDIATE");
@@ -566,7 +733,7 @@ export function bulkUpdateTaskAssignee(ids: string[], assigneeId: string | null)
       .map((task) => task.id);
     if (changedIds.length === 0) {
       db.exec("COMMIT");
-      return;
+      return 0;
     }
 
     const changedPlaceholders = changedIds.map(() => "?").join(", ");
@@ -578,14 +745,15 @@ export function bulkUpdateTaskAssignee(ids: string[], assigneeId: string | null)
       `DELETE FROM task_personal_targets WHERE task_id IN (${changedPlaceholders})`,
     ).run(...changedIds);
     db.exec("COMMIT");
+    return changedIds.length;
   } catch (error) {
     db.exec("ROLLBACK");
     throw error;
   }
 }
 
-export function bulkDeleteTasks(ids: string[]): void {
-  if (ids.length === 0) return;
+export function bulkDeleteTasks(ids: string[]): number {
+  if (ids.length === 0) return 0;
   const placeholders = ids.map(() => "?").join(", ");
-  getDb().prepare(`DELETE FROM tasks WHERE id IN (${placeholders})`).run(...ids);
+  return Number(getDb().prepare(`DELETE FROM tasks WHERE id IN (${placeholders})`).run(...ids).changes);
 }

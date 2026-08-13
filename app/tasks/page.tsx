@@ -11,7 +11,7 @@ import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
 import { listPersonalTaskTargets } from "@/lib/repositories/personalTargets";
 import { listActivePeople } from "@/lib/repositories/people";
-import { listAllTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
+import { countArchivedTasks, listAllTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
 import { listLegacyUndatedTasks, listUnplannedGuestTasks } from "@/lib/repositories/guestTasks";
 import { archiveCountdownBadge } from "@/lib/taskArchive";
 import { parseTaskFocus } from "@/lib/taskFocus";
@@ -37,9 +37,8 @@ export default async function AllTasksPage({
   // Okumadan ÖNCE süpür, yoksa süresi dolmuş işler bu render'da bir kez daha
   // arşivlenmemiş görünürdü.
   sweepArchivablePublishedTasks();
-  // Arşiv de indiriliyor (`true`): "Arşivi göster" düğmesi sayfadaki diğer
-  // filtreler gibi tamamen istemci tarafında çalışsın, tıklayınca sunucuya
-  // gidilmesin diye.
+  // Arşiv ayrı sayfada okunur; aktif görev ekranı yüzlerce eski kaydı istemciye
+  // taşımaz ve pano görünümünün tek "Yayınlandı" sütununa yığmaz.
   // Geri sayım rozeti SUNUCUDA iliştiriliyor (bkz. `archiveCountdownBadge`):
   // kart bileşeni istemci tarafında, orada `new Date()` çağırmak gün sınırında
   // hydration uyuşmazlığı üretebilirdi.
@@ -49,7 +48,7 @@ export default async function AllTasksPage({
       target.target_date,
     ]),
   );
-  const tasks = listAllTasks(true).map((task) => {
+  const tasks = listAllTasks().map((task) => {
     const countdown = archiveCountdownBadge(task);
     return {
       ...task,
@@ -59,6 +58,7 @@ export default async function AllTasksPage({
         : {}),
     };
   });
+  const archivedCount = countArchivedTasks();
   const brands = listBrands();
   const people = listActivePeople();
   const unplannedGuestTasks = listUnplannedGuestTasks();
@@ -107,6 +107,7 @@ export default async function AllTasksPage({
         focusWeekEnd={weekEnd}
         initialView={initialView}
         canDeleteTasks={me.is_manager === 1}
+        archivedCount={archivedCount}
       />
     </div>
   );

@@ -25,9 +25,10 @@ aynı yetkiyi yeniden doğrular. Yunus kendi yönetici rolünü kaldıramaz.
 - `lib/repositories/*` — tüm SQL burada (senkron, prepared statements). `brands.ts`'te
   `listBrandRelations()` (karşı markanın bilgisini normalize eder) ve `getBrandAudit()` da var.
 - `lib/actions/*` — `"use server"` mutasyonları; repo çağır + `revalidatePath("/", "layout")`.
-- `lib/identity.ts` — HttpOnly `inturlam_session` cookie'sindeki rastgele anahtarı
-  `auth_sessions` tablosunda doğrulayıp aktif kişiyi okur. Cookie'de ham kişi id'si
-  veya rol tutulmaz. `lib/actions/identity.ts` giriş/çıkış ve şifre değişimini yönetir;
+- `lib/identity.ts` — HttpOnly `inturlam_v03_session` cookie'sindeki rastgele anahtarı
+  `account_sessions` tablosunda doğrulayıp `TeamActor | GuestActor` kimliğini çözer.
+  Cookie'de ham kişi/marka id'si veya rol tutulmaz. `lib/actions/identity.ts`
+  ekip/guest girişini, çıkışı ve şifre değişimini yönetir;
   şifreler `lib/auth/password.ts` içinde salt'lı `scrypt` özeti olarak saklanır.
 - Sayfalar `app/`, client component'ler `components/`.
 - Seed: `db/seed.mts` (`npm run db:seed`) — 19 marka + kişiler + `brand_relations` + vault'taki
@@ -170,7 +171,8 @@ aynı yetkiyi yeniden doğrular. Yunus kendi yönetici rolünü kaldıramaz.
   build sırasında statik snapshot alınıp bayat veri servis edilir. (Layout `cookies()` okuduğu
   için zaten dinamik ama açıkça belirtiliyor.) `cacheComponents` KAPALI, bilinçli.
 - **async params:** Next 16'da `params` bir Promise → `const { x } = await params`.
-- **LAN:** `npm run start` → `next start -H 0.0.0.0 -p 3000`. Firewall notu README'de.
+- **LAN:** `npm run start` → `next start -H 0.0.0.0 -p 3001`. Port 3000 v02'ye aittir;
+  geliştirme sırasında iki sürümün runtime dosyaları paylaşılmaz. Firewall notu README'de.
 - **`ALTER TABLE ... RENAME` FK'leri kırar:** SQLite bir tabloyu yeniden adlandırınca, ona referans
   veren diğer tabloların FK metnini otomatik yeni isme günceller. Bir tabloyu CHECK kısıtlaması
   gibi bir nedenle yeniden kurman gerekirse ESKİ tabloyu asla rename etme — YENİ tabloyu geçici
@@ -284,8 +286,9 @@ kısa bilgilendirme metni.
 `brands.median_reel_views` / `cover_test_verdict` / `cover_test_note` / `first_action` sütunları
 duruyor, `db/seed.mts` hâlâ vault'tan dolduruyor. `listBrandRelations()` ve `getBrandAudit()`
 okuma yolu da yerinde ama artık ÇAĞRILMIYOR — geri istenirse birkaç satırlık iş. Buna bağlı
-`react-markdown` ve `@tailwindcss/typography` şu an boşta; kaldırmadan önce raporun geri
-gelmeyeceğinden emin ol. `updateBrand()` bu sütunları artık YAZMIYOR.
+Markdown raporu geri istenirse ilgili gösterim bağımlılıklarının yeniden eklenmesi gerekir;
+`react-markdown` ve `@tailwindcss/typography` artık pakette yok. `updateBrand()` bu sütunları
+artık YAZMIYOR.
 
 `brands.stats_updated_at`: takipçi/gönderi haftalık elle giriliyor; damga yalnızca sayılardan
 biri gerçekten değiştiğinde bugüne çekilir (yalnızca adı düzeltip kaydetmek tazelemez, yoksa

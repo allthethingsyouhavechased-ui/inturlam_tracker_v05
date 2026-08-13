@@ -144,6 +144,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   title           TEXT NOT NULL,
   status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Onaylandi','Yayinlandi')),
   priority        TEXT NOT NULL DEFAULT 'Normal' CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
+  -- NULL yalnızca migration öncesi görevler ve henüz ekipçe planlanmamış guest
+  -- talepleri içindir. Yeni ekip görevleri uygulama katmanında seçim ister.
+  difficulty      TEXT CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel')),
   assignee_id     TEXT REFERENCES people(id) ON DELETE SET NULL,
   due_date        TEXT,
   notes           TEXT,
@@ -250,6 +253,7 @@ CREATE TABLE IF NOT EXISTS task_template_items (
   template_id     TEXT NOT NULL REFERENCES task_templates(id) ON DELETE CASCADE,
   title           TEXT NOT NULL,
   priority        TEXT NOT NULL DEFAULT 'Normal' CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
+  difficulty      TEXT NOT NULL DEFAULT 'Orta' CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel')),
   assignee_id     TEXT REFERENCES people(id) ON DELETE SET NULL,
   -- İçeriğin target_date'ine göre gün kayması: -3 = teslimden 3 gün önce.
   -- Eski NULL kayıtlar uygulamada 0 (teslim günü) olarak yorumlanır.
@@ -282,6 +286,23 @@ CREATE TABLE IF NOT EXISTS task_attachments (
   file_path     TEXT NOT NULL,
   original_name TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Revize turu görev durumundan bağımsızdır: bir iş İncelemede veya Devam Ediyor
+-- durumundayken revize alabilir. Geçmiş append-only tutulur; sayaç elle ezilmez.
+CREATE TABLE IF NOT EXISTS task_revision_rounds (
+  id              TEXT PRIMARY KEY,
+  task_id         TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  round_number    INTEGER NOT NULL CHECK (round_number > 0),
+  target_minutes  INTEGER NOT NULL CHECK (target_minutes BETWEEN 15 AND 10080),
+  note            TEXT,
+  started_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  completed_at    TEXT,
+  created_by      TEXT REFERENCES people(id) ON DELETE SET NULL,
+  completed_by    TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (task_id, round_number)
 );
 
 -- Guest ile paylaşılan konuşmalar iç yorumlardan fiziksel olarak ayrıdır;
@@ -499,6 +520,7 @@ CREATE INDEX IF NOT EXISTS idx_content_items_assignee ON content_items(assignee_
 CREATE INDEX IF NOT EXISTS idx_tasks_content_item  ON tasks(content_item_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_assignee      ON tasks(assignee_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date      ON tasks(due_date);
+CREATE INDEX IF NOT EXISTS idx_tasks_difficulty    ON tasks(difficulty);
 CREATE INDEX IF NOT EXISTS idx_tasks_completed_at  ON tasks(completed_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_archived_at   ON tasks(archived_at);
 CREATE INDEX IF NOT EXISTS idx_client_requests_status
@@ -519,6 +541,10 @@ CREATE INDEX IF NOT EXISTS idx_personal_targets_person
   ON task_personal_targets(person_id, target_date);
 CREATE INDEX IF NOT EXISTS idx_task_status_events_task
   ON task_status_events(task_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_task_revision_rounds_task
+  ON task_revision_rounds(task_id, round_number DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_task_revision_rounds_active
+  ON task_revision_rounds(task_id) WHERE completed_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_comments_task       ON comments(task_id);
 CREATE INDEX IF NOT EXISTS idx_template_items_template ON task_template_items(template_id);
 CREATE INDEX IF NOT EXISTS idx_comment_attachments_comment ON comment_attachments(comment_id);

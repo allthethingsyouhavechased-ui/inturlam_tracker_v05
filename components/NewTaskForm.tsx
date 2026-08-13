@@ -2,7 +2,12 @@
 
 import { useRef, useState } from "react";
 import { createTaskAction } from "@/lib/actions/tasks";
-import { TASK_PRIORITIES, TASK_PRIORITY_LABEL } from "@/lib/constants";
+import {
+  TASK_DIFFICULTIES,
+  TASK_DIFFICULTY_LABEL,
+  TASK_PRIORITIES,
+  TASK_PRIORITY_LABEL,
+} from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { Person } from "@/lib/types";
 import SubmitButton from "./SubmitButton";
@@ -33,7 +38,7 @@ export default function NewTaskForm({
           setError(getActionErrorMessage(e));
         }
       }}
-      className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end"
+      className="grid gap-3 sm:grid-cols-2 sm:items-end xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto_auto]"
     >
       <input type="hidden" name="contentItemId" value={contentItemId} />
       <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -44,6 +49,16 @@ export default function NewTaskForm({
           placeholder="Örn. Çekim, Kurgu, Onay…"
           className={inputClass}
         />
+      </label>
+      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        Zorluk
+        <select name="difficulty" required className={inputClass} defaultValue="Orta">
+          {TASK_DIFFICULTIES.map((difficulty) => (
+            <option key={difficulty} value={difficulty}>
+              {TASK_DIFFICULTY_LABEL[difficulty]}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         Öncelik
@@ -75,7 +90,7 @@ export default function NewTaskForm({
         <input type="date" name="dueDate" required className={inputClass} />
       </label>
       <SubmitButton>Ekle</SubmitButton>
-      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400 sm:col-span-5">{error}</p>}
+      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400 sm:col-span-2 xl:col-span-6">{error}</p>}
     </form>
   );
 }

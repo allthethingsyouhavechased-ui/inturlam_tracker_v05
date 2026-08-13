@@ -85,23 +85,47 @@ export async function updateBrandAction(formData: FormData) {
   const keyFinding = cleanValue(formData.get("keyFinding"));
   if ((keyFinding?.length ?? 0) > 1000) throw new Error("Marka özeti en fazla 1000 karakter olabilir.");
   const cluster = await resolveClusterFromForm(formData);
+  const instagramHandle = cleanValue(formData.get("instagramHandle"));
+  const followerCount = cleanInt(formData.get("followerCount"));
+  const postCount = cleanInt(formData.get("postCount"));
+  const tier = cleanValue(formData.get("tier"));
+  const monthlyShootAllowance = cleanNonNegativeInt(
+    formData.get("monthlyShootAllowance"),
+    "Aylık çekim hakkı",
+  );
+  const annualShootAllowance = cleanNonNegativeInt(
+    formData.get("annualShootAllowance"),
+    "Yıllık çekim hakkı",
+  );
 
   const update = (logoPath?: string) => updateBrand({
     id,
     name,
     cluster,
-    instagramHandle: cleanValue(formData.get("instagramHandle")),
-    followerCount: cleanInt(formData.get("followerCount")),
-    postCount: cleanInt(formData.get("postCount")),
+    instagramHandle,
+    followerCount,
+    postCount,
     keyFinding,
-    tier: cleanValue(formData.get("tier")),
-    monthlyShootAllowance: cleanNonNegativeInt(formData.get("monthlyShootAllowance"), "Aylık çekim hakkı"),
-    annualShootAllowance: cleanNonNegativeInt(formData.get("annualShootAllowance"), "Yıllık çekim hakkı"),
+    tier,
+    monthlyShootAllowance,
+    annualShootAllowance,
     today: todayISO(),
     logoPath,
   });
 
   const logo = extractLogoFile(formData);
+  const changed =
+    logo !== null ||
+    current.name !== name ||
+    current.cluster !== cluster ||
+    current.instagram_handle !== instagramHandle ||
+    current.follower_count !== followerCount ||
+    current.post_count !== postCount ||
+    current.key_finding !== keyFinding ||
+    current.tier !== tier ||
+    current.monthly_shoot_allowance !== monthlyShootAllowance ||
+    current.annual_shoot_allowance !== annualShootAllowance;
+  if (!changed) return;
   if (logo) {
     await replaceBrandLogo(logo, current.logo_path, (logoPath) => update(logoPath));
   } else update();
@@ -120,13 +144,14 @@ export async function updateBrandAction(formData: FormData) {
 export async function archiveBrandAction(brandId: string) {
   await requireManager();
   const brand = getBrand(brandId);
-  setBrandArchived(brandId, true);
+  if (!brand) throw new Error("Marka bulunamadı.");
+  if (brand.archived === 1 || !setBrandArchived(brandId, true)) return;
   await recordActivity({
     action: "brand.archive",
     entityType: "brand",
     entityId: brandId,
     brandId,
-    summary: `“${brand?.name ?? "Marka"}” markasını arşivledi`,
+    summary: `“${brand.name}” markasını arşivledi`,
   });
   revalidatePath("/", "layout");
 }
@@ -138,12 +163,12 @@ export async function archiveBrandAction(brandId: string) {
 export async function deleteBrandAction(brandId: string) {
   await requireManager();
   const brand = getBrand(brandId);
-  if (!brand) return;
+  if (!brand) throw new Error("Marka bulunamadı.");
   if (brand.archived !== 1) {
     throw new Error("Önce markayı arşivle, sonra sil.");
   }
   const uploadPaths = listUploadPathsForBrand(brandId);
-  deleteBrand(brandId);
+  if (!deleteBrand(brandId)) throw new Error("Marka bulunamadı.");
   await deleteUploadedFiles(uploadPaths);
   if (brand.logo_path) {
     await deleteUploadedFile(brand.logo_path);
@@ -161,13 +186,14 @@ export async function deleteBrandAction(brandId: string) {
 export async function unarchiveBrandAction(brandId: string) {
   await requireManager();
   const brand = getBrand(brandId);
-  setBrandArchived(brandId, false);
+  if (!brand) throw new Error("Marka bulunamadı.");
+  if (brand.archived !== 1 || !setBrandArchived(brandId, false)) return;
   await recordActivity({
     action: "brand.unarchive",
     entityType: "brand",
     entityId: brandId,
     brandId,
-    summary: `“${brand?.name ?? "Marka"}” markasını arşivden çıkardı`,
+    summary: `“${brand.name}” markasını arşivden çıkardı`,
   });
   revalidatePath("/", "layout");
 }

@@ -15,3 +15,9 @@ export function assertCanManageRoles(person: RoleActor): void {
     throw new Error("Yönetici yetkisini yalnızca Yunus Emre değiştirebilir.");
   }
 }
+
+export function assertCanDeactivatePerson(personId: string): void {
+  if (personId === ROLE_ADMIN_PERSON_ID) {
+    throw new Error("Sistem yöneticisi pasife alınamaz.");
+  }
+}

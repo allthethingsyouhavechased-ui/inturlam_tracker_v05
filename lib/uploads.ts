@@ -38,7 +38,7 @@ export function validateImageFiles(images: File[]): void {
   }
 }
 
-// `subdir` public/uploads altında ayrı bir klasör (ör. "comments", "tasks") —
+// `subdir` runtime `data/uploads` kökü altında ayrı bir klasör (ör. "comments", "tasks") —
 // farklı varlık türlerinin ekleri karışmasın diye.
 export async function saveImageFiles(
   images: File[],

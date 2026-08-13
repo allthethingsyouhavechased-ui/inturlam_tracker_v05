@@ -44,10 +44,12 @@ export function listArchivedContentByBrand(brandId: string): ContentItemWithCoun
   );
 }
 
-export function setContentArchived(id: string, archived: boolean): void {
-  getDb()
+export function setContentArchived(id: string, archived: boolean): boolean {
+  const value = archived ? 1 : 0;
+  const result = getDb()
     .prepare("UPDATE content_items SET archived = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(archived ? 1 : 0, id);
+    .run(value, id);
+  return Number(result.changes) === 1;
 }
 
 export interface ContentSummary {
@@ -104,12 +106,13 @@ export function createContentItem(input: {
   return id;
 }
 
-export function updateContentStatus(id: string, status: ContentStatus): void {
-  getDb()
+export function updateContentStatus(id: string, status: ContentStatus): boolean {
+  const result = getDb()
     .prepare(
-      "UPDATE content_items SET status = ?, updated_at = datetime('now') WHERE id = ?",
+      "UPDATE content_items SET status = ?, updated_at = datetime('now') WHERE id = ? AND status <> ?",
     )
-    .run(status, id);
+    .run(status, id, status);
+  return Number(result.changes) === 1;
 }
 
 export function updateContentItem(input: {
@@ -118,16 +121,17 @@ export function updateContentItem(input: {
   type: ContentType;
   targetDate: string | null;
   assigneeId: string | null;
-}): void {
-  getDb()
+}): boolean {
+  const result = getDb()
     .prepare(
       `UPDATE content_items
        SET title = ?, type = ?, target_date = ?, assignee_id = ?, updated_at = datetime('now')
        WHERE id = ?`,
     )
     .run(input.title, input.type, input.targetDate, input.assigneeId, input.id);
+  return Number(result.changes) === 1;
 }
 
-export function deleteContentItem(id: string): void {
-  getDb().prepare("DELETE FROM content_items WHERE id = ?").run(id);
+export function deleteContentItem(id: string): boolean {
+  return Number(getDb().prepare("DELETE FROM content_items WHERE id = ?").run(id).changes) === 1;
 }

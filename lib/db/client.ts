@@ -47,6 +47,7 @@ function createConnection(): DatabaseSync {
   migratePeopleDepartmentIfNeeded(db);
   migratePeopleAuthIfNeeded(db);
   migrateV03TaskColumnsIfNeeded(db);
+  migrateTaskTemplateDifficultyIfNeeded(db);
   migrateV03AccountsIfNeeded(db);
   migrateV03NotificationColumnsIfNeeded(db);
   migrateCalendarEventColorIfNeeded(db);
@@ -88,6 +89,7 @@ function migrateV03TaskColumnsIfNeeded(db: DatabaseSync): void {
   const columns = db.prepare(`PRAGMA table_info(tasks)`).all() as { name: string }[];
   const additions: ReadonlyArray<readonly [string, string]> = [
     ["weight_points", "INTEGER NOT NULL DEFAULT 1 CHECK (weight_points BETWEEN 1 AND 100)"],
+    ["difficulty", "TEXT CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel'))"],
     ["origin", "TEXT NOT NULL DEFAULT 'team' CHECK (origin IN ('team','guest'))"],
     ["requested_date", "TEXT"],
     ["guest_brief", "TEXT"],
@@ -97,6 +99,18 @@ function migrateV03TaskColumnsIfNeeded(db: DatabaseSync): void {
     if (!columns.some((column) => column.name === name)) {
       db.exec(`ALTER TABLE tasks ADD COLUMN ${name} ${definition}`);
     }
+  }
+}
+
+function migrateTaskTemplateDifficultyIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_template_items'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(task_template_items)`).all() as { name: string }[];
+  if (!columns.some((column) => column.name === "difficulty")) {
+    db.exec(`ALTER TABLE task_template_items ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'Orta'
+      CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel'))`);
   }
 }
 
@@ -349,7 +363,7 @@ const DEFAULT_TEMPLATES: {
   id: string;
   name: string;
   contentType: string | null;
-  items: { title: string; priority: string; offset: number | null }[];
+  items: { title: string; priority: string; difficulty?: string; offset: number | null }[];
 }[] = [
   {
     id: "reel-akisi",
@@ -399,13 +413,13 @@ function seedTaskTemplatesIfNeeded(db: DatabaseSync): void {
   );
   const insertItem = db.prepare(
     `INSERT OR IGNORE INTO task_template_items
-       (id, template_id, title, priority, due_offset_days, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+       (id, template_id, title, priority, difficulty, due_offset_days, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
   DEFAULT_TEMPLATES.forEach((t, i) => {
     insertTemplate.run(t.id, t.name, t.contentType, (i + 1) * 10);
     t.items.forEach((item, j) => {
-      insertItem.run(`${t.id}-${j + 1}`, t.id, item.title, item.priority, item.offset, (j + 1) * 10);
+      insertItem.run(`${t.id}-${j + 1}`, t.id, item.title, item.priority, item.difficulty ?? "Orta", item.offset, (j + 1) * 10);
     });
   });
 }

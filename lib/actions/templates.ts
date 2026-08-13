@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
-import { CONTENT_TYPES, TASK_PRIORITIES } from "@/lib/constants";
+import { activeAssigneeId } from "@/lib/assignees";
+import { CONTENT_TYPES, TASK_DIFFICULTIES, TASK_PRIORITIES } from "@/lib/constants";
 import { requireManager, requireSession } from "@/lib/identity";
 import { getContentItem } from "@/lib/repositories/content";
 import {
@@ -14,7 +15,7 @@ import {
   getTemplate,
   renameTemplate,
 } from "@/lib/repositories/templates";
-import type { ContentType, TaskPriority } from "@/lib/types";
+import type { ContentType, TaskDifficulty, TaskPriority } from "@/lib/types";
 
 function readContentType(value: FormDataEntryValue | null): ContentType | null {
   const s = String(value ?? "").trim();
@@ -81,6 +82,8 @@ export async function addTemplateItemAction(formData: FormData): Promise<void> {
 
   const priority = String(formData.get("priority") ?? "Normal") as TaskPriority;
   if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
+  const difficulty = String(formData.get("difficulty") ?? "Orta") as TaskDifficulty;
+  if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Geçersiz zorluk derecesi.");
 
   // Boş bırakılırsa teslim günü (0) kullanılır. Böylece şablondan açılan ekip
   // görevleri de zorunlu teslim tarihi kuralını ihlal etmez.
@@ -91,7 +94,7 @@ export async function addTemplateItemAction(formData: FormData): Promise<void> {
     if (!Number.isInteger(dueOffsetDays)) throw new Error("Gün kayması tam sayı olmalı.");
   }
 
-  addTemplateItem({ templateId, title, priority, dueOffsetDays });
+  addTemplateItem({ templateId, title, priority, difficulty, dueOffsetDays });
   revalidatePath("/", "layout");
 }
 
@@ -120,7 +123,7 @@ export async function applyTemplateAction(
   const count = applyTemplateToContent({
     templateId,
     contentItemId,
-    defaultAssigneeId: assigneeId,
+    defaultAssigneeId: activeAssigneeId(assigneeId),
   });
 
   await recordActivity({

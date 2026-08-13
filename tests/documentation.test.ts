@@ -44,6 +44,15 @@ describe("v03 teknik dokümantasyonu", () => {
     assert.doesNotMatch(office, /npm run db:clear-work/);
     assert.doesNotMatch(office, /public\/uploads/);
   });
+
+  it("geliştirici notları v03 kimlik, runtime ve port sözleşmesini güncel tutar", () => {
+    const claude = source("CLAUDE.md");
+    assert.match(claude, /inturlam_v03_session/);
+    assert.match(claude, /account_sessions/);
+    assert.match(claude, /TeamActor \| GuestActor/);
+    assert.match(claude, /next start -H 0\.0\.0\.0 -p 3001/);
+    assert.doesNotMatch(claude, /next start -H 0\.0\.0\.0 -p 3000/);
+  });
 });
 
 describe("v03 kullanım kılavuzu", () => {

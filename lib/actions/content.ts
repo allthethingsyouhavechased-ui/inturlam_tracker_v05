@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordActivity } from "@/lib/activity";
+import { activeAssigneeId } from "@/lib/assignees";
 import {
   CONTENT_STATUS_LABEL,
   CONTENT_STATUSES,
@@ -44,13 +45,13 @@ export async function createContentItemAction(formData: FormData): Promise<strin
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "") as ContentType;
   const targetDate = cleanDate(formData.get("targetDate"));
-  const assigneeId = cleanValue(formData.get("assigneeId"));
   const templateId = cleanValue(formData.get("templateId"));
 
   if (!brandId) throw new Error("Marka bulunamadı.");
   if (!title) throw new Error("Başlık zorunlu.");
   if (title.length > 200) throw new Error("Başlık en fazla 200 karakter olabilir.");
   if (!CONTENT_TYPES.includes(type)) throw new Error("Geçersiz içerik türü.");
+  const assigneeId = activeAssigneeId(cleanValue(formData.get("assigneeId")));
 
   const template = templateId ? getTemplate(templateId) : null;
   if (templateId && !template) throw new Error("Şablon bulunamadı.");
@@ -116,13 +117,14 @@ export async function setContentStatusAction(
     throw new Error("Geçersiz durum.");
   }
   const content = getContentItem(contentId);
-  updateContentStatus(contentId, status);
+  if (!content) throw new Error("İçerik bulunamadı.");
+  if (!updateContentStatus(contentId, status)) return;
   await recordActivity({
     action: "content.status",
     entityType: "content",
     entityId: contentId,
-    brandId: content?.brand_id ?? null,
-    summary: `“${content?.title ?? "İçerik"}” durumunu ${CONTENT_STATUS_LABEL[status]} yaptı`,
+    brandId: content.brand_id,
+    summary: `“${content.title}” durumunu ${CONTENT_STATUS_LABEL[status]} yaptı`,
   });
   revalidatePath("/", "layout");
 }
@@ -139,19 +141,29 @@ export async function updateContentItemAction(formData: FormData) {
   if (!CONTENT_TYPES.includes(type)) throw new Error("Geçersiz içerik türü.");
 
   const before = getContentItem(id);
-  updateContentItem({
+  if (!before) throw new Error("İçerik bulunamadı.");
+  const targetDate = cleanDate(formData.get("targetDate"));
+  const assigneeId = activeAssigneeId(cleanValue(formData.get("assigneeId")));
+  if (
+    before.title === title &&
+    before.type === type &&
+    before.target_date === targetDate &&
+    before.assignee_id === assigneeId
+  ) return;
+  const updated = updateContentItem({
     id,
     title,
     type,
-    targetDate: cleanDate(formData.get("targetDate")),
-    assigneeId: cleanValue(formData.get("assigneeId")),
+    targetDate,
+    assigneeId,
   });
+  if (!updated) throw new Error("İçerik bulunamadı.");
 
   await recordActivity({
     action: "content.update",
     entityType: "content",
     entityId: id,
-    brandId: before?.brand_id ?? null,
+    brandId: before.brand_id,
     summary: `“${title}” içeriğini güncelledi`,
   });
 
@@ -161,13 +173,14 @@ export async function updateContentItemAction(formData: FormData) {
 export async function archiveContentItemAction(contentId: string) {
   await requireSession();
   const content = getContentItem(contentId);
-  setContentArchived(contentId, true);
+  if (!content) throw new Error("İçerik bulunamadı.");
+  if (content.archived === 1 || !setContentArchived(contentId, true)) return;
   await recordActivity({
     action: "content.archive",
     entityType: "content",
     entityId: contentId,
-    brandId: content?.brand_id ?? null,
-    summary: `“${content?.title ?? "İçerik"}” içeriğini arşivledi`,
+    brandId: content.brand_id,
+    summary: `“${content.title}” içeriğini arşivledi`,
   });
   revalidatePath("/", "layout");
 }
@@ -175,13 +188,14 @@ export async function archiveContentItemAction(contentId: string) {
 export async function unarchiveContentItemAction(contentId: string) {
   await requireSession();
   const content = getContentItem(contentId);
-  setContentArchived(contentId, false);
+  if (!content) throw new Error("İçerik bulunamadı.");
+  if (content.archived !== 1 || !setContentArchived(contentId, false)) return;
   await recordActivity({
     action: "content.unarchive",
     entityType: "content",
     entityId: contentId,
-    brandId: content?.brand_id ?? null,
-    summary: `“${content?.title ?? "İçerik"}” içeriğini arşivden çıkardı`,
+    brandId: content.brand_id,
+    summary: `“${content.title}” içeriğini arşivden çıkardı`,
   });
   revalidatePath("/", "layout");
 }
@@ -189,19 +203,17 @@ export async function unarchiveContentItemAction(contentId: string) {
 export async function deleteContentItemAction(contentId: string) {
   await requireManager();
   const content = getContentItem(contentId);
+  if (!content) throw new Error("İçerik bulunamadı.");
   const uploadPaths = listUploadPathsForContent(contentId);
-  deleteContentItem(contentId);
+  if (!deleteContentItem(contentId)) throw new Error("İçerik bulunamadı.");
   await deleteUploadedFiles(uploadPaths);
   await recordActivity({
     action: "content.delete",
     entityType: "content",
     entityId: null,
-    brandId: content?.brand_id ?? null,
-    summary: `“${content?.title ?? "İçerik"}” içeriğini sildi`,
+    brandId: content.brand_id,
+    summary: `“${content.title}” içeriğini sildi`,
   });
   revalidatePath("/", "layout");
-  if (content) {
-    redirect(`/brands/${content.brand_id}`);
-  }
-  redirect("/");
+  redirect(`/brands/${content.brand_id}`);
 }

@@ -11,6 +11,9 @@ import {
 import {
   CONTENT_TYPE_LABEL,
   CONTENT_TYPES,
+  TASK_DIFFICULTIES,
+  TASK_DIFFICULTY_BADGE,
+  TASK_DIFFICULTY_LABEL,
   TASK_PRIORITIES,
   TASK_PRIORITY_BADGE,
   TASK_PRIORITY_LABEL,
@@ -143,6 +146,9 @@ function TemplateCard({
             >
               {TASK_PRIORITY_LABEL[item.priority]}
             </span>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TASK_DIFFICULTY_BADGE[item.difficulty]}`}>
+              {TASK_DIFFICULTY_LABEL[item.difficulty]}
+            </span>
             <span className="w-28 shrink-0 text-right text-xs text-zinc-500 dark:text-zinc-400">
               {offsetLabel(item.due_offset_days)}
             </span>
@@ -186,6 +192,14 @@ function TemplateCard({
             placeholder="Örn. Kapak görseli"
             className={inputClass}
           />
+        </label>
+        <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          Zorluk
+          <select name="difficulty" defaultValue="Orta" className={inputClass}>
+            {TASK_DIFFICULTIES.map((value) => (
+              <option key={value} value={value}>{TASK_DIFFICULTY_LABEL[value]}</option>
+            ))}
+          </select>
         </label>
         <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
           Öncelik

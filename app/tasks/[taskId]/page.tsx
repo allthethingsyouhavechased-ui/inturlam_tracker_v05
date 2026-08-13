@@ -10,7 +10,9 @@ import DeleteTaskButton from "@/components/DeleteTaskButton";
 import SubmitButton from "@/components/SubmitButton";
 import TaskNotesAttachments from "@/components/TaskNotesAttachments";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
+import TaskDifficultySelect from "@/components/TaskDifficultySelect";
 import TaskRepeatSelect from "@/components/TaskRepeatSelect";
+import TaskRevisionPanel from "@/components/TaskRevisionPanel";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskWeightSelect from "@/components/TaskWeightSelect";
 import PageHeader from "@/components/ui/PageHeader";
@@ -25,7 +27,7 @@ import { listCommentsByTask } from "@/lib/repositories/comments";
 import { getClientRequestByTask } from "@/lib/repositories/clientRequests";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listAttachmentsByTask } from "@/lib/repositories/taskAttachments";
-import { getTask } from "@/lib/repositories/tasks";
+import { getTask, listTaskRevisions } from "@/lib/repositories/tasks";
 import { listSharedAttachments, listSharedComments } from "@/lib/repositories/guestTasks";
 import { markTaskNotificationsReadForPerson } from "@/lib/repositories/notifications";
 import { daysUntilArchive } from "@/lib/taskArchive";
@@ -49,6 +51,7 @@ export default async function TaskPage({
   const comments = listCommentsByTask(taskId);
   const activity = listActivityForEntity("task", taskId);
   const attachments = listAttachmentsByTask(taskId);
+  const revisionRounds = listTaskRevisions(taskId);
   const sharedComments = task.origin === "guest" ? listSharedComments(taskId) : [];
   const sharedAttachments = task.origin === "guest" ? listSharedAttachments(taskId) : [];
   const sourceRequest = canReviewClientRequests(me)
@@ -134,6 +137,13 @@ export default async function TaskPage({
             </div>
           </form>
 
+          <TaskRevisionPanel
+            taskId={task.id}
+            status={task.status}
+            archived={task.archived_at !== null}
+            rounds={revisionRounds}
+          />
+
           <section className="rounded-xl border border-border-default bg-surface">
             <div className="border-b border-border-subtle px-4 py-3 sm:px-5">
               <h2 className="text-sm font-semibold text-foreground">Yorumlar <span className="font-normal text-muted">· {comments.length}</span></h2>
@@ -163,6 +173,7 @@ export default async function TaskPage({
               <label className="grid gap-1.5 text-xs font-medium text-muted">Durum<TaskStatusSelect taskId={task.id} status={task.status} locked={task.origin === "guest" && !task.due_date} />{task.origin === "guest" && !task.due_date && <span className="text-[10px] leading-4 text-amber-500">Durumu ilerletmek için önce iç teslim tarihini planlayın.</span>}</label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Atanan<AssigneeSelect taskId={task.id} assigneeId={task.assignee_id} people={people} /></label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Öncelik<TaskPrioritySelect taskId={task.id} priority={task.priority} /></label>
+              <label className="grid gap-1.5 text-xs font-medium text-muted">Zorluk<TaskDifficultySelect taskId={task.id} difficulty={task.difficulty} /></label>
               {me.is_manager === 1 && <label className="grid gap-1.5 text-xs font-medium text-muted">Ağırlık puanı<TaskWeightSelect taskId={task.id} weight={task.weight_points} /></label>}
               <div className="grid gap-1.5 text-xs font-medium text-muted"><span>Tekrar</span><TaskRepeatSelect taskId={task.id} repeatDays={task.repeat_days} /></div>
             </div>

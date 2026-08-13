@@ -95,14 +95,16 @@ export function updateBrand(input: {
   );
 }
 
-export function deleteBrand(id: string): void {
-  getDb().prepare("DELETE FROM brands WHERE id = ?").run(id);
+export function deleteBrand(id: string): boolean {
+  return Number(getDb().prepare("DELETE FROM brands WHERE id = ?").run(id).changes) === 1;
 }
 
-export function setBrandArchived(id: string, archived: boolean): void {
-  getDb()
+export function setBrandArchived(id: string, archived: boolean): boolean {
+  const value = archived ? 1 : 0;
+  const result = getDb()
     .prepare("UPDATE brands SET archived = ? WHERE id = ?")
-    .run(archived ? 1 : 0, id);
+    .run(value, id);
+  return Number(result.changes) === 1;
 }
 
 export function listBrandsWithOpenCounts(): BrandWithCount[] {

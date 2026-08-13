@@ -42,6 +42,7 @@ export default function HomeBrandProgress({
   portfolioBrands,
   portfolioProgress,
   portfolioStatusCounts,
+  personalProgress,
 }: {
   month: string;
   personalBrands: PersonalBrandProgressRow[];
@@ -49,12 +50,20 @@ export default function HomeBrandProgress({
   portfolioBrands: BrandMonthlyProgressRow[];
   portfolioProgress: MonthlyProgress;
   portfolioStatusCounts: Record<TaskStatus, number>;
+  personalProgress: MonthlyProgress;
 }) {
   const plannedBrandCount = portfolioBrands.filter((brand) => brand.progress.percent !== null).length;
   const statuses: TaskStatus[] = ["Beklemede", "DevamEdiyor", "Incelemede", "Onaylandi", "Yayinlandi"];
 
   return (
     <div className="space-y-5">
+      <section aria-label="Aylık analiz özeti" className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
+        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">BENİM AYLIK İLERLEMEM</p><p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{personalProgress.percent === null ? "Plan yok" : `%${personalProgress.percent}`}</p><Link href={`/panom/katkim?month=${month}`} className="mt-1 inline-flex text-[10px] font-semibold text-brand-600 hover:underline">Katkı dökümünü aç</Link></div>
+        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">ÜZERİMDEKİ MARKALAR</p><p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{assignedBrandsProgress.percent === null ? "Plan yok" : `%${assignedBrandsProgress.percent}`}</p><Link href={`/panom/markalar?month=${month}`} className="mt-1 inline-flex text-[10px] font-semibold text-brand-600 hover:underline">Marka analizini aç</Link></div>
+        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">PORTFÖY İLERLEMESİ</p><p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{portfolioProgress.percent === null ? "Plan yok" : `%${portfolioProgress.percent}`}</p><p className="mt-1 text-[10px] text-muted">{portfolioProgress.task_count} planlı görev</p></div>
+        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">PLANLI MARKA</p><p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">{plannedBrandCount}<span className="text-sm font-medium text-muted"> / {portfolioBrands.length}</span></p><p className="mt-1 text-[10px] text-muted">Bu ay işi tanımlı marka</p></div>
+      </section>
+
       <section aria-labelledby="monthly-flow-title" className="grid overflow-hidden rounded-xl border border-border-default bg-surface sm:grid-cols-2 xl:grid-cols-[minmax(15rem,1.25fr)_repeat(5,minmax(7rem,0.75fr))]">
         <div className="border-b border-border-subtle px-4 py-3.5 sm:col-span-2 sm:px-5 xl:col-span-1 xl:border-b-0 xl:border-r">
           <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">AYLIK ÜRETİM AKIŞI</p>

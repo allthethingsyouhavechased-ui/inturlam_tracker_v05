@@ -1,6 +1,7 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import type {
   ContentType,
+  TaskDifficulty,
   TaskPriority,
   TaskTemplate,
   TaskTemplateItem,
@@ -81,6 +82,7 @@ export function addTemplateItem(input: {
   templateId: string;
   title: string;
   priority: TaskPriority;
+  difficulty?: TaskDifficulty;
   dueOffsetDays: number | null;
 }): string {
   const db = getDb();
@@ -92,13 +94,14 @@ export function addTemplateItem(input: {
   )!;
   db.prepare(
     `INSERT INTO task_template_items
-       (id, template_id, title, priority, due_offset_days, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+       (id, template_id, title, priority, difficulty, due_offset_days, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     input.templateId,
     input.title,
     input.priority,
+    input.difficulty ?? "Orta",
     input.dueOffsetDays,
     (maxOrder ?? 0) + 10,
   );
@@ -129,8 +132,8 @@ export function applyTemplateToContent(input: {
   if (!content.target_date) throw new Error("Şablonu uygulamadan önce içerik hedef tarihini belirleyin.");
 
   const insert = db.prepare(
-    `INSERT INTO tasks (id, content_item_id, title, priority, assignee_id, due_date)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tasks (id, content_item_id, title, priority, difficulty, assignee_id, due_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
 
   db.exec("BEGIN");
@@ -141,6 +144,7 @@ export function applyTemplateToContent(input: {
         input.contentItemId,
         item.title,
         item.priority,
+        item.difficulty,
         item.assignee_id ?? input.defaultAssigneeId,
         shiftDate(content.target_date, item.due_offset_days ?? 0),
       );

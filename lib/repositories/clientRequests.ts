@@ -5,6 +5,7 @@ import type {
   ClientRequestAttachment,
   ClientRequestComment,
   ContentType,
+  TaskDifficulty,
   TaskPriority,
 } from "@/lib/types";
 
@@ -314,6 +315,7 @@ export interface ClientRequestReviewInput {
   department: DepartmentId;
   assigneeId: string;
   priority: TaskPriority;
+  difficulty?: TaskDifficulty;
   dueDate: string | null;
 }
 
@@ -386,13 +388,14 @@ export function approveClientRequest(
     );
     db.prepare(
       `INSERT INTO tasks
-         (id, content_item_id, title, priority, assignee_id, due_date, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (id, content_item_id, title, priority, difficulty, assignee_id, due_date, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       taskId,
       contentItemId,
       request.title,
       input.priority,
+      input.difficulty ?? "Orta",
       input.assigneeId,
       input.dueDate,
       taskNotes(request),

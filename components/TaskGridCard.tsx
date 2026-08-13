@@ -6,11 +6,14 @@ import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
 import Icon from "@/components/ui/Icon";
 import {
   CONTENT_TYPE_LABEL,
+  TASK_DIFFICULTY_BADGE,
+  TASK_DIFFICULTY_LABEL,
   TASK_PRIORITY_BADGE,
   TASK_PRIORITY_LABEL,
 } from "@/lib/constants";
 import { formatDateShort, isOverdue } from "@/lib/date";
 import type { TaskCardBadge, TaskPriority, TaskWithContext } from "@/lib/types";
+import { formatRevisionDuration, isRevisionOverTarget } from "@/lib/taskMetadata";
 
 export type { TaskCardBadge };
 
@@ -69,6 +72,28 @@ export default function TaskGridCard({
             </span>
           ))}
           </>
+        )}
+        {task.difficulty && (
+          <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold tracking-wide ${TASK_DIFFICULTY_BADGE[task.difficulty]}`}>
+            {TASK_DIFFICULTY_LABEL[task.difficulty].toLocaleUpperCase("tr-TR")}
+          </span>
+        )}
+        {task.revision_count > 0 && (
+          <span
+            title={task.active_revision_id ? "Aktif revize turu" : "Tamamlanan revize turları"}
+            className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold tracking-wide ${
+              isRevisionOverTarget(task.active_revision_elapsed_minutes, task.active_revision_target_minutes)
+                ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200"
+                : task.active_revision_id
+                  ? "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+                  : "bg-surface-muted text-secondary"
+            }`}
+          >
+            R{task.revision_count}
+            {task.active_revision_id && task.active_revision_elapsed_minutes !== null
+              ? ` · ${formatRevisionDuration(task.active_revision_elapsed_minutes)}`
+              : ""}
+          </span>
         )}
       </div>
 

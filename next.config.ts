@@ -17,6 +17,9 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Canlı 3001 sürecinin kullandığı `.next` klasörüne dokunmadan doğrulama
+  // build'i alabilmek için yalnızca açıkça verildiğinde ayrı çıktı kökü kullan.
+  distDir: process.env.INTURLAM_NEXT_DIST_DIR?.trim() || ".next",
   turbopack: {
     root: process.cwd(),
   },

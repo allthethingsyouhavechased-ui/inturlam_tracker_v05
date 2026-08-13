@@ -7,7 +7,7 @@ import {
   rejectClientRequestAction,
   updateClientRequestReviewAction,
 } from "@/lib/actions/clientRequests";
-import { TASK_PRIORITIES, TASK_PRIORITY_LABEL } from "@/lib/constants";
+import { TASK_DIFFICULTIES, TASK_DIFFICULTY_LABEL, TASK_PRIORITIES, TASK_PRIORITY_LABEL } from "@/lib/constants";
 import { DEPARTMENTS, type DepartmentId } from "@/lib/departments";
 import type { Person, TaskPriority } from "@/lib/types";
 import Button, { buttonClass } from "@/components/ui/Button";
@@ -171,6 +171,14 @@ export default function RequestReviewForm({
           <label className="grid gap-1.5 text-xs font-medium text-secondary">
             Hedef teslim
             <Input name="dueDate" type="date" required defaultValue={dueDate ?? ""} />
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-secondary">
+            Zorluk
+            <Select name="difficulty" defaultValue="Orta">
+              {TASK_DIFFICULTIES.map((option) => (
+                <option key={option} value={option}>{TASK_DIFFICULTY_LABEL[option]}</option>
+              ))}
+            </Select>
           </label>
         </div>
         <ReviewButtons assigneeName={selectedAssigneeName} />
