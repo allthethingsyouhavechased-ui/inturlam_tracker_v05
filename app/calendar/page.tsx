@@ -1,10 +1,12 @@
 import Link from "next/link";
+import ActionForm from "@/components/ActionForm";
 import CalendarDateTimeFields from "@/components/CalendarDateTimeFields";
 import CalendarColorPicker from "@/components/CalendarColorPicker";
 import CalendarSyncHealthCard from "@/components/CalendarSyncHealthCard";
 import EventCalendarGrid from "@/components/EventCalendarGrid";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
+import SubmitButton from "@/components/SubmitButton";
 import { cancelCalendarEventAction, saveCalendarEventAction } from "@/lib/actions/calendar";
 import {
   calendarGridDays,
@@ -158,10 +160,7 @@ export default async function CalendarPage({
             selectedDate={selectedDay}
           />
         </div>
-        <form
-          action={saveCalendarEventAction}
-          className="min-w-0 w-full space-y-4 rounded-xl border border-border-default bg-surface p-4 xl:sticky xl:top-20"
-        >
+        <aside className="min-w-0 w-full rounded-xl border border-border-default bg-surface p-4 xl:sticky xl:top-20">
           <div className="border-b border-border-subtle pb-3">
             <h2 className="text-sm font-semibold text-foreground">
               {selected ? "Etkinliği düzenle" : "Yeni etkinlik"}
@@ -170,34 +169,44 @@ export default async function CalendarPage({
               Etkinliğin kapsamını, zamanını ve görünürlüğünü belirle.
             </p>
           </div>
-          {selected && <input type="hidden" name="eventId" value={selected.id} />}
-          <label className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary">
-            Başlık
-            <input name="title" required maxLength={200} defaultValue={selected?.title ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm outline-none focus:border-brand-500" />
-          </label>
-          <div className="grid min-w-0 grid-cols-2 gap-3">
+          <ActionForm
+            action={saveCalendarEventAction}
+            successMessage={selected ? "Etkinlik güncellendi." : "Etkinlik oluşturuldu."}
+            className="mt-4 space-y-4"
+          >
+            {selected && <input type="hidden" name="eventId" value={selected.id} />}
             <label className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary">
-              Tür
-              <select name="type" defaultValue={selected?.type ?? "Toplanti"} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm outline-none focus:border-brand-500">
-                {TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </select>
+              Başlık
+              <input name="title" required maxLength={200} defaultValue={selected?.title ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm outline-none focus:border-brand-500" />
             </label>
-            <CalendarDateTimeFields
-              key={selected?.id ?? selectedDay ?? "new-event"}
-              brands={brands.map(({ id, name }) => ({ id, name }))}
-              initialBrandId={selected?.brand_id ?? brandId ?? ""}
-              initialGuestVisible={selected?.guest_visible === 1}
-              initialAllDay={selected?.all_day === 1}
-              initialStart={selected?.all_day === 1 ? selected.start_at.slice(0, 10) : selected ? localDateTime(selected.start_at) : selectedDay ? `${selectedDay}T09:00` : ""}
-              initialEnd={selected?.all_day === 1 ? calendarFormEndDate(selected) : selected ? localDateTime(selected.end_at) : selectedDay ? `${selectedDay}T10:00` : ""}
-            />
-          </div>
-          <CalendarColorPicker defaultValue={selected?.color_key ?? "auto"} />
-          <label className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary">Konum<input name="location" maxLength={300} defaultValue={selected?.location ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm outline-none focus:border-brand-500" /></label>
-          <label className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary">Açıklama<textarea name="description" maxLength={5000} rows={4} defaultValue={selected?.description ?? ""} className="min-w-0 w-full resize-y rounded-lg border border-border-default bg-background px-3 py-2 text-sm outline-none focus:border-brand-500" /></label>
-          <button className="ui-press min-h-10 w-full rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700">{selected ? "Değişiklikleri kaydet" : "Etkinlik oluştur"}</button>
-          {selected && <button formAction={cancelCalendarEventAction.bind(null, selected.id)} className="min-h-9 w-full rounded-lg border border-red-200 text-xs font-semibold text-red-700">Etkinliği iptal et</button>}
-        </form>
+            <div className="grid min-w-0 grid-cols-2 gap-3">
+              <label className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary">
+                Tür
+                <select name="type" defaultValue={selected?.type ?? "Toplanti"} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm outline-none focus:border-brand-500">
+                  {TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <CalendarDateTimeFields
+                key={selected?.id ?? selectedDay ?? "new-event"}
+                brands={brands.map(({ id, name }) => ({ id, name }))}
+                initialBrandId={selected?.brand_id ?? brandId ?? ""}
+                initialGuestVisible={selected?.guest_visible === 1}
+                initialAllDay={selected?.all_day === 1}
+                initialStart={selected?.all_day === 1 ? selected.start_at.slice(0, 10) : selected ? localDateTime(selected.start_at) : selectedDay ? `${selectedDay}T09:00` : ""}
+                initialEnd={selected?.all_day === 1 ? calendarFormEndDate(selected) : selected ? localDateTime(selected.end_at) : selectedDay ? `${selectedDay}T10:00` : ""}
+              />
+            </div>
+            <CalendarColorPicker defaultValue={selected?.color_key ?? "auto"} />
+            <label className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary">Konum<input name="location" maxLength={300} defaultValue={selected?.location ?? ""} className="min-h-10 min-w-0 w-full rounded-lg border border-border-default bg-background px-3 text-sm outline-none focus:border-brand-500" /></label>
+            <label className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary">Açıklama<textarea name="description" maxLength={5000} rows={4} defaultValue={selected?.description ?? ""} className="min-w-0 w-full resize-y rounded-lg border border-border-default bg-background px-3 py-2 text-sm outline-none focus:border-brand-500" /></label>
+            <SubmitButton pendingLabel={selected ? "Kaydediliyor…" : "Oluşturuluyor…"} className="ui-press min-h-10 w-full rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">{selected ? "Değişiklikleri kaydet" : "Etkinlik oluştur"}</SubmitButton>
+          </ActionForm>
+          {selected && (
+            <ActionForm action={cancelCalendarEventAction.bind(null, selected.id)} successMessage="Etkinlik iptal edildi." className="mt-2">
+              <SubmitButton pendingLabel="İptal ediliyor…" className="min-h-9 w-full rounded-lg border border-red-200 text-xs font-semibold text-red-700 disabled:cursor-wait disabled:opacity-60">Etkinliği iptal et</SubmitButton>
+            </ActionForm>
+          )}
+        </aside>
       </div>
     </div>
   );

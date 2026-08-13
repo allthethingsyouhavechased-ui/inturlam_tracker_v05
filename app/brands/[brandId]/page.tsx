@@ -17,7 +17,7 @@ import {
   CONTENT_TYPE_LABEL,
   UNKNOWN_CLUSTER_LABEL,
 } from "@/lib/constants";
-import { daysAgoISO, formatDateShort, formatIsoDateTime, shiftISODate, shiftMonthParam, todayISO } from "@/lib/date";
+import { daysAgoISO, formatDateShort, formatIsoDateTime, monthParamISO, monthParamToDate, shiftMonthParam, todayISO } from "@/lib/date";
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
 import { classifySocial } from "@/lib/socialSilence";
@@ -40,12 +40,14 @@ export const dynamic = "force-dynamic";
 
 export default async function BrandPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ brandId: string }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const me = await requirePageSession();
   const canManageBrand = me.is_manager === 1;
-  const { brandId } = await params;
+  const [{ brandId }, sp] = await Promise.all([params, searchParams]);
   const brand = getBrand(brandId);
   if (!brand) notFound();
 
@@ -61,7 +63,7 @@ export default async function BrandPage({
     contentTargets[row.kind as ContentKind] = row.monthly_target;
   }
   const today = todayISO();
-  const month = today.slice(0, 7);
+  const month = monthParamISO(monthParamToDate(sp.month));
   const monthlyContentCompletion = getBrandMonthlyContentCompletion(brandId, month);
   const assignments = listBrandPersonAssignments(brandId);
   const progress = getBrandMonthlyProgress(brandId, month);
@@ -76,11 +78,6 @@ export default async function BrandPage({
   const annualEvents = listCalendarEvents({
     rangeStart: `${year}-01-01`,
     rangeEnd: `${year + 1}-01-01`,
-    brandId,
-  });
-  const upcomingEvents = listCalendarEvents({
-    rangeStart: today,
-    rangeEnd: shiftISODate(today, 91),
     brandId,
   });
   // Sayılar haftalık tazeleniyor; 7 günden eskiyse (ya da hiç girilmemişse)
@@ -220,7 +217,7 @@ export default async function BrandPage({
         progress={progress}
         contributions={contributions}
         monthlyContents={monthlyContents}
-        upcomingEvents={upcomingEvents}
+        periodEvents={monthlyEvents}
         monthlyShootCount={monthlyEvents.filter((event) => event.type === "Cekim").length}
         annualShootCount={annualEvents.filter((event) => event.type === "Cekim").length}
       />

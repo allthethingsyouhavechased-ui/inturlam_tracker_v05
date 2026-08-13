@@ -1,8 +1,7 @@
 // Sosyal medya üretim planının (hedef/varlık/paylaşım takvimi) saf kuralları
 // ve sabitleri. `"use client"` DEĞİL — hem Server Action'lar hem Client
 // Component'ler okuyor; bir "use client" dosyasından sunucuya import edilen
-// sabit gerçek değer değil bir istemci-referansı proxy'si olur
-// (bkz. lib/constants.ts'teki BRAND_VIEW_COOKIE yorumu, aynı tuzak).
+// sabit gerçek değer değil bir istemci-referansı proxy'si olur.
 import type { ContentKind } from "@/lib/types";
 
 export const CONTENT_KINDS: ContentKind[] = ["Post", "Story", "Reels"];

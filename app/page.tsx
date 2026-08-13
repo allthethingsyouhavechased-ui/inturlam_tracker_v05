@@ -1,9 +1,17 @@
 import Link from "next/link";
 import HomeBrandProgress from "@/components/HomeBrandProgress";
+import MonthNavigator from "@/components/MonthNavigator";
 import SilentAccountsCard from "@/components/SilentAccountsCard";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
-import { currentWeekRange, formatDateLong, todayISO } from "@/lib/date";
+import {
+  currentWeekRange,
+  formatDateLong,
+  formatMonthLabel,
+  monthParamISO,
+  monthParamToDate,
+  todayISO,
+} from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
 import { combineMonthlyProgress } from "@/lib/progress";
 import { listPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
@@ -59,10 +67,17 @@ function Metric({
   );
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const me = await requirePageSession();
+  const sp = await searchParams;
   const today = todayISO();
-  const month = today.slice(0, 7);
+  const monthDate = monthParamToDate(sp.month);
+  const month = monthParamISO(monthDate);
+  const monthLabel = formatMonthLabel(monthDate);
   const weekEnd = currentWeekRange().end;
 
   sweepArchivablePublishedTasks();
@@ -106,14 +121,15 @@ export default async function HomePage() {
       <PageHeader
         eyebrow="OPERASYON ÖZETİ"
         title="Bugün"
-        description={`${formatDateLong(today)} · ${me.name} için kişisel marka odağı ve ajans portföyünün aylık ilerlemesi.`}
+        description={`${formatDateLong(today)} · Güncel operasyon metrikleri ve ${monthLabel} marka ilerlemesi.`}
+        actions={<MonthNavigator month={month} basePath="/" ariaLabel="Ana sayfa analiz ayı" />}
       />
 
       <section aria-label="Operasyon göstergeleri" className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
         <Metric href="/brands" label="Aktif marka" value={brands.length} icon="brands" />
-        <Metric href="/tasks" label="Açık görev" value={openTasks.length} icon="tasks" />
-        <Metric href="/tasks" label="Gecikmiş" value={overdue.length} icon="alert" tone="danger" />
-        <Metric href="/tasks" label="Bu hafta" value={thisWeek.length} icon="clock" tone="warning" />
+        <Metric href="/tasks?focus=open" label="Açık görev" value={openTasks.length} icon="tasks" />
+        <Metric href="/tasks?focus=overdue" label="Gecikmiş" value={overdue.length} icon="alert" tone="danger" />
+        <Metric href="/tasks?focus=week" label="Bu hafta" value={thisWeek.length} icon="clock" tone="warning" />
       </section>
 
       <SilentAccountsCard
@@ -124,6 +140,7 @@ export default async function HomePage() {
       />
 
       <HomeBrandProgress
+        month={month}
         personalBrands={personalBrands}
         assignedBrandsProgress={assignedBrandsProgress}
         portfolioBrands={portfolioBrands}

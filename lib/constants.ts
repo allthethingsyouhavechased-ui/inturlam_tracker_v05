@@ -5,13 +5,6 @@ import type {
   TaskStatus,
 } from "./types";
 
-// Markalar sayfasındaki Kart/Liste tercihini taşıyan çerez. Sabit BURADA
-// duruyor, `BrandViewToggle` içinde DEĞİL: "use client" bir dosyadan sunucu
-// bileşenine import edilen değer gerçek string değil, bir istemci-referansı
-// proxy'si olur — `cookies().get(proxy)` sessizce `undefined` döner (bir kez
-// tam olarak bu yüzden tercih hiç hatırlanmadı).
-export const BRAND_VIEW_COOKIE = "inturlam_brands_view";
-
 // Kategoriler (küme) artık sabit değil — `clusters` tablosundan geliyor.
 // Sunucu tarafında `listClusters()` / `clusterLabelMap()`
 // (lib/repositories/clusters.ts), client component'lerde prop olarak taşınıyor.

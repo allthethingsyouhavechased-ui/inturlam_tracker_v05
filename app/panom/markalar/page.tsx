@@ -1,8 +1,9 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import MonthNavigator from "@/components/MonthNavigator";
 import PageHeader from "@/components/ui/PageHeader";
 import { TASK_STATUS_LABEL } from "@/lib/constants";
-import { formatMonthLabel, monthParamToDate, todayISO } from "@/lib/date";
+import { formatMonthLabel, monthParamISO, monthParamToDate } from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
 import { combineMonthlyProgress } from "@/lib/progress";
 import { listPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
@@ -21,10 +22,16 @@ function points(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-export default async function AssignedBrandsDetailPage() {
+export default async function AssignedBrandsDetailPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const me = await requirePageSession();
-  const month = todayISO().slice(0, 7);
-  const monthLabel = formatMonthLabel(monthParamToDate(month));
+  const sp = await searchParams;
+  const monthDate = monthParamToDate(sp.month);
+  const month = monthParamISO(monthDate);
+  const monthLabel = formatMonthLabel(monthDate);
   const assignments = listPersonBrandAssignments(me.id);
   const portfolioById = new Map(listBrandMonthlyProgress(month).map((brand) => [brand.brand_id, brand]));
   const personalContributions = listPersonMonthlyContributions(me.id, month);
@@ -49,7 +56,7 @@ export default async function AssignedBrandsDetailPage() {
         title="Üzerimdeki markalar"
         description={`${monthLabel} · ${me.name} adına atanmış markaların toplam ilerlemesi, durum dağılımı ve kişisel katkısı.`}
         breadcrumb={[{ label: "Panom", href: "/panom" }, { label: "Üzerimdeki markalar" }]}
-        actions={<Link href="/panom" className="ui-press inline-flex min-h-10 items-center rounded-[10px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover">Panoma dön</Link>}
+        actions={<><MonthNavigator month={month} basePath="/panom/markalar" ariaLabel="Marka portföyü analiz ayı" /><Link href="/panom" className="ui-press inline-flex min-h-10 items-center rounded-[10px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover">Panoma dön</Link></>}
       />
 
       <section className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
@@ -70,7 +77,7 @@ export default async function AssignedBrandsDetailPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right"><p className="text-xl font-semibold tabular-nums text-foreground">{brand.progress.percent === null ? "Plan yok" : `%${brand.progress.percent}`}</p><p className="text-[10px] text-muted">Marka ilerlemesi</p></div>
-                  <Link href={`/brands/${brand.brand_id}`} className="ui-press inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40">Markaya git →</Link>
+                  <Link href={`/brands/${brand.brand_id}?month=${month}`} className="ui-press inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40">Markaya git →</Link>
                 </div>
               </div>
               <div className="grid sm:grid-cols-[minmax(13rem,0.8fr)_minmax(0,1.2fr)]">

@@ -36,12 +36,14 @@ function Percent({ progress }: { progress: MonthlyProgress }) {
 }
 
 export default function HomeBrandProgress({
+  month,
   personalBrands,
   assignedBrandsProgress,
   portfolioBrands,
   portfolioProgress,
   portfolioStatusCounts,
 }: {
+  month: string;
   personalBrands: PersonalBrandProgressRow[];
   assignedBrandsProgress: MonthlyProgress;
   portfolioBrands: BrandMonthlyProgressRow[];
@@ -83,7 +85,7 @@ export default function HomeBrandProgress({
         {personalBrands.length > 0 ? (
           <div className="divide-y divide-border-subtle">
             {personalBrands.map((brand) => (
-              <Link key={brand.brand_id} href={`/brands/${brand.brand_id}`} className="group block px-4 py-3.5 hover:bg-surface-hover sm:px-5">
+              <Link key={brand.brand_id} href={`/brands/${brand.brand_id}?month=${month}`} className="group block px-4 py-3.5 hover:bg-surface-hover sm:px-5">
                 <div className="flex min-w-0 items-center gap-3">
                   <BrandLogo name={brand.brand_name} logoPath={brand.brand_logo_path} />
                   <div className="min-w-0 flex-1">
@@ -124,7 +126,7 @@ export default function HomeBrandProgress({
           {portfolioBrands.map((brand, index) => (
             <Link
               key={brand.brand_id}
-              href={`/brands/${brand.brand_id}`}
+              href={`/brands/${brand.brand_id}?month=${month}`}
               className={`group min-w-0 px-4 py-3 hover:bg-surface-hover sm:px-5 ${index > 0 ? "border-t border-border-subtle" : ""} sm:[&:nth-child(2)]:border-t-0 sm:[&:nth-child(even)]:border-l`}
             >
               <div className="flex min-w-0 items-center gap-2.5">

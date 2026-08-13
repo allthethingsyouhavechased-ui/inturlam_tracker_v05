@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { getCurrentActor, requireGuestSession, requireSession } from "@/lib/identity";
 import {
   announceGuestComment,
@@ -45,7 +44,7 @@ export async function createGuestTaskAction(formData: FormData) {
     brandId: actor.brand.id,
   });
   revalidatePath("/guest", "layout");
-  redirect(`/guest/tasks/${taskId}`);
+  return taskId;
 }
 
 export async function updateGuestTaskAction(formData: FormData) {

@@ -5,6 +5,7 @@ import TaskExplorer from "@/components/TaskExplorer";
 import TaskPlanningQueue from "@/components/TaskPlanningQueue";
 import PageHeader from "@/components/ui/PageHeader";
 import Icon from "@/components/ui/Icon";
+import { currentWeekRange, todayISO } from "@/lib/date";
 import { isDepartmentId, NO_DEPARTMENT } from "@/lib/departments";
 import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
@@ -13,6 +14,7 @@ import { listActivePeople } from "@/lib/repositories/people";
 import { listAllTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
 import { listLegacyUndatedTasks, listUnplannedGuestTasks } from "@/lib/repositories/guestTasks";
 import { archiveCountdownBadge } from "@/lib/taskArchive";
+import { parseTaskFocus } from "@/lib/taskFocus";
 import { TASKS_VIEW_PREFERENCE, parseWorkspaceView } from "@/lib/uiPreferences";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +26,7 @@ export const dynamic = "force-dynamic";
 export default async function AllTasksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ assignee?: string; department?: string }>;
+  searchParams: Promise<{ assignee?: string; department?: string; focus?: string }>;
 }) {
   const me = await requirePageSession();
   const sp = await searchParams;
@@ -68,6 +70,8 @@ export default async function AllTasksPage({
     sp.department && (isDepartmentId(sp.department) || sp.department === NO_DEPARTMENT)
       ? sp.department
       : "";
+  const today = todayISO();
+  const weekEnd = currentWeekRange().end;
 
   return (
     // Panom ile AYNI genişlik (layout'un max-w-7xl kabuğu). Bir dönem
@@ -98,6 +102,9 @@ export default async function AllTasksPage({
         people={people}
         initialAssigneeId={initialAssigneeId}
         initialDepartment={initialDepartment}
+        initialFocus={parseTaskFocus(sp.focus)}
+        focusToday={today}
+        focusWeekEnd={weekEnd}
         initialView={initialView}
         canDeleteTasks={me.is_manager === 1}
       />

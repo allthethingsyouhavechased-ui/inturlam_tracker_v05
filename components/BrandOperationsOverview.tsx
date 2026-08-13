@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MonthNavigator from "@/components/MonthNavigator";
 import PersonAvatar from "@/components/PersonAvatar";
 import Icon from "@/components/ui/Icon";
 import {
@@ -41,7 +42,7 @@ export default function BrandOperationsOverview({
   progress,
   contributions,
   monthlyContents,
-  upcomingEvents,
+  periodEvents,
   monthlyShootCount,
   annualShootCount,
 }: {
@@ -51,7 +52,7 @@ export default function BrandOperationsOverview({
   progress: MonthlyProgress;
   contributions: TaskContribution[];
   monthlyContents: ContentItemWithCounts[];
-  upcomingEvents: CalendarEvent[];
+  periodEvents: CalendarEvent[];
   monthlyShootCount: number;
   annualShootCount: number;
 }) {
@@ -68,7 +69,12 @@ export default function BrandOperationsOverview({
           <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">OPERASYON ÖZETİ</p>
           <h2 id="brand-operations-title" className="mt-0.5 text-sm font-semibold text-foreground">{monthLabel}</h2>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <MonthNavigator
+            month={month}
+            basePath={`/brands/${brand.id}`}
+            ariaLabel={`${brand.name} operasyon analiz ayı`}
+          />
           <Link href={calendarLink(month, brand.id, "Toplanti")} className="ui-press inline-flex min-h-9 items-center gap-1.5 rounded-[9px] border border-border-default bg-surface-subtle px-3 text-xs font-semibold text-secondary hover:border-brand-300 hover:text-foreground">
             <Icon name="calendar" className="size-3.5" /> Toplantılar
           </Link>
@@ -141,12 +147,12 @@ export default function BrandOperationsOverview({
         </div>
 
         <div className="min-w-0 border-t border-border-subtle p-4 sm:p-5 lg:border-l lg:border-t-0">
-          <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">YAKLAŞAN TAKVİM</p><Link href={calendarLink(month, brand.id)} className="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">Takvimi aç</Link></div>
-          {upcomingEvents.length > 0 ? (
+          <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">DÖNEM TAKVİMİ</p><Link href={calendarLink(month, brand.id)} className="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">Takvimi aç</Link></div>
+          {periodEvents.length > 0 ? (
             <div className="mt-2 divide-y divide-border-subtle">
-              {upcomingEvents.slice(0, 4).map((event) => { const startDate = calendarEventStartDate(event); return <Link key={event.id} href={`${calendarLink(startDate.slice(0, 7), brand.id)}&event=${encodeURIComponent(event.id)}`} className="flex min-w-0 items-center gap-3 py-2 hover:text-brand-600"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-subtle"><Icon name="calendar" className="size-4 text-muted" /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{event.title}</span><span className="block truncate text-[11px] text-muted">{event.type === "Toplanti" ? "Toplantı" : event.type === "Cekim" ? "Çekim" : "Diğer"} · {eventDate(event)}{event.location ? ` · ${event.location}` : ""}</span></span></Link>; })}
+              {periodEvents.slice(0, 4).map((event) => { const startDate = calendarEventStartDate(event); return <Link key={event.id} href={`${calendarLink(startDate.slice(0, 7), brand.id)}&event=${encodeURIComponent(event.id)}`} className="flex min-w-0 items-center gap-3 py-2 hover:text-brand-600"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-subtle"><Icon name="calendar" className="size-4 text-muted" /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{event.title}</span><span className="block truncate text-[11px] text-muted">{event.type === "Toplanti" ? "Toplantı" : event.type === "Cekim" ? "Çekim" : "Diğer"} · {eventDate(event)}{event.location ? ` · ${event.location}` : ""}</span></span></Link>; })}
             </div>
-          ) : <p className="mt-3 text-sm text-muted">Önümüzdeki 90 günde planlanmış etkinlik yok.</p>}
+          ) : <p className="mt-3 text-sm text-muted">{monthLabel} için planlanmış etkinlik yok.</p>}
         </div>
       </div>
     </section>

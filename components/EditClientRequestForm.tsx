@@ -26,27 +26,50 @@ export default function EditClientRequestForm({
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const savingRef = useRef(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const isClient = useSyncExternalStore(noSubscribe, () => true, () => false);
 
   useEffect(() => {
     if (!open) return;
+    const trigger = triggerRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) setOpen(false);
+      if (event.key === "Escape" && !savingRef.current) setOpen(false);
+      if (event.key !== "Tab") return;
+
+      const focusableElements = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
+      ) ?? []).filter((element) => element.getAttribute("aria-hidden") !== "true");
+      const first = focusableElements[0];
+      const last = focusableElements.at(-1);
+      if (!first || !last) return;
+      if (!dialogRef.current?.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>("input, select")?.focus());
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
+      requestAnimationFrame(() => trigger?.focus());
     };
-  }, [open, saving]);
+  }, [open]);
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
         className="text-xs font-semibold text-secondary hover:text-brand-600 dark:hover:text-brand-300"
@@ -55,18 +78,19 @@ export default function EditClientRequestForm({
       </button>
       {open && isClient && createPortal(
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-950/65 p-4 pt-8 backdrop-blur-[2px] sm:pt-14">
-          <button type="button" aria-label="Pencereyi kapat" className="absolute inset-0" onClick={() => !saving && setOpen(false)} />
-          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="edit-request-title" className="ui-enter relative w-full max-w-4xl overflow-hidden rounded-xl border border-border-default bg-surface-elevated shadow-2xl">
+          <button type="button" tabIndex={-1} aria-label="Pencereyi kapat" className="absolute inset-0" onClick={() => !saving && setOpen(false)} />
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="edit-request-title" aria-describedby="edit-request-description" className="ui-enter relative w-full max-w-4xl overflow-hidden rounded-xl border border-border-default bg-surface-elevated shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">TALEP AYARLARI</p>
                 <h2 id="edit-request-title" className="mt-1 text-lg font-semibold text-foreground">Müşteri talebini düzenle</h2>
-                <p className="mt-1 text-xs text-muted">Briefi ve yeni görsel eklerini güncelle. Reddedilmiş talep yeniden kuyruğa alınır.</p>
+                <p id="edit-request-description" className="mt-1 text-xs text-muted">Briefi ve yeni görsel eklerini güncelle. Reddedilmiş talep yeniden kuyruğa alınır.</p>
               </div>
               <button type="button" aria-label="Kapat" onClick={() => !saving && setOpen(false)} className="ui-press grid size-9 place-items-center rounded-[9px] text-muted hover:bg-surface-hover"><Icon name="close" className="size-4" /></button>
             </div>
             <form
               action={async (formData) => {
+                savingRef.current = true;
                 setSaving(true);
                 setError(null);
                 try {
@@ -75,6 +99,7 @@ export default function EditClientRequestForm({
                 } catch (cause) {
                   setError(getActionErrorMessage(cause));
                 } finally {
+                  savingRef.current = false;
                   setSaving(false);
                 }
               }}

@@ -38,15 +38,23 @@ export default function EventCalendarGrid({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1 grid grid-cols-7 gap-x-1 sm:gap-x-2">
-        {WEEKDAY_LABELS.map((day) => (
-          <div key={day} className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-muted">
-            {day}
+      <p className="mb-2 text-[11px] text-muted sm:hidden">Takvimin devamını görmek için yatay kaydır.</p>
+      <div
+        role="region"
+        aria-label="Aylık etkinlik takvimi"
+        tabIndex={0}
+        className="-mx-1 overflow-x-auto px-1 pb-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:mx-0 sm:overflow-visible sm:px-0"
+      >
+        <div className="min-w-[44rem] sm:min-w-0">
+          <div className="mb-1 grid grid-cols-7 gap-x-1 sm:gap-x-2">
+            {WEEKDAY_LABELS.map((day) => (
+              <div key={day} className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {day}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="space-y-1 sm:space-y-2">
-        {weeksOf(gridDays).map((week) => {
+          <div className="space-y-1 sm:space-y-2">
+            {weeksOf(gridDays).map((week) => {
           const segments = calendarWeekEventSegments(events, week);
           const laneCount = segments.reduce((count, segment) => Math.max(count, segment.lane + 1), 0);
           const spacerRow = laneCount + 2;
@@ -141,7 +149,9 @@ export default function EventCalendarGrid({
               />
             </div>
           );
-        })}
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

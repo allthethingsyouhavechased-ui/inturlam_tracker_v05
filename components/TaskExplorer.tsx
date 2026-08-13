@@ -23,6 +23,11 @@ import {
 } from "@/lib/departments";
 import type { Person, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
 import {
+  matchesTaskFocus,
+  TASK_FOCUS_LABEL,
+  type TaskFocus,
+} from "@/lib/taskFocus";
+import {
   TASKS_VIEW_PREFERENCE,
   rememberWorkspaceView,
   type WorkspaceView,
@@ -68,6 +73,9 @@ export default function TaskExplorer({
   people,
   initialAssigneeId = "",
   initialDepartment = "",
+  initialFocus = "",
+  focusToday,
+  focusWeekEnd,
   initialView = "pano",
   canDeleteTasks,
 }: {
@@ -76,6 +84,9 @@ export default function TaskExplorer({
   people: Person[];
   initialAssigneeId?: string;
   initialDepartment?: string;
+  initialFocus?: TaskFocus | "";
+  focusToday: string;
+  focusWeekEnd: string;
   initialView?: WorkspaceView;
   canDeleteTasks: boolean;
 }) {
@@ -84,6 +95,7 @@ export default function TaskExplorer({
   const [priority, setPriority] = useState("");
   const [department, setDepartment] = useState(initialDepartment);
   const [assigneeId, setAssigneeId] = useState(initialAssigneeId);
+  const [focus, setFocus] = useState<TaskFocus | "">(initialFocus);
   const [q, setQ] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("varsayilan");
   const [view, setView] = useState<WorkspaceView>(initialView);
@@ -128,6 +140,7 @@ export default function TaskExplorer({
       // Tek satırda iki mod: arşiv görünümünde yalnızca arşivlenenler,
       // normal görünümde yalnızca arşivlenmemişler kalır.
       if (archiveOnly !== (task.archived_at !== null)) return false;
+      if (!matchesTaskFocus(task, focus, focusToday, focusWeekEnd)) return false;
       if (brandId && task.brand_id !== brandId) return false;
       if (statusFilter && task.status !== statusFilter) return false;
       if (priority && task.priority !== priority) return false;
@@ -144,7 +157,7 @@ export default function TaskExplorer({
       }
       return true;
     });
-  }, [tasks, archiveOnly, brandId, statusFilter, priority, assigneeId, q]);
+  }, [tasks, archiveOnly, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, assigneeId, q]);
 
   const departmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -167,7 +180,7 @@ export default function TaskExplorer({
   }, [withoutDepartment, department, departmentByPerson]);
 
   const hasFilter = Boolean(
-    brandId || statusFilter || priority || department || assigneeId || q,
+    brandId || statusFilter || priority || department || assigneeId || focus || q,
   );
   // Rozet, "Filtreler" panelinin içindekileri sayar; departman panelde değil,
   // her zaman görünen sekme satırında seçiliyor.
@@ -196,6 +209,7 @@ export default function TaskExplorer({
     setPriority("");
     setDepartment("");
     setAssigneeId("");
+    setFocus("");
     setQ("");
     setSortKey("varsayilan");
   }
@@ -467,6 +481,12 @@ export default function TaskExplorer({
                     : (selectedPerson?.name ?? "Kişi")
                 }
                 onRemove={() => setAssigneeId("")}
+              />
+            )}
+            {focus && (
+              <FilterChip
+                label={TASK_FOCUS_LABEL[focus]}
+                onRemove={() => setFocus("")}
               />
             )}
             {q && <FilterChip label={`Arama: ${q}`} onRemove={() => setQ("")} />}

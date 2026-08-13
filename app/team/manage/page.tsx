@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ActionForm from "@/components/ActionForm";
 import DeactivatePersonButton from "@/components/DeactivatePersonButton";
 import ManagerRoleButton from "@/components/ManagerRoleButton";
 import NewPersonPopover from "@/components/NewPersonPopover";
 import PersonAvatar from "@/components/PersonAvatar";
 import ResetPersonPasswordPopover from "@/components/ResetPersonPasswordPopover";
+import SubmitButton from "@/components/SubmitButton";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import { canManageRoles, ROLE_ADMIN_PERSON_ID } from "@/lib/auth/authorization";
@@ -105,13 +107,13 @@ export default async function TeamManagementPage() {
           {people.map((person) => {
             const selected = new Set(assignments.filter((item) => item.person_id === person.id).map((item) => item.brand_id));
             return (
-              <form key={person.id} action={savePersonBrandAssignmentsAction} className="rounded-xl border border-border-default bg-surface p-4">
+              <ActionForm key={person.id} action={savePersonBrandAssignmentsAction} successMessage="Marka atamaları kaydedildi." className="rounded-xl border border-border-default bg-surface p-4">
                 <input type="hidden" name="personId" value={person.id} />
-                <div className="mb-3 flex items-center justify-between gap-3"><span className="text-sm font-semibold text-foreground">{person.name}</span><button className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-500">Kaydet</button></div>
+                <div className="mb-3 flex items-center justify-between gap-3"><span className="text-sm font-semibold text-foreground">{person.name}</span><SubmitButton className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-500 disabled:cursor-wait disabled:opacity-70">Kaydet</SubmitButton></div>
                 <div className="flex flex-wrap gap-2">
                   {brands.map((brand) => <label key={brand.id} className="inline-flex items-center gap-2 rounded-lg border border-border-default px-2.5 py-2 text-xs text-secondary"><input type="checkbox" name="brandId" value={brand.id} defaultChecked={selected.has(brand.id)} />{brand.name}</label>)}
                 </div>
-              </form>
+              </ActionForm>
             );
           })}
         </div>
@@ -120,18 +122,18 @@ export default async function TeamManagementPage() {
       <section className="mt-8" aria-labelledby="guest-accounts-title">
         <h2 id="guest-accounts-title" className="mb-1 text-sm font-semibold text-foreground">Guest hesapları</h2>
         <p className="mb-3 text-xs text-muted">Her marka için en fazla bir ortak guest hesabı bulunur. Aynı marka yeniden kaydedilirse kullanıcı adı ve şifresi yenilenir.</p>
-        <form action={saveGuestAccountAction} className="grid gap-3 rounded-xl border border-border-default bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
+        <ActionForm action={saveGuestAccountAction} successMessage="Guest hesabı kaydedildi." resetOnSuccess feedbackClassName="sm:col-span-2 lg:col-span-5" className="grid gap-3 rounded-xl border border-border-default bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
           <label className="grid gap-1 text-xs font-medium text-secondary">Marka<select name="brandId" required className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm"><option value="">Seç</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
           <label className="grid gap-1 text-xs font-medium text-secondary">Kullanıcı adı<input name="username" required minLength={3} maxLength={40} className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm" /></label>
           <label className="grid gap-1 text-xs font-medium text-secondary">Şifre<input name="password" type="password" required minLength={8} className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm" /></label>
           <label className="grid gap-1 text-xs font-medium text-secondary">Şifre tekrar<input name="confirmPassword" type="password" required minLength={8} className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm" /></label>
-          <button className="min-h-10 self-end rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-500">Hesabı kaydet</button>
-        </form>
+          <SubmitButton pendingLabel="Kaydediliyor…" className="min-h-10 self-end rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-500 disabled:cursor-wait disabled:opacity-70">Hesabı kaydet</SubmitButton>
+        </ActionForm>
         <div className="mt-3 overflow-hidden rounded-xl border border-border-default bg-surface">
           {guestAccounts.length === 0 ? <p className="p-4 text-sm text-muted">Henüz guest hesabı yok.</p> : guestAccounts.map((account, index) => (
             <div key={account.id} className={`flex items-center justify-between gap-3 px-4 py-3 ${index > 0 ? "border-t border-border-subtle" : ""}`}>
               <span><span className="block text-sm font-semibold text-foreground">{account.brand_name}</span><span className="text-xs text-muted">{account.username} · {account.active === 1 ? "Aktif" : "Pasif"}</span></span>
-              <form action={setGuestAccountActiveAction.bind(null, account.id, account.active !== 1)}><button className="rounded-lg border border-border-default px-3 py-2 text-xs font-semibold text-secondary hover:bg-surface-hover">{account.active === 1 ? "Pasife al" : "Aktifleştir"}</button></form>
+              <ActionForm action={setGuestAccountActiveAction.bind(null, account.id, account.active !== 1)}><SubmitButton pendingLabel="İşleniyor…" className="rounded-lg border border-border-default px-3 py-2 text-xs font-semibold text-secondary hover:bg-surface-hover disabled:cursor-wait disabled:opacity-60">{account.active === 1 ? "Pasife al" : "Aktifleştir"}</SubmitButton></ActionForm>
             </div>
           ))}
         </div>
