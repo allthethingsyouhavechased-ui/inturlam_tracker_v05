@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import CollapsiblePanel from "@/components/reports/CollapsiblePanel";
+import DeliveryQualityPanel from "@/components/reports/DeliveryQualityPanel";
 import {
   MetricCard,
   comparePeriod,
@@ -36,6 +37,7 @@ import {
 import type {
   BrandReportRow,
   CycleTimeReport,
+  DeliveryQualityReport,
   DepartmentReportRow,
   DueHealthRow,
   PersonReportRow,
@@ -77,6 +79,7 @@ export default function ReportsClient({
   workflow,
   trend,
   cycleTime,
+  deliveryQuality,
   dueHealth,
   departments,
   people,
@@ -93,6 +96,7 @@ export default function ReportsClient({
   workflow: WorkflowReportRow[];
   trend: TrendReport;
   cycleTime: CycleTimeReport;
+  deliveryQuality: DeliveryQualityReport;
   dueHealth: DueHealthRow[];
   departments: DepartmentReportRow[];
   people: PersonReportView[];
@@ -477,6 +481,16 @@ export default function ReportsClient({
             })}
           </div>
         )}
+      </CollapsiblePanel>
+
+      <CollapsiblePanel
+        panelKey="delivery-quality"
+        title="Teslim ve revize kalitesi"
+        description="Versiyonlu teslimlerin onay oranı, revize nedenleri ve marka dağılımı."
+        meta={<span className="tabular-nums text-muted">{deliveryQuality.total_deliveries} versiyon</span>}
+        defaultOpen={false}
+      >
+        <DeliveryQualityPanel report={deliveryQuality} />
       </CollapsiblePanel>
 
       <CollapsiblePanel

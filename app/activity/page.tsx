@@ -16,7 +16,7 @@ export default async function ActivityPage() {
       <PageHeader
         eyebrow="DENETİM İZİ"
         title="Aktivite"
-        description="Portföydeki son 150 değişikliği kişi, görev ve işlem bazında ara."
+        description="Portföydeki son 150 değişikliği kişi, görev, fikir ve işlem bazında ara."
       />
 
       <ActivitySearch entries={entries} />

@@ -26,6 +26,11 @@ before(() => {
   db.prepare(
     "INSERT INTO tasks (id, content_item_id, title, notes) VALUES (?,?,?,?)",
   ).run("t1", "c1", "Çekim planı", "Işık ekibiyle konuş");
+  db.prepare(
+    `INSERT INTO ideas
+      (id, scope_type, brand_id, brand_name_snapshot, category, title, body, tags_text, created_by_name)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+  ).run("i1", "brand", "b1", "Şantiye Market", "Icerik", "Sessiz ürün videosu", "Ürün seslerinden ritim", "ilham, kurgu", "Ayşe");
 });
 
 after(() => {
@@ -56,8 +61,15 @@ describe("searchAll — Türkçe büyük/küçük harf", () => {
     assert.equal(searchAll("ışık").tasks.length, 1);
   });
 
+  it("fikir başlığı, açıklaması, etiketi ve marka bağlamında arıyor", () => {
+    assert.equal(searchAll("sessiz").ideas.length, 1);
+    assert.equal(searchAll("ritim").ideas.length, 1);
+    assert.equal(searchAll("ilham").ideas.length, 1);
+    assert.equal(searchAll("şantiye").ideas.length, 1);
+  });
+
   it("boş sorguda hiçbir şey döndürmüyor", () => {
     const r = searchAll("   ");
-    assert.deepEqual(r, { brands: [], content: [], tasks: [] });
+    assert.deepEqual(r, { brands: [], content: [], tasks: [], ideas: [] });
   });
 });

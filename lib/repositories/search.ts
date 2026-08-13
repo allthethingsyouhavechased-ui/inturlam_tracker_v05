@@ -1,5 +1,5 @@
 import { getDb, plainList } from "@/lib/db/client";
-import type { Brand, TaskWithContext } from "@/lib/types";
+import type { Brand, IdeaWithContext, TaskWithContext } from "@/lib/types";
 import { plannedTaskCondition, visibleContentCondition } from "@/lib/taskPlanning";
 
 export interface ContentSearchResult {
@@ -13,6 +13,7 @@ export interface SearchResults {
   brands: Brand[];
   content: ContentSearchResult[];
   tasks: TaskWithContext[];
+  ideas: IdeaWithContext[];
 }
 
 const RESULT_LIMIT = 20;
@@ -29,7 +30,7 @@ function turkishIncludes(haystack: string, needleLower: string): boolean {
 
 export function searchAll(query: string): SearchResults {
   const q = query.trim();
-  if (!q) return { brands: [], content: [], tasks: [] };
+  if (!q) return { brands: [], content: [], tasks: [], ideas: [] };
   const needle = q.toLocaleLowerCase("tr-TR");
   const db = getDb();
 
@@ -83,5 +84,26 @@ export function searchAll(query: string): SearchResults {
     )
     .slice(0, RESULT_LIMIT);
 
-  return { brands, content, tasks };
+  const allIdeas = plainList<IdeaWithContext>(
+    db.prepare(
+      `SELECT i.*, CASE
+                WHEN i.scope_type = 'brand' THEN COALESCE(b.name, i.brand_name_snapshot)
+                ELSE NULL
+              END AS brand_name
+         FROM ideas i
+         LEFT JOIN brands b ON b.id = i.brand_id
+        WHERE i.archived_at IS NULL
+        ORDER BY i.updated_at DESC`,
+    ).all(),
+  );
+  const ideas = allIdeas
+    .filter((idea) => turkishIncludes([
+      idea.title,
+      idea.body,
+      idea.brand_name,
+      idea.tags_text,
+    ].filter(Boolean).join(" "), needle))
+    .slice(0, RESULT_LIMIT);
+
+  return { brands, content, tasks, ideas };
 }

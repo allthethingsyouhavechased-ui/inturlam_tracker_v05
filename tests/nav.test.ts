@@ -37,12 +37,12 @@ describe("NAV_GROUPS bilgi mimarisi", () => {
     assert.equal(new Set(hrefs).size, hrefs.length);
   });
 
-  it("Bugün, Panom, Talepler, Görevler ve Takvim aynı çalışma grubundadır", () => {
+  it("Bugün, Panom, Fikir Bankası, Talepler, Görevler ve Takvim aynı çalışma grubundadır", () => {
     const calisma = NAV_GROUPS.find((group) => group.id === "calisma");
     assert.ok(calisma);
     assert.deepEqual(
       calisma.items.map((item) => item.href),
-      ["/", "/panom", "/requests", "/tasks", "/calendar"],
+      ["/", "/panom", "/ideas", "/requests", "/tasks", "/calendar"],
     );
   });
 

@@ -154,6 +154,30 @@ export interface DueHealthRow {
   task_count: number;
 }
 
+export interface DeliveryQualityBrandRow {
+  brand_id: string;
+  brand_name: string;
+  total_deliveries: number;
+  approved_deliveries: number;
+  revision_requests: number;
+  approval_rate: number | null;
+}
+
+export interface DeliveryRevisionReasonRow {
+  reason: string;
+  revision_requests: number;
+}
+
+export interface DeliveryQualityReport {
+  total_deliveries: number;
+  pending_deliveries: number;
+  approved_deliveries: number;
+  revision_requests: number;
+  approval_rate: number | null;
+  reasons: DeliveryRevisionReasonRow[];
+  brands: DeliveryQualityBrandRow[];
+}
+
 function periodCondition(column: string, range: DateRange | null): string {
   return range ? `date(${column}) BETWEEN :start AND :end` : "1 = 1";
 }
@@ -363,6 +387,64 @@ export function listDueHealthReport(
       )
       .all({ today, ...scopeParams(scope) }),
   );
+}
+
+export function getDeliveryQualityReport(range: DateRange | null): DeliveryQualityReport {
+  const submitted = periodCondition("d.submitted_at", range);
+  const params = rangeParams(range);
+  const summaryStatement = getDb().prepare(
+    `SELECT COUNT(*) AS total_deliveries,
+            COALESCE(SUM(CASE WHEN d.status = 'Beklemede' THEN 1 ELSE 0 END), 0) AS pending_deliveries,
+            COALESCE(SUM(CASE WHEN d.status = 'Onaylandi' THEN 1 ELSE 0 END), 0) AS approved_deliveries,
+            COALESCE(SUM(CASE WHEN d.status = 'RevizeIstendi' THEN 1 ELSE 0 END), 0) AS revision_requests,
+            ROUND(
+              100.0 * SUM(CASE WHEN d.status = 'Onaylandi' THEN 1 ELSE 0 END)
+              / NULLIF(SUM(CASE WHEN d.status IN ('Onaylandi', 'RevizeIstendi') THEN 1 ELSE 0 END), 0),
+              1
+            ) AS approval_rate
+       FROM task_deliveries d
+      WHERE ${submitted}`,
+  );
+  const summary = plainOne<Omit<DeliveryQualityReport, "reasons" | "brands">>(
+    params ? summaryStatement.get(params) : summaryStatement.get(),
+  ) ?? {
+    total_deliveries: 0,
+    pending_deliveries: 0,
+    approved_deliveries: 0,
+    revision_requests: 0,
+    approval_rate: null,
+  };
+
+  const reasons = allForRange<DeliveryRevisionReasonRow>(
+    `SELECT d.revision_reason AS reason, COUNT(*) AS revision_requests
+       FROM task_deliveries d
+      WHERE d.status = 'RevizeIstendi' AND d.revision_reason IS NOT NULL
+        AND ${submitted}
+      GROUP BY d.revision_reason
+      ORDER BY revision_requests DESC, d.revision_reason`,
+    range,
+  );
+  const brands = allForRange<DeliveryQualityBrandRow>(
+    `SELECT b.id AS brand_id, b.name AS brand_name,
+            COUNT(*) AS total_deliveries,
+            COALESCE(SUM(CASE WHEN d.status = 'Onaylandi' THEN 1 ELSE 0 END), 0) AS approved_deliveries,
+            COALESCE(SUM(CASE WHEN d.status = 'RevizeIstendi' THEN 1 ELSE 0 END), 0) AS revision_requests,
+            ROUND(
+              100.0 * SUM(CASE WHEN d.status = 'Onaylandi' THEN 1 ELSE 0 END)
+              / NULLIF(SUM(CASE WHEN d.status IN ('Onaylandi', 'RevizeIstendi') THEN 1 ELSE 0 END), 0),
+              1
+            ) AS approval_rate
+       FROM task_deliveries d
+       JOIN tasks t ON t.id = d.task_id
+       JOIN content_items ci ON ci.id = t.content_item_id
+       JOIN brands b ON b.id = ci.brand_id
+      WHERE ${submitted}
+      GROUP BY b.id, b.name
+      ORDER BY revision_requests DESC, total_deliveries DESC, b.name`,
+    range,
+  );
+
+  return { ...summary, reasons, brands };
 }
 
 export function getReportSummary(

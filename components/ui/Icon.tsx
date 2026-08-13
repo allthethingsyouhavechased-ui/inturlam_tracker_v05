@@ -8,6 +8,8 @@ function IconGlyph({ name }: { name: IconName }) {
       return <><path d="M3.5 9.2 10 3.8l6.5 5.4"/><path d="M5.4 8.1v8h9.2v-8M8.4 16.1v-4.5h3.2v4.5"/></>;
     case "board":
       return <><rect x="3.2" y="3.2" width="5.2" height="13.6" rx="1.2"/><rect x="11.6" y="3.2" width="5.2" height="8.2" rx="1.2"/></>;
+    case "ideas":
+      return <><path d="M6.3 12.8c-1.2-1-2-2.5-2-4.2a5.7 5.7 0 0 1 11.4 0c0 1.7-.8 3.2-2 4.2-.7.6-1 1.2-1 2H7.3c0-.8-.3-1.4-1-2Z"/><path d="M7.6 17h4.8M8 8.7l1.4 1.4 2.9-3"/></>;
     case "tasks":
       return <><path d="m3.5 5.4 1.3 1.3 2-2.3M9 5.6h7.5M3.5 10l1.3 1.3 2-2.3M9 10.2h7.5M3.5 14.6l1.3 1.3 2-2.3M9 14.8h7.5"/></>;
     case "inbox":

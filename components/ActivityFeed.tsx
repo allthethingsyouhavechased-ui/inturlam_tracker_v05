@@ -10,6 +10,7 @@ function hrefFor(e: ActivityEntry): string | null {
   if (e.entity_type === "task") return `/tasks/${e.entity_id}`;
   if (e.entity_type === "brand") return `/brands/${e.entity_id}`;
   if (e.entity_type === "request") return `/requests/${e.entity_id}`;
+  if (e.entity_type === "idea") return `/ideas/${e.entity_id}`;
   if (e.entity_type === "content" && e.brand_id) {
     return `/brands/${e.brand_id}/content/${e.entity_id}`;
   }
@@ -33,7 +34,7 @@ export default function ActivityFeed({
     <ul className="divide-y divide-border-subtle">
       {entries.map((e) => {
         const href = showLink ? hrefFor(e) : null;
-        const entityLabel = e.entity_type === "task" ? "Görev" : e.entity_type === "content" ? "İçerik" : e.entity_type === "brand" ? "Marka" : e.entity_type === "request" ? "Talep" : "Sistem";
+        const entityLabel = e.entity_type === "task" ? "Görev" : e.entity_type === "content" ? "İçerik" : e.entity_type === "brand" ? "Marka" : e.entity_type === "request" ? "Talep" : e.entity_type === "idea" ? "Fikir" : "Sistem";
         return (
           <li
             key={e.id}

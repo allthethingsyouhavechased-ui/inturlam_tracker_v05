@@ -3,6 +3,8 @@ import type {
   ContentType,
   TaskPriority,
   TaskDifficulty,
+  TaskDeliveryStatus,
+  TaskRevisionReason,
   TaskStatus,
 } from "./types";
 
@@ -152,6 +154,36 @@ export const TASK_DIFFICULTY_BADGE: Record<TaskDifficulty, string> = {
   Orta: "border border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200",
   Zor: "border border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-200",
   Ozel: "border border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200",
+};
+
+export const TASK_DELIVERY_STATUS_LABEL: Record<TaskDeliveryStatus, string> = {
+  Beklemede: "Onay bekliyor",
+  Onaylandi: "Onaylandı",
+  RevizeIstendi: "Revize istendi",
+};
+
+export const TASK_DELIVERY_STATUS_BADGE: Record<TaskDeliveryStatus, string> = {
+  Beklemede: "border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
+  Onaylandi: "border border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+  RevizeIstendi: "border border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200",
+};
+
+export const TASK_REVISION_REASONS: TaskRevisionReason[] = [
+  "BriefDegisikligi",
+  "MusteriDegisikligi",
+  "Tasarim",
+  "Metin",
+  "Teknik",
+  "Diger",
+];
+
+export const TASK_REVISION_REASON_LABEL: Record<TaskRevisionReason, string> = {
+  BriefDegisikligi: "Brief değişikliği",
+  MusteriDegisikligi: "Müşteri değişikliği",
+  Tasarim: "Tasarım",
+  Metin: "Metin",
+  Teknik: "Teknik hata",
+  Diger: "Diğer",
 };
 
 export const TASK_PRIORITY_LABEL: Record<TaskPriority, string> = {

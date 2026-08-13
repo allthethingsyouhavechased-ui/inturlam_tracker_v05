@@ -9,6 +9,7 @@ import { withAllDepartments } from "@/lib/departments";
 import { requireReportAccess } from "@/lib/identity";
 import {
   getCycleTimeReport,
+  getDeliveryQualityReport,
   getReportSummary,
   getTrendReport,
   listBrandPersonBreakdown,
@@ -76,6 +77,7 @@ export default async function ReportsPage({
   const workflow = listWorkflowReport();
   const trend = getTrendReport(range);
   const cycleTime = getCycleTimeReport(range);
+  const deliveryQuality = getDeliveryQualityReport(range);
   const dueHealth = listDueHealthReport(today);
   // Departmanı olan/olmayan herkesin satırı sabit sırada; o dönemde hiç işi
   // olmayan departman da sıfır satırıyla görünsün diye zenginleştiriliyor.
@@ -144,6 +146,7 @@ export default async function ReportsPage({
         workflow={workflow}
         trend={trend}
         cycleTime={cycleTime}
+        deliveryQuality={deliveryQuality}
         dueHealth={dueHealth}
         departments={departmentRows}
         people={personViews}

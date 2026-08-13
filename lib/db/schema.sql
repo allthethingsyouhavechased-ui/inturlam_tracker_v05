@@ -305,6 +305,51 @@ CREATE TABLE IF NOT EXISTS task_revision_rounds (
   UNIQUE (task_id, round_number)
 );
 
+-- Görev teslimleri append-only sürüm zinciridir. Her gönderim otomatik V1, V2...
+-- numarası alır; karar mevcut satırda yalnızca bir kez mühürlenir. Büyük yaratıcı
+-- dosyalar external_url ile, hızlı görsel kontrolü küçük önizleme ekleriyle taşınır.
+CREATE TABLE IF NOT EXISTS task_deliveries (
+  id                       TEXT PRIMARY KEY,
+  task_id                  TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  version_number           INTEGER NOT NULL CHECK (version_number > 0),
+  note                     TEXT,
+  external_url             TEXT,
+  guest_visible            INTEGER NOT NULL DEFAULT 0 CHECK (guest_visible IN (0,1)),
+  status                   TEXT NOT NULL DEFAULT 'Beklemede'
+                           CHECK (status IN ('Beklemede','Onaylandi','RevizeIstendi')),
+  submitted_by_account_id  TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  submitted_by_name        TEXT NOT NULL,
+  submitted_at             TEXT NOT NULL DEFAULT (datetime('now')),
+  decision_actor_kind      TEXT CHECK (decision_actor_kind IN ('team','guest')),
+  decided_by_account_id    TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  decided_by_name          TEXT,
+  decision_note            TEXT,
+  revision_reason          TEXT CHECK (revision_reason IN
+                           ('BriefDegisikligi','MusteriDegisikligi','Tasarim','Metin','Teknik','Diger')),
+  decided_at               TEXT,
+  created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at               TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (task_id, version_number),
+  CHECK (
+    (status = 'Beklemede' AND decision_actor_kind IS NULL AND decided_by_name IS NULL
+      AND decision_note IS NULL AND revision_reason IS NULL AND decided_at IS NULL)
+    OR
+    (status = 'Onaylandi' AND decision_actor_kind IS NOT NULL AND decided_by_name IS NOT NULL
+      AND revision_reason IS NULL AND decided_at IS NOT NULL)
+    OR
+    (status = 'RevizeIstendi' AND decision_actor_kind IS NOT NULL AND decided_by_name IS NOT NULL
+      AND decision_note IS NOT NULL AND revision_reason IS NOT NULL AND decided_at IS NOT NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS task_delivery_attachments (
+  id            TEXT PRIMARY KEY,
+  delivery_id   TEXT NOT NULL REFERENCES task_deliveries(id) ON DELETE CASCADE,
+  file_path     TEXT NOT NULL,
+  original_name TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Guest ile paylaşılan konuşmalar iç yorumlardan fiziksel olarak ayrıdır;
 -- böylece bir DTO/filtre hatası iç notları dışarı sızdıramaz.
 CREATE TABLE IF NOT EXISTS task_shared_comments (
@@ -324,6 +369,28 @@ CREATE TABLE IF NOT EXISTS task_shared_attachments (
   file_path     TEXT NOT NULL,
   original_name TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Marka bazlı veya ofis genelindeki yaratıcı/operasyonel fikirlerin aranabilir bankası.
+-- Marka adı snapshot olarak da tutulur; marka sonradan silinse bile fikrin bağlamı kaybolmaz.
+CREATE TABLE IF NOT EXISTS ideas (
+  id                  TEXT PRIMARY KEY,
+  scope_type          TEXT NOT NULL CHECK (scope_type IN ('office','brand')),
+  brand_id            TEXT REFERENCES brands(id) ON DELETE SET NULL,
+  brand_name_snapshot TEXT,
+  category            TEXT NOT NULL CHECK (category IN ('Icerik','Kampanya','Gorsel','Strateji','Ofis','Diger')),
+  status              TEXT NOT NULL DEFAULT 'Yeni'
+                      CHECK (status IN ('Yeni','Gelistiriliyor','Hazir','Kullanildi')),
+  title               TEXT NOT NULL,
+  body                TEXT NOT NULL,
+  source_url          TEXT,
+  source_platform     TEXT CHECK (source_platform IN ('Instagram','TikTok','Pinterest','YouTube','Web')),
+  tags_text           TEXT,
+  created_by_id       TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_by_name     TEXT NOT NULL,
+  archived_at         TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS calendar_events (
@@ -545,12 +612,21 @@ CREATE INDEX IF NOT EXISTS idx_task_revision_rounds_task
   ON task_revision_rounds(task_id, round_number DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_task_revision_rounds_active
   ON task_revision_rounds(task_id) WHERE completed_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_task_deliveries_task
+  ON task_deliveries(task_id, version_number DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_task_deliveries_pending
+  ON task_deliveries(task_id) WHERE status = 'Beklemede';
+CREATE INDEX IF NOT EXISTS idx_task_delivery_attachments_delivery
+  ON task_delivery_attachments(delivery_id);
 CREATE INDEX IF NOT EXISTS idx_comments_task       ON comments(task_id);
 CREATE INDEX IF NOT EXISTS idx_template_items_template ON task_template_items(template_id);
 CREATE INDEX IF NOT EXISTS idx_comment_attachments_comment ON comment_attachments(comment_id);
 CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_shared_comments_task ON task_shared_comments(task_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_task_shared_attachments_task ON task_shared_attachments(task_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_ideas_scope ON ideas(scope_type, brand_id, archived_at);
+CREATE INDEX IF NOT EXISTS idx_ideas_status ON ideas(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ideas_category ON ideas(category, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_range ON calendar_events(start_at, end_at);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_brand ON calendar_events(brand_id, start_at);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_sync ON calendar_events(sync_status, updated_at);

@@ -15,7 +15,11 @@ export function listUploadPathsForTaskIds(taskIds: string[]): string[] {
      WHERE c.task_id IN (${placeholders})
     UNION
     SELECT file_path FROM task_shared_attachments WHERE task_id IN (${placeholders})
-  `).all(...taskIds, ...taskIds, ...taskIds)));
+    UNION
+    SELECT da.file_path FROM task_delivery_attachments da
+      JOIN task_deliveries d ON d.id = da.delivery_id
+     WHERE d.task_id IN (${placeholders})
+  `).all(...taskIds, ...taskIds, ...taskIds, ...taskIds)));
 }
 
 export function listUploadPathsForContent(contentId: string): string[] {
@@ -43,8 +47,14 @@ export function listUploadPathsForBrand(brandId: string): string[] {
       JOIN content_items ci ON ci.id = t.content_item_id
      WHERE ci.brand_id = ?
     UNION
+    SELECT da.file_path FROM task_delivery_attachments da
+      JOIN task_deliveries d ON d.id = da.delivery_id
+      JOIN tasks t ON t.id = d.task_id
+      JOIN content_items ci ON ci.id = t.content_item_id
+     WHERE ci.brand_id = ?
+    UNION
     SELECT ra.file_path FROM client_request_attachments ra
       JOIN client_requests r ON r.id = ra.request_id
      WHERE r.brand_id = ?
-  `).all(brandId, brandId, brandId, brandId)));
+  `).all(brandId, brandId, brandId, brandId, brandId)));
 }

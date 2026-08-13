@@ -10,6 +10,8 @@ import EditBrandForm from "@/components/EditBrandForm";
 import NewContentForm from "@/components/NewContentForm";
 import QuickAddModal from "@/components/QuickAddModal";
 import SocialHealthBadge from "@/components/SocialHealthBadge";
+import { buttonClass } from "@/components/ui/Button";
+import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import {
   CONTENT_STATUS_BADGE,
@@ -197,6 +199,9 @@ export default async function BrandPage({
         }
         actions={
           <>
+            <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}`} className={buttonClass({ variant: "secondary" })}>
+              <Icon name="ideas" className="size-4" /> Fikirler
+            </Link>
             <QuickAddModal
               brands={[{ id: brand.id, name: brand.name }]}
               contents={items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title }))}

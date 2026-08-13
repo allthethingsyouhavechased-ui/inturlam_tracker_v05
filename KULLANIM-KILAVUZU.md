@@ -54,6 +54,7 @@ kişi, ağırlık puanı, iç notlar ve iç yorumlar guest’e gösterilmez.
 |---|---|
 | **Bugün** | Güncel operasyon sayıları, kişisel iş akışı ve marka ilerlemeleri |
 | **Panom** | Kişisel teslim radarı, üzerinizdeki markalar ve aylık katkınız |
+| **Fikir Bankası** | Marka veya Ofis geneli fikirleri, ilham bağlantıları ve geliştirme durumları |
 | **Talepler** | Müşteriden gelen brieflerin ekip içi değerlendirme kuyruğu |
 | **Görevler** | Tüm görevler, filtreler, pano/liste ve tarih bekleyen eski işler |
 | **Takvim** | Toplantı, çekim ve diğer etkinlikler |
@@ -93,7 +94,25 @@ değiştirildiğinde seçilen ay detay linklerinde korunur.
 
 Marka ataması ekip erişimini kısıtlamaz; Panom’daki kişisel portföy özetini belirler.
 
-## 7. Marka sayfası
+## 7. Fikir Bankası
+
+Fikir Bankası, henüz göreve veya projeye dönüşmemiş düşüncelerin ortak hafızasıdır. Yeni
+fikir eklerken:
+
+- bir marka veya **Ofis geneli** kapsamı,
+- içerik fikri, kampanya, görsel dil, strateji, ofis/süreç veya diğer kategorisi,
+- kısa başlık ve fikrin uygulanışını anlatan açıklama,
+- isteğe bağlı Instagram, TikTok, Pinterest, YouTube veya web bağlantısı,
+- virgülle ayrılan etiketler seçilebilir.
+
+Fikirler **Ham fikir → Geliştiriliyor → Hazır → Kullanıldı** durumlarında ilerler. Sayfadaki
+arama; başlık, açıklama, marka ve etiketleri kapsar. Kapsam, kategori ve durum filtreleri
+birlikte kullanılabilir. Arşivlenen fikir silinmez ve tekrar aktif bankaya alınabilir.
+
+Marka sayfasındaki **Fikirler** düğmesi bankayı o marka seçili açar. Üst çubuktaki genel
+arama da aktif fikirleri bulur. Guest hesapları ekip içi Fikir Bankası'na erişemez.
+
+## 8. Marka sayfası
 
 Marka çalışma alanında şunlar birlikte görünür:
 
@@ -110,6 +129,9 @@ Marka çalışma alanında şunlar birlikte görünür:
 **Toplantılar** ve **Çekimler** düğmeleri Takvim sayfasını o marka ve etkinlik türüyle
 filtreli açar.
 
+**Fikirler** düğmesi Fikir Bankası'nı doğrudan bu markaya göre filtreler; yeni fikir formu
+açıldığında marka seçimi hazır gelir.
+
 ### Aylık içerik teslimini kapatma
 
 Marka, o ay için planlanan içerik setini teslim ettiğinde **Aylık içerikler tamamlandı**
@@ -119,7 +141,7 @@ düğmesini kullanın. Bu işaret canlı stok sayısından bağımsızdır.
 Bu, ayı eksik teslim ettiğiniz anlamına gelmez; aylık teslim rozeti kapanmış kalır. Yanlış
 işaretlendiğinde aynı kontrolle ay yeniden açılabilir.
 
-## 8. İçerik/proje oluşturma
+## 9. İçerik/proje oluşturma
 
 Marka sayfasından yeni içerik/proje oluştururken başlık, tür ve hedef tarih belirlenir.
 Hedef tarih, Görev şablonları uygulanacaksa zorunludur; sistem yapay tarih üretmez.
@@ -131,7 +153,7 @@ Hedef tarih, Görev şablonları uygulanacaksa zorunludur; sistem yapay tarih ü
 Kartlar pano üzerinde sürüklenebilir. Liste görünümünde de durum, öncelik, sorumlu,
 teslim tarihi ve ağırlık puanı okunabilir.
 
-## 9. Ekip görevi oluşturma
+## 10. Ekip görevi oluşturma
 
 Ekip tarafından oluşturulan her yeni görevde teslim tarihi zorunludur. Bu kural hızlı
 ekleme, görev formu, talep onayı, şablon ve tekrar eden görev akışlarında geçerlidir.
@@ -151,7 +173,7 @@ Görev alanları:
 Eski tarihsiz kayıtlar silinmez. Yöneticiler bunları Görevler sayfasındaki
 **Tarih bekleyenler** düğmesinden bulup gerçek tarihleriyle planlar.
 
-## 10. Görev ağırlığı ve aylık ilerleme
+## 11. Görev ağırlığı ve aylık ilerleme
 
 Her görev 1–100 arasında bir **Ağırlık puanı** taşır. Varsayılan değer 1’dir ve yalnızca
 yöneticiler değiştirebilir. Ağırlık kartta ve liste görünümünde yazılıdır.
@@ -172,7 +194,7 @@ hesaplanır. O ay planlanmış görev yoksa `%0` yerine **Bu ay plan yok** gör�
 Ay kapsamı görevin iç teslim tarihine göre belirlenir. İlgili aya ait arşivlenmiş işler
 hesapta kalır; henüz iç teslim tarihi verilmeyen guest talepleri hesaplamaya girmez.
 
-## 11. Görev detayı, yorum ve dosyalar
+## 12. Görev detayı, yorum ve dosyalar
 
 Görev detayında durum, öncelik, sorumlu, teslim tarihi, tekrar kuralı, notlar, yorumlar,
 dosyalar ve hareket geçmişi bulunur.
@@ -181,11 +203,17 @@ dosyalar ve hareket geçmişi bulunur.
 - Guest kaynaklı görevlerde yorum ve ekler **internal** veya **guest-visible** kapsamla
   ayrılır.
 - Guest-visible yazılan ekip cevabı guest portalında görünür; iç yorum görünmez.
+- **Teslim ve onay** alanında çalışma bağlantısı, teslim notu ve önizleme görselleri V1,
+  V2… sırasıyla saklanır. Aynı anda yalnızca bir versiyon karar bekleyebilir.
+- Teslim onaylandığında görev **Onaylandı** durumuna geçer. **Revize iste** kararı neden,
+  açıklama ve hedef süre ister; yeni revize turunu açar. Sonraki versiyon teslim edildiğinde
+  aktif revize turu otomatik tamamlanır.
+- Karar bekleyen teslim veya aktif revize turu varken görev yayınlanamaz ya da arşivlenemez.
 - Yayınlanan görev yedi gün pano üzerinde kalır, sonra arşivlenir.
 - Arşivleme silme değildir; görev tekrar panoya alınabilir.
 - Kalıcı silme gibi geri dönüşü zor işlemler yönetici yetkisine bağlıdır.
 
-## 12. Guest görev akışı
+## 13. Guest görev akışı
 
 Guest görev açarken şu alanları doldurur:
 
@@ -202,9 +230,14 @@ Görev Beklemede iken guest başlık, brief, İstenen tarih ve kendi eklerini d�
 Görev Devam Ediyor olduğunda brief kilitlenir. Sonrasında guest yalnızca paylaşılan
 konuşmaya yorum ve dosya ekleyebilir.
 
-İlk planlama, ekip cevabı ve durum değişiklikleri guest bildirim zincirine girer.
+Ekip teslimi **Bu teslimi guest ile paylaş** seçeneğiyle açtıysa guest bağlantı ve
+önizlemeleri görür; teslimi onaylayabilir veya gerekçeli revize isteyebilir. İç teslim tarihi,
+atanan kişi, ağırlık ve iç notlar bu görünümde yer almaz.
 
-## 13. Görevler sayfası
+İlk planlama, ekip cevabı, paylaşılan teslim, teslim kararı ve durum değişiklikleri guest
+bildirim zincirine girer.
+
+## 14. Görevler sayfası
 
 Görevler sayfası ekip kapsamındaki tüm görevleri gösterir. Marka, durum, öncelik,
 sorumlu, departman ve metin filtreleri kullanılabilir. Pano ve liste tercihleri tarayıcıda
@@ -214,7 +247,7 @@ Bugün sayfasındaki metriklerden gelindiğinde açık/gecikmiş/bu hafta filtre
 uygulanır. **Tarih bekleyenler** üst alandaki kompakt düğmeden açılır; ana listeyi sürekli
 kaplamaz.
 
-## 14. Etkinlik takvimi
+## 15. Etkinlik takvimi
 
 Takvim yalnızca operasyon etkinlikleri içindir:
 
@@ -238,7 +271,7 @@ Takvimde:
 aktif guest hesabına bildirim gider ve etkinlik guest takviminde tarih/saat bilgisiyle
 görünür. Bu paylaşım görev teslim tarihlerini açmaz.
 
-## 15. Görev şablonları ve tekrar eden işler
+## 16. Görev şablonları ve tekrar eden işler
 
 **Görev şablonları** Görevler sayfasındaki bağlantıdan veya `/templates` ekranından
 yönetilir. Şablona adımlar, gün kaymaları, sorumlular ve varsayılan alanlar eklenebilir.
@@ -250,7 +283,7 @@ Tekrar eden görev, mevcut teslim tarihini baz alır. Görev Yayınlandı olduğ
 iki haftalık veya aylık sonraki örnek açılır. Eski tarihsiz bir kayıt için sonraki örnek
 oluşturulmaz; önce gerçek tarih verilmelidir.
 
-## 16. Sosyal sayfaları
+## 17. Sosyal sayfaları
 
 Sosyal alan üç görünüm taşır:
 
@@ -264,7 +297,7 @@ gelmez. Marka bazında aylık teslim durumu Varlık sayfasındaki rozetle ayrıc
 “Sessiz” gerçek paylaşım yokluğunu, “Veri yok/Hata” ise sağlayıcıdan güvenilir sonuç
 alınamadığını anlatır. Hata durumu sessizlik gibi yorumlanmaz.
 
-## 17. Talepler
+## 18. Talepler
 
 Yetkili ekip üyeleri müşteriden gelen briefi marka, tür, departman, tarih, bağlantı ve
 görsellerle kaydeder. Talep değerlendirilirken hedef departmandaki sorumlu ve öncelik
@@ -274,12 +307,13 @@ Onay anında ekip görevi oluşturulacağı için gerçek teslim tarihi zorunlud
 talep içerik ve göreve dönüşür; reddetme gerekçesi geçmişte kalır. Kararı yedi günü geçen
 onaylı/reddedilmiş talepler arşive taşınır.
 
-## 18. Raporlar
+## 19. Raporlar
 
 Raporlar yöneticilere açıktır. Dönem seçimiyle:
 
 - açılan, tamamlanan, açık ve geciken işler,
 - aktif iş akışı,
+- teslimlerin ilk-onay oranı, revize nedenleri ve marka bazlı revize yükü,
 - **Ekip aylık puanı**,
 - teslim sağlığı ve tamamlanma süresi,
 - kişi, departman ve marka dağılımları incelenir.
@@ -288,7 +322,7 @@ Ekip aylık puanı, Aktif iş akışı kartının altında açılıp kapanabilir
 detay raporları gerçek görev listelerine bağlanır. CSV, Excel ve yazdırma çıktıları seçilen
 kapsamı korur.
 
-## 19. Ekip ve hesap yönetimi
+## 20. Ekip ve hesap yönetimi
 
 Ekip sayfasında herkes o an çalıştığı aktif markayı seçebilir. Yöneticiler ayrıca:
 
@@ -302,7 +336,7 @@ Ekip sayfasında herkes o an çalıştığı aktif markayı seçebilir. Yönetic
 Guest şifreleri düz metin olarak gösterilmez veya sonradan okunmaz. Şifre unutulduysa
 yönetici yeni şifre belirler.
 
-## 20. Bildirimler
+## 21. Bildirimler
 
 Ekip bildirimleri şunlardan oluşabilir:
 
@@ -316,11 +350,12 @@ Guest bildirimleri:
 - görevin ekip tarafından ilk planlanması,
 - guest-visible ekip yanıtı,
 - görev durum değişikliği,
+- paylaşılan yeni teslim ve bu teslimin kararı,
 - markalı ve **Guest ile paylaş** açık etkinlik oluşturulması.
 
 Bildirim bağlantısı yalnızca hesabın erişebildiği hedefe gider.
 
-## 21. Sorun giderme
+## 22. Sorun giderme
 
 - **Adrese girilmiyorsa:** Aynı ofis ağına bağlı olduğunuzu ve sunucu PC’nin açık
   olduğunu kontrol edin.

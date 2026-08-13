@@ -396,6 +396,12 @@ function applyTaskStatusChanges(
     if (tasks.some((task) => activeRevision.get(task.id))) {
       throw new Error("Görev yayınlanmadan önce aktif revize turu tamamlanmalı.");
     }
+    const pendingDelivery = getDb().prepare(
+      "SELECT 1 FROM task_deliveries WHERE task_id = ? AND status = 'Beklemede'",
+    );
+    if (tasks.some((task) => pendingDelivery.get(task.id))) {
+      throw new Error("Görev yayınlanmadan önce bekleyen teslim için karar verilmeli.");
+    }
   }
   const changed = tasks.filter((task) => task.status !== status);
   if (changed.length === 0) return 0;
@@ -668,6 +674,14 @@ export function setTaskArchived(id: string, archived: boolean): void {
     ).get(id)
   ) {
     throw new Error("Görev arşivlenmeden önce aktif revize turu tamamlanmalı.");
+  }
+  if (
+    archived &&
+    db.prepare(
+      "SELECT 1 FROM task_deliveries WHERE task_id = ? AND status = 'Beklemede'",
+    ).get(id)
+  ) {
+    throw new Error("Görev arşivlenmeden önce bekleyen teslim için karar verilmeli.");
   }
   db
     .prepare(

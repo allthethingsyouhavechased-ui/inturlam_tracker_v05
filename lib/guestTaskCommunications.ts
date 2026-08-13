@@ -150,3 +150,52 @@ export async function announceGuestTaskStatus(input: TeamTaskBase & { statusLabe
     summary,
   });
 }
+
+export async function announceTeamDeliveryShared(
+  input: TeamTaskBase & { versionNumber: number },
+): Promise<void> {
+  const summary = `${input.actor.name}, “${input.taskTitle}” görevinin V${input.versionNumber} teslimini onayınıza sundu`;
+  notifyGuest({ ...input, summary });
+  recordCommunicationActivity({
+    actorId: input.actor.id,
+    actorName: input.actor.name,
+    action: "task.delivery.shared",
+    entityId: input.taskId,
+    brandId: input.brandId,
+    summary,
+  });
+}
+
+export async function announceGuestDeliveryDecision(
+  input: GuestTaskBase & {
+    assigneeId: string | null;
+    versionNumber: number;
+    decisionLabel: string;
+  },
+): Promise<void> {
+  const summary = `${input.guestName}, “${input.taskTitle}” görevinin V${input.versionNumber} teslimi için ${input.decisionLabel.toLocaleLowerCase("tr-TR")} kararı verdi`;
+  notifyTeam({ ...input, summary });
+  recordCommunicationActivity({
+    actorId: input.guestAccountId,
+    actorName: input.guestName,
+    action: "guest.delivery.decision",
+    entityId: input.taskId,
+    brandId: input.brandId,
+    summary,
+  });
+}
+
+export async function announceTeamDeliveryDecision(
+  input: TeamTaskBase & { versionNumber: number; decisionLabel: string },
+): Promise<void> {
+  const summary = `${input.actor.name}, “${input.taskTitle}” görevinin V${input.versionNumber} teslimini ${input.decisionLabel.toLocaleLowerCase("tr-TR")} olarak işaretledi`;
+  notifyGuest({ ...input, summary });
+  recordCommunicationActivity({
+    actorId: input.actor.id,
+    actorName: input.actor.name,
+    action: "team.delivery.decision",
+    entityId: input.taskId,
+    brandId: input.brandId,
+    summary,
+  });
+}

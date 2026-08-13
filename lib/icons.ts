@@ -1,6 +1,7 @@
 export type IconName =
   | "home"
   | "board"
+  | "ideas"
   | "tasks"
   | "inbox"
   | "calendar"

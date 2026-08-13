@@ -32,6 +32,11 @@ describe("gerçek v02 snapshot v03 migrationı", () => {
     assert.equal((db.prepare("SELECT COUNT(*) c FROM tasks WHERE weight_points = 1 AND origin = 'team'").get() as { c: number }).c, counts.tasks);
     assert.equal((db.prepare("SELECT COUNT(*) c FROM tasks WHERE difficulty IS NULL").get() as { c: number }).c, counts.tasks);
     assert.ok(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_revision_rounds'").get());
+    assert.ok(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_deliveries'").get());
+    assert.ok(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_delivery_attachments'").get());
+    assert.ok(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ideas'").get());
+    assert.equal((db.prepare("SELECT COUNT(*) c FROM task_deliveries").get() as { c: number }).c, 0);
+    assert.equal((db.prepare("SELECT COUNT(*) c FROM ideas").get() as { c: number }).c, 0);
     assert.equal((db.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check, "ok");
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
   });

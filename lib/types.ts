@@ -29,9 +29,44 @@ export type TaskStatus =
 
 export type TaskPriority = "Dusuk" | "Normal" | "Yuksek" | "Acil";
 export type TaskDifficulty = "Kolay" | "Orta" | "Zor" | "Ozel";
+export type TaskDeliveryStatus = "Beklemede" | "Onaylandi" | "RevizeIstendi";
+export type TaskRevisionReason =
+  | "BriefDegisikligi"
+  | "MusteriDegisikligi"
+  | "Tasarim"
+  | "Metin"
+  | "Teknik"
+  | "Diger";
 export type AccountKind = "team" | "guest";
 export type CalendarEventType = "Toplanti" | "Cekim" | "Diger";
 export type CalendarEventColor = "auto" | "purple" | "blue" | "cyan" | "green" | "amber" | "rose" | "slate";
+export type IdeaScope = "office" | "brand";
+export type IdeaCategory = "Icerik" | "Kampanya" | "Gorsel" | "Strateji" | "Ofis" | "Diger";
+export type IdeaStatus = "Yeni" | "Gelistiriliyor" | "Hazir" | "Kullanildi";
+export type IdeaSourcePlatform = "Instagram" | "TikTok" | "Pinterest" | "YouTube" | "Web";
+
+export interface Idea {
+  id: string;
+  scope_type: IdeaScope;
+  brand_id: string | null;
+  brand_name_snapshot: string | null;
+  category: IdeaCategory;
+  status: IdeaStatus;
+  title: string;
+  body: string;
+  source_url: string | null;
+  source_platform: IdeaSourcePlatform | null;
+  tags_text: string | null;
+  created_by_id: string | null;
+  created_by_name: string;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IdeaWithContext extends Idea {
+  brand_name: string | null;
+}
 
 export type ClientRequestStatus =
   | "Beklemede"
@@ -258,8 +293,54 @@ export interface GuestTaskDTO {
   editable: boolean;
   comments: GuestSharedTaskComment[];
   attachments: GuestSharedTaskAttachment[];
+  deliveries: GuestTaskDelivery[];
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskDeliveryAttachment {
+  id: string;
+  delivery_id: string;
+  file_path: string;
+  original_name: string | null;
+  created_at: string;
+}
+
+export interface TaskDelivery {
+  id: string;
+  task_id: string;
+  version_number: number;
+  note: string | null;
+  external_url: string | null;
+  guest_visible: number;
+  status: TaskDeliveryStatus;
+  submitted_by_account_id: string | null;
+  submitted_by_name: string;
+  submitted_at: string;
+  decision_actor_kind: AccountKind | null;
+  decided_by_account_id: string | null;
+  decided_by_name: string | null;
+  decision_note: string | null;
+  revision_reason: TaskRevisionReason | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+  attachments: TaskDeliveryAttachment[];
+}
+
+export interface GuestTaskDelivery {
+  id: string;
+  version_number: number;
+  note: string | null;
+  external_url: string | null;
+  status: TaskDeliveryStatus;
+  submitted_by_name: string;
+  submitted_at: string;
+  decided_by_name: string | null;
+  decision_note: string | null;
+  revision_reason: TaskRevisionReason | null;
+  decided_at: string | null;
+  attachments: Array<Omit<TaskDeliveryAttachment, "delivery_id">>;
 }
 
 export interface MonthlyProgress {
@@ -352,7 +433,8 @@ export type ActivityEntityType =
   | "brand"
   | "cluster"
   | "template"
-  | "request";
+  | "request"
+  | "idea";
 
 export interface ActivityEntry {
   id: string;

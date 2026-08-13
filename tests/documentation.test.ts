@@ -67,6 +67,7 @@ describe("v03 kullanım kılavuzu", () => {
       "Görev şablonları",
       "Aylık içerikler tamamlandı",
       "Guest ile paylaş",
+      "Fikir Bankası",
     ]) assert.ok(guide.includes(fragment), `${fragment} kullanım kılavuzunda bulunmalı`);
     assert.match(guide, /Görev teslim tarihleri[\s\S]*takvimde gösterilmez/i);
     assert.match(guide, /ekip[\s\S]*teslim tarihi[\s\S]*zorunlu/i);

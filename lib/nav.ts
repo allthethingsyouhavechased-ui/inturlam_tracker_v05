@@ -19,6 +19,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/", label: "Bugün", icon: "home" },
       { href: "/panom", label: "Panom", icon: "board" },
+      { href: "/ideas", label: "Fikir Bankası", icon: "ideas" },
       { href: "/requests", label: "Talepler", icon: "inbox" },
       { href: "/tasks", label: "Görevler", icon: "tasks" },
       { href: "/calendar", label: "Takvim", icon: "calendar" },
@@ -74,6 +75,7 @@ export function routeContextForPathname(pathname: string): RouteContext {
   if (pathname.startsWith("/settings")) return { section: "Ayarlar", label: "Hesap" };
   if (pathname.startsWith("/tasks/")) return { section: "Görevler", label: "Görev detayı" };
   if (pathname.startsWith("/templates")) return { section: "Görevler", label: "Görev şablonları" };
+  if (pathname.startsWith("/ideas/")) return { section: "Fikir Bankası", label: "Fikir detayı" };
   if (pathname.startsWith("/requests/")) return { section: "Talepler", label: "Talep değerlendirme" };
   if (pathname.startsWith("/brands/") && pathname.includes("/content/")) {
     return { section: "Markalar", label: "İçerik detayı" };

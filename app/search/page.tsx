@@ -9,6 +9,7 @@ import {
   TASK_STATUS_LABEL,
   UNKNOWN_CLUSTER_LABEL,
 } from "@/lib/constants";
+import { IDEA_CATEGORY_LABEL, IDEA_STATUS_LABEL } from "@/lib/ideas";
 import { clusterLabelMap } from "@/lib/repositories/clusters";
 import { searchAll } from "@/lib/repositories/search";
 
@@ -22,8 +23,8 @@ export default async function SearchPage({
   await requirePageSession();
   const { q } = await searchParams;
   const query = (q ?? "").trim();
-  const results = query ? searchAll(query) : { brands: [], content: [], tasks: [] };
-  const totalCount = results.brands.length + results.content.length + results.tasks.length;
+  const results = query ? searchAll(query) : { brands: [], content: [], tasks: [], ideas: [] };
+  const totalCount = results.brands.length + results.content.length + results.tasks.length + results.ideas.length;
   const clusterLabels = clusterLabelMap();
 
   return (
@@ -34,7 +35,7 @@ export default async function SearchPage({
 
       {!query && (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Yukarıdaki arama kutusuna marka, içerik veya görev adı yaz.
+          Yukarıdaki arama kutusuna marka, içerik, görev veya fikir yaz.
         </p>
       )}
 
@@ -114,6 +115,29 @@ export default async function SearchPage({
                   <span className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">
                     {task.brand_name} · {CONTENT_TYPE_LABEL[task.content_type]} · {task.content_title}
                   </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {results.ideas.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Fikirler ({results.ideas.length})
+          </h2>
+          <ul className="grid gap-2">
+            {results.ideas.map((idea) => (
+              <li key={idea.id}>
+                <Link
+                  href={`/ideas/${idea.id}`}
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 transition-colors hover:border-brand-300 hover:bg-brand-50/50 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-brand-800 dark:hover:bg-brand-950/30"
+                >
+                  <span className="font-medium">{idea.title}</span>
+                  <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-secondary">{IDEA_CATEGORY_LABEL[idea.category]}</span>
+                  <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">{IDEA_STATUS_LABEL[idea.status]}</span>
+                  <span className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">{idea.scope_type === "office" ? "Ofis geneli" : (idea.brand_name ?? "Eski marka")}</span>
                 </Link>
               </li>
             ))}

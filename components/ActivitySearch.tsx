@@ -8,7 +8,7 @@ import type { ActivityEntry } from "@/lib/types";
 
 export default function ActivitySearch({ entries }: { entries: ActivityEntry[] }) {
   const [query, setQuery] = useState("");
-  const [entityType, setEntityType] = useState<"all" | "task" | "content" | "brand">("all");
+  const [entityType, setEntityType] = useState<"all" | "task" | "content" | "brand" | "request" | "idea">("all");
   const filteredEntries = useMemo(
     () => filterActivityEntries(entries, query).filter((entry) => entityType === "all" || entry.entity_type === entityType),
     [entries, entityType, query],
@@ -34,7 +34,7 @@ export default function ActivitySearch({ entries }: { entries: ActivityEntry[] }
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Kişi, görev veya işlem ara…"
+            placeholder="Kişi, görev, fikir veya işlem ara…"
             className="min-h-10 w-full rounded-[9px] border border-border-default bg-surface-subtle pl-9 pr-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
           />
         </label>
@@ -44,6 +44,8 @@ export default function ActivitySearch({ entries }: { entries: ActivityEntry[] }
             ["task", "Görev"],
             ["content", "İçerik"],
             ["brand", "Marka"],
+            ["request", "Talep"],
+            ["idea", "Fikir"],
           ] as const).map(([value, label]) => (
             <button
               key={value}

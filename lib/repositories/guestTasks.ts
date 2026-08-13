@@ -1,4 +1,5 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
+import { listGuestTaskDeliveries } from "@/lib/repositories/deliveries";
 import type { GuestTaskDTO, SharedTaskAttachment, SharedTaskComment, TaskStatus } from "@/lib/types";
 
 interface GuestTaskRow {
@@ -61,6 +62,7 @@ function toDto(row: GuestTaskRow, viewerAccountId: string): GuestTaskDTO {
       created_at,
       can_delete: account_id === viewerAccountId,
     })),
+    deliveries: listGuestTaskDeliveries(row.id, row.brand_id),
   };
 }
 
@@ -200,11 +202,20 @@ export function deleteGuestOwnedSharedAttachment(
 
 export function guestCanAccessUpload(accountBrandId: string, filePath: string): boolean {
   return Boolean(getDb().prepare(
-    `SELECT 1
-       FROM task_shared_attachments a
-       JOIN tasks t ON t.id = a.task_id
-       JOIN content_items ci ON ci.id = t.content_item_id
-      WHERE ci.brand_id = ? AND a.file_path = ?`,
+    `SELECT 1 FROM (
+       SELECT sa.file_path, ci.brand_id, t.origin, 1 AS guest_visible
+         FROM task_shared_attachments sa
+         JOIN tasks t ON t.id = sa.task_id
+         JOIN content_items ci ON ci.id = t.content_item_id
+       UNION ALL
+       SELECT da.file_path, ci.brand_id, t.origin, d.guest_visible
+         FROM task_delivery_attachments da
+         JOIN task_deliveries d ON d.id = da.delivery_id
+         JOIN tasks t ON t.id = d.task_id
+         JOIN content_items ci ON ci.id = t.content_item_id
+     ) visible_uploads
+     WHERE brand_id = ? AND file_path = ?
+       AND origin = 'guest' AND guest_visible = 1`,
   ).get(accountBrandId, filePath));
 }
 

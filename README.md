@@ -29,6 +29,12 @@ olarak `http://localhost:3001` adresinde çalışır.
   %90 ve %100 katsayıyla hesaplanır.
 - **Kişisel ve marka analizleri:** Bugün, Panom, Bu ayki katkım, Üzerimdeki markalar ve
   marka detay ekranları seçilen aya göre ağırlıklı ilerlemeyi gösterir.
+- **Fikir Bankası:** Marka veya Ofis geneli kapsamındaki içerik, kampanya, görsel dil,
+  strateji ve süreç fikirleri; Instagram ve diğer kaynak bağlantılarıyla birlikte aranabilir,
+  etiketlenebilir ve fikir durumuna göre geliştirilebilir.
+- **Versiyonlu teslim ve onay:** Görev çalışmaları V1, V2… olarak bağlantı ve önizlemelerle
+  sunulur. Onay veya gerekçeli revize kararı mühürlenir; yeni teslim aktif revize turunu
+  otomatik tamamlar. Guest yalnızca açıkça paylaşılan teslimleri görür ve karara bağlar.
 - **Marka operasyon özeti:** Marka sorumluları, aylık/yıllık çekim hakları, aylık içerik
   akışı, ilerleme ve yaklaşan toplantı/çekimler marka sayfasındadır.
 - **Merkezi etkinlik takvimi:** Toplantı, Çekim ve Diğer etkinlikleri marka ve renkle
@@ -39,8 +45,8 @@ olarak `http://localhost:3001` adresinde çalışır.
   hedef tarihi bulunan içeriklere uygulanabilir.
 - **Sosyal operasyon:** Hesap sessizliği, hazır içerik varlığı, paylaşım takvimi ve
   marka bazlı “Aylık içerikler tamamlandı” kapanışı birbirinden ayrıdır.
-- **Raporlama:** Dönem, kişi, departman ve marka detayları; CSV, Excel ve yazdırma
-  çıktıları yönetici kapsamındadır.
+- **Raporlama:** Dönem, kişi, departman ve marka detaylarıyla birlikte teslimlerin ilk-onay
+  oranı ve revize nedenleri izlenir; CSV, Excel ve yazdırma çıktıları yönetici kapsamındadır.
 
 ## Teknoloji ve runtime verisi
 

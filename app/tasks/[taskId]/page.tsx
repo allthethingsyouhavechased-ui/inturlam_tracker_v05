@@ -11,6 +11,7 @@ import SubmitButton from "@/components/SubmitButton";
 import TaskNotesAttachments from "@/components/TaskNotesAttachments";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
 import TaskDifficultySelect from "@/components/TaskDifficultySelect";
+import TaskDeliveryPanel from "@/components/TaskDeliveryPanel";
 import TaskRepeatSelect from "@/components/TaskRepeatSelect";
 import TaskRevisionPanel from "@/components/TaskRevisionPanel";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
@@ -25,6 +26,7 @@ import { canReviewClientRequests } from "@/lib/requestAccess";
 import { listActivityForEntity } from "@/lib/repositories/activity";
 import { listCommentsByTask } from "@/lib/repositories/comments";
 import { getClientRequestByTask } from "@/lib/repositories/clientRequests";
+import { listTaskDeliveries } from "@/lib/repositories/deliveries";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listAttachmentsByTask } from "@/lib/repositories/taskAttachments";
 import { getTask, listTaskRevisions } from "@/lib/repositories/tasks";
@@ -51,6 +53,7 @@ export default async function TaskPage({
   const comments = listCommentsByTask(taskId);
   const activity = listActivityForEntity("task", taskId);
   const attachments = listAttachmentsByTask(taskId);
+  const deliveries = listTaskDeliveries(taskId);
   const revisionRounds = listTaskRevisions(taskId);
   const sharedComments = task.origin === "guest" ? listSharedComments(taskId) : [];
   const sharedAttachments = task.origin === "guest" ? listSharedAttachments(taskId) : [];
@@ -136,6 +139,15 @@ export default async function TaskPage({
               {canDeleteTask && <DeleteTaskButton taskId={task.id} />}
             </div>
           </form>
+
+          <TaskDeliveryPanel
+            taskId={task.id}
+            taskStatus={task.status}
+            taskOrigin={task.origin}
+            planned={task.due_date !== null}
+            archived={task.archived_at !== null}
+            deliveries={deliveries}
+          />
 
           <TaskRevisionPanel
             taskId={task.id}
