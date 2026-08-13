@@ -37,19 +37,19 @@ describe("NAV_GROUPS bilgi mimarisi", () => {
     assert.equal(new Set(hrefs).size, hrefs.length);
   });
 
-  it("Bugün, Panom, Fikir Bankası, Talepler, Görevler ve Takvim aynı çalışma grubundadır", () => {
+  it("Bugün, Panom, Talepler, Görevler ve Takvim aynı çalışma grubundadır", () => {
     const calisma = NAV_GROUPS.find((group) => group.id === "calisma");
     assert.ok(calisma);
     assert.deepEqual(
       calisma.items.map((item) => item.href),
-      ["/", "/panom", "/ideas", "/requests", "/tasks", "/calendar"],
+      ["/", "/panom", "/requests", "/tasks", "/calendar"],
     );
   });
 
-  it("Markalar ve Sosyal portföyde; marka ağacı global navda değildir", () => {
+  it("Markalar, Sosyal ve Fikir Bankası portföydedir; marka ağacı global navda değildir", () => {
     const portfoy = NAV_GROUPS.find((group) => group.id === "portfoy");
     assert.ok(portfoy);
-    assert.deepEqual(portfoy.items.map((item) => item.href), ["/brands", "/social"]);
+    assert.deepEqual(portfoy.items.map((item) => item.href), ["/brands", "/social", "/ideas"]);
     assert.equal(allHrefs(NAV_GROUPS).some((href) => href.startsWith("/brands/")), false);
   });
 });

@@ -19,7 +19,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/", label: "Bugün", icon: "home" },
       { href: "/panom", label: "Panom", icon: "board" },
-      { href: "/ideas", label: "Fikir Bankası", icon: "ideas" },
       { href: "/requests", label: "Talepler", icon: "inbox" },
       { href: "/tasks", label: "Görevler", icon: "tasks" },
       { href: "/calendar", label: "Takvim", icon: "calendar" },
@@ -31,6 +30,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/brands", label: "Markalar", icon: "brands" },
       { href: "/social", label: "Sosyal", icon: "social" },
+      { href: "/ideas", label: "Fikir Bankası", icon: "ideas" },
     ],
   },
   {
