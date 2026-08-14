@@ -1,4 +1,5 @@
 import Link from "next/link";
+import IdeaCreateButton from "@/components/IdeaCreateButton";
 import IdeaBankExplorer from "@/components/IdeaBankExplorer";
 import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
@@ -36,15 +37,12 @@ export default async function IdeasPage({
               <Icon name="archive" className="size-4" />
               {archived ? "Aktif fikirler" : `Arşiv · ${archivedCount}`}
             </Link>
-            {!archived && (
-              <Link href="/ideas?new=1#yeni-fikir" className={buttonClass()}>
-                <Icon name="plus" className="size-4" /> Yeni fikir
-              </Link>
-            )}
+            {!archived && <IdeaCreateButton />}
           </>
         }
       />
       <IdeaBankExplorer
+        key={`${archived ? "archive" : "active"}:${initialBrandId}:${sp.new === "1" ? "new" : "closed"}`}
         ideas={ideas}
         brands={brands}
         clusters={clusters}

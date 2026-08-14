@@ -71,6 +71,9 @@ describe("v03 marka operasyon özeti", () => {
     assert.match(list, /t\.weight_points/);
     assert.match(responsibilityDialog, /Bir markaya birden fazla sorumlu atayabilirsin/);
     assert.match(responsibilityDialog, /name="personId"/);
+    assert.match(responsibilityDialog, /h-\[min\(52rem,calc\(100dvh-1\.5rem\)\)\]/);
+    assert.match(responsibilityDialog, /overflow-y-auto overscroll-contain/);
+    assert.match(responsibilityDialog, /\[scrollbar-gutter:stable\]/);
     assert.match(editBrand, /name="responsiblePersonId"/);
     assert.ok(editBrand.indexOf("annualShootAllowance") < editBrand.indexOf("Marka sorumluları"));
     assert.match(editBrand, /<details className="group border-t/);

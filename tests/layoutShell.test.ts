@@ -20,18 +20,23 @@ describe("masaüstü uygulama kabuğu", () => {
 });
 
 describe("marka başlığı bilgi hiyerarşisi", () => {
-  it("marka özeti, aylık hedef ve aktifliği soldan sağa sıralar", () => {
+  it("marka özeti, aylık hedef, aktiflik ve hızlı işlemleri boşluk bırakmadan sıralar", () => {
     const page = source("app/brands/[brandId]/page.tsx");
     const summaryStart = page.indexOf("summary={");
     const brandSummary = page.indexOf('data-brand-info="summary"', summaryStart);
     const targets = page.indexOf('data-brand-info="targets"', brandSummary);
     const activity = page.indexOf('data-brand-info="activity"', targets);
+    const actions = page.indexOf('data-brand-info="actions"', activity);
 
     assert.ok(summaryStart >= 0);
     assert.ok(brandSummary > summaryStart);
     assert.ok(targets > brandSummary);
     assert.ok(activity > targets);
-    assert.match(page, /xl:grid-cols-\[1\.1fr_1fr_0\.85fr\]/);
+    assert.ok(actions > activity);
+    assert.match(page, /xl:grid-cols-\[1\.15fr_1fr_0\.9fr_1\.05fr\]/);
+    assert.match(page, /summaryClassName="sm:max-w-none xl:basis-\[68rem\]"/);
+    assert.match(page, /HIZLI İŞLEMLER/);
+    assert.doesNotMatch(page, /\n\s*actions=\{/);
     assert.doesNotMatch(page, /operasyon özeti/);
   });
 

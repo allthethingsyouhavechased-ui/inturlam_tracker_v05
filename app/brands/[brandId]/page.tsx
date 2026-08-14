@@ -102,7 +102,7 @@ export default async function BrandPage({
     <div className="space-y-6">
       <AutoRefresh />
       <PageHeader
-        className="!mb-0 sm:flex-wrap xl:flex-nowrap"
+        className="!mb-0 sm:!items-stretch xl:flex-nowrap"
         eyebrow="MARKA ÇALIŞMA ALANI"
         title={brand.name}
         description={
@@ -126,12 +126,13 @@ export default async function BrandPage({
         }
         breadcrumb={[{ label: "Markalar", href: "/brands" }, { label: brand.name }]}
         media={<BrandLogo name={brand.name} logoPath={brand.logo_path} size="lg" />}
+        summaryClassName="sm:max-w-none xl:basis-[68rem]"
         summary={
           <section
             aria-label="Marka bilgi özeti"
             className="min-w-0 border-t border-border-subtle pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0 lg:pl-5"
           >
-            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_1fr_0.85fr] xl:gap-0">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-[1.15fr_1fr_0.9fr_1.05fr] xl:gap-0">
               <div data-brand-info="summary" className="min-w-0 xl:pr-5">
                 <p className="text-[10px] font-semibold tracking-[0.09em] text-faint">MARKA ÖZETİ</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -175,7 +176,7 @@ export default async function BrandPage({
 
               <div
                 data-brand-info="activity"
-                className="min-w-0 border-t border-border-subtle pt-4 md:col-span-2 xl:col-span-1 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0"
+                className="min-w-0 border-t border-border-subtle pt-4 md:pr-4 xl:border-l xl:border-t-0 xl:px-5 xl:pt-0"
               >
                 <p className="text-[9px] font-semibold tracking-[0.08em] text-faint">AKTİFLİK</p>
                 <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
@@ -196,31 +197,38 @@ export default async function BrandPage({
                   )}
                 </div>
               </div>
+
+              <div
+                data-brand-info="actions"
+                className="min-w-0 border-t border-border-subtle pt-4 md:border-l md:pl-4 xl:border-t-0 xl:pl-5 xl:pt-0"
+              >
+                <p className="text-[9px] font-semibold tracking-[0.08em] text-faint">HIZLI İŞLEMLER</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <QuickAddModal
+                    brands={[{ id: brand.id, name: brand.name }]}
+                    contents={items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title }))}
+                    people={people}
+                    defaultAssigneeId={me?.id ?? null}
+                    defaultBrandId={brand.id}
+                    triggerLabel="Görev oluştur"
+                    triggerClassName={buttonClass({ size: "sm", className: "col-span-2 w-full" })}
+                  />
+                  <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary", size: "sm", className: canManageBrand ? "w-full" : "col-span-2 w-full" })}>
+                    <Icon name="ideas" className="size-3.5" /> Fikirler · {brandIdeaCount}
+                  </Link>
+                  {canManageBrand ? (
+                    <EditBrandForm
+                      brand={brand}
+                      clusters={clusters}
+                      people={people}
+                      assignments={assignments}
+                      triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: "w-full" })}
+                    />
+                  ) : null}
+                </div>
+              </div>
             </div>
           </section>
-        }
-        actions={
-          <>
-            <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary" })}>
-              <Icon name="ideas" className="size-4" /> Fikirler · {brandIdeaCount}
-            </Link>
-            <QuickAddModal
-              brands={[{ id: brand.id, name: brand.name }]}
-              contents={items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title }))}
-              people={people}
-              defaultAssigneeId={me?.id ?? null}
-              defaultBrandId={brand.id}
-              triggerLabel="Görev oluştur"
-            />
-            {canManageBrand && (
-              <EditBrandForm
-                brand={brand}
-                clusters={clusters}
-                people={people}
-                assignments={assignments}
-              />
-            )}
-          </>
         }
       />
 

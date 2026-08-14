@@ -8,11 +8,18 @@ function source(file: string): string {
 }
 
 describe("Fikir Bankası ürün bağlantıları", () => {
-  it("hızlı kayıt formunu kapsam, kategori, kaynak ve etiketlerle kurar", () => {
+  it("yeni fikir düğmesinin açtığı modalı kapsam, kategori, kaynak ve etiketlerle kurar", () => {
     const explorer = source("components/IdeaBankExplorer.tsx");
+    const page = source("app/ideas/page.tsx");
+    const trigger = source("components/IdeaCreateButton.tsx");
     for (const name of ["brandId", "category", "title", "body", "sourceUrl", "tags"]) {
       assert.match(explorer, new RegExp(`name=["']${name}["']`), `${name} alanı eksik`);
     }
+    assert.match(page, /<IdeaCreateButton \/>/);
+    assert.match(trigger, /OPEN_IDEA_DIALOG_EVENT/);
+    assert.match(explorer, /role="dialog"/);
+    assert.doesNotMatch(explorer, /<details id="yeni-fikir"/);
+    assert.doesNotMatch(explorer, /Yeni fikir yakala/);
     assert.match(explorer, /Ofis geneli/);
     assert.match(explorer, /Instagram, TikTok, Pinterest, YouTube/);
     assert.match(explorer, /updateIdeaStatusAction/);
@@ -40,6 +47,8 @@ describe("Fikir Bankası ürün bağlantıları", () => {
     assert.match(explorer, /ideaCountByBrand/);
     assert.match(explorer, /group\.label\.toLocaleUpperCase\("tr-TR"\)/);
     assert.match(explorer, /chooseScope\(brand\.id\)/);
+    assert.match(explorer, /setQuery\(""\);\s+setCategory\(ALL\);\s+setStatus\(ALL\);\s+setScope\(nextScope\)/);
+    assert.match(explorer, /`\$\{selectedScopeLabel\} fikirleri`/);
   });
 
   it("marka detayındaki fikir kısayolu sayacı korur ve filtrelenmiş akışa iner", () => {

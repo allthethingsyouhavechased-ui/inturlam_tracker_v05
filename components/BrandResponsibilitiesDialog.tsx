@@ -83,7 +83,7 @@ export default function BrandResponsibilitiesDialog({
       </Button>
 
       {open && isClient && createPortal(
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-950/65 p-3 pt-6 backdrop-blur-[2px] sm:p-6 sm:pt-12">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-zinc-950/65 p-3 backdrop-blur-[2px] sm:p-6">
           <button
             type="button"
             tabIndex={-1}
@@ -97,9 +97,9 @@ export default function BrandResponsibilitiesDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby="brand-responsibilities-title"
-            className="ui-enter relative w-full max-w-5xl overflow-hidden rounded-xl border border-border-default bg-surface-elevated shadow-2xl outline-none"
+            className="ui-enter relative flex h-[min(52rem,calc(100dvh-1.5rem))] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border-default bg-surface-elevated shadow-2xl outline-none sm:h-[min(52rem,calc(100dvh-3rem))]"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-border-subtle px-4 py-4 sm:px-6">
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border-subtle px-4 py-4 sm:px-6">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">PORTFÖY DAĞILIMI</p>
                 <h2 id="brand-responsibilities-title" className="mt-1 text-lg font-semibold tracking-[-0.015em] text-foreground">Marka sorumlularını yönet</h2>
@@ -110,7 +110,7 @@ export default function BrandResponsibilitiesDialog({
               </button>
             </header>
 
-            <div className="grid max-h-[calc(100dvh-9rem)] min-h-[32rem] overflow-hidden lg:grid-cols-[17rem_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 grid-rows-[minmax(12rem,42%)_minmax(0,1fr)] overflow-hidden lg:grid-cols-[17rem_minmax(0,1fr)] lg:grid-rows-1">
               <aside className="flex min-h-0 flex-col border-b border-border-subtle bg-surface-subtle lg:border-b-0 lg:border-r">
                 <label className="border-b border-border-subtle p-3">
                   <span className="sr-only">Marka ara</span>
@@ -119,7 +119,7 @@ export default function BrandResponsibilitiesDialog({
                     <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Marka ara…" className="min-h-10 w-full rounded-[9px] border border-border-default bg-surface pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand-500" />
                   </span>
                 </label>
-                <div className="min-h-0 overflow-y-auto p-2">
+                <div className="min-h-0 overflow-y-auto overscroll-contain p-2 [scrollbar-gutter:stable]">
                   {filteredBrands.map((brand) => {
                     const selected = selectedBrand?.id === brand.id;
                     const count = assignmentCountByBrand.get(brand.id) ?? 0;

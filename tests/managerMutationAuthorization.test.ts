@@ -83,7 +83,7 @@ describe("yönetici mutasyon sınırı", () => {
     assert.match(brandsPage, /canManageBrands && \([\s\S]*<ArchiveBrandButton/);
 
     const brandPage = fs.readFileSync(path.join(process.cwd(), "app/brands/[brandId]/page.tsx"), "utf8");
-    assert.match(brandPage, /canManageBrand && \([\s\S]*<EditBrandForm/);
+    assert.match(brandPage, /canManageBrand \? \([\s\S]*<EditBrandForm/);
 
     const contentPage = fs.readFileSync(
       path.join(process.cwd(), "app/brands/[brandId]/content/[contentId]/page.tsx"),

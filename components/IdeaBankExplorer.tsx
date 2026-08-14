@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import ActionForm from "@/components/ActionForm";
 import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
+import { OPEN_IDEA_DIALOG_EVENT } from "@/components/IdeaCreateButton";
 import SubmitButton from "@/components/SubmitButton";
 import Badge from "@/components/ui/Badge";
 import Icon from "@/components/ui/Icon";
@@ -26,6 +29,11 @@ import type { Brand, ClusterRow, IdeaCategory, IdeaStatus, IdeaWithContext } fro
 
 const ALL = "__all__";
 const OFFICE = "__office__";
+const emptySubscribe = () => () => {};
+
+function useIsClient(): boolean {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
 
 function searchText(idea: IdeaWithContext): string {
   return [idea.title, idea.body, idea.brand_name, idea.tags_text, idea.source_platform]
@@ -39,6 +47,137 @@ function IdeaScopeBadge({ idea }: { idea: IdeaWithContext }) {
     <Badge tone="neutral">Ofis geneli</Badge>
   ) : (
     <Badge tone="brand">{idea.brand_name ?? "Silinmiş marka"}</Badge>
+  );
+}
+
+function IdeaCreateDialog({
+  open,
+  brands,
+  defaultBrandId,
+  onClose,
+}: {
+  open: boolean;
+  brands: Brand[];
+  defaultBrandId: string;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const isClient = useIsClient();
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLInputElement>('input[name="title"]')?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose, open]);
+
+  if (!open || !isClient) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-950/65 p-3 pt-6 backdrop-blur-[2px] sm:p-6 sm:pt-12">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Yeni fikir penceresini kapat"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-idea-title"
+        aria-describedby="new-idea-description"
+        className="ui-enter relative w-full max-w-4xl overflow-hidden rounded-xl border border-border-default bg-surface-elevated shadow-2xl outline-none"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-border-subtle px-4 py-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">YENİ KAYIT</p>
+            <h2 id="new-idea-title" className="mt-1 text-lg font-semibold tracking-[-0.015em] text-foreground">Yeni fikir</h2>
+            <p id="new-idea-description" className="mt-1 text-xs leading-5 text-muted">Ham düşünceyi ve ilham kaynağını kaydet; ayrıntıları daha sonra geliştirebilirsin.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Kapat" className="ui-press inline-flex size-9 shrink-0 items-center justify-center rounded-[9px] text-muted hover:bg-surface-hover hover:text-foreground">
+            <Icon name="close" className="size-[17px]" />
+          </button>
+        </header>
+
+        <ActionForm
+          key={defaultBrandId}
+          action={createIdeaAction}
+          redirectPathPrefix="/ideas/"
+          className="grid max-h-[calc(100dvh-8rem)] gap-4 overflow-y-auto p-4 sm:p-6 lg:grid-cols-12"
+        >
+          <input type="hidden" name="status" value="Yeni" />
+          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-4">
+            Kapsam
+            <Select name="brandId" defaultValue={defaultBrandId}>
+              <option value={OFFICE}>Ofis geneli</option>
+              {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+            </Select>
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-4">
+            Kategori
+            <Select name="category" defaultValue="Icerik">
+              {IDEA_CATEGORIES.map((value) => <option key={value} value={value}>{IDEA_CATEGORY_LABEL[value]}</option>)}
+            </Select>
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-12">
+            Fikir başlığı
+            <Input name="title" required maxLength={180} placeholder="Örn. Ürünün seslerinden oluşan ritmik Reels" />
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-12">
+            Fikri anlat
+            <Textarea name="body" required maxLength={8000} rows={5} placeholder="Neyi ilginç bulduk, bu fikir nasıl uygulanabilir, hangi duygu veya mesajı taşımalı?" />
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-8">
+            İlham / kaynak bağlantısı <span className="font-normal text-muted">(Instagram, TikTok, Pinterest, YouTube veya web)</span>
+            <Input name="sourceUrl" type="url" maxLength={2000} placeholder="https://www.instagram.com/reel/…" />
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-4">
+            Etiketler
+            <Input name="tags" maxLength={260} placeholder="reels, ürün, kurgu" />
+          </label>
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border-subtle pt-4 lg:col-span-12">
+            <button type="button" onClick={onClose} className="ui-press min-h-10 rounded-[10px] px-4 text-[13px] font-semibold text-secondary hover:bg-surface-hover">
+              Vazgeç
+            </button>
+            <SubmitButton pendingLabel="Kaydediliyor…" className="min-h-10 rounded-[10px] bg-brand-600 px-5 text-[13px] font-semibold text-white hover:bg-brand-700">
+              Fikri kaydet
+            </SubmitButton>
+          </div>
+        </ActionForm>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -57,10 +196,21 @@ export default function IdeaBankExplorer({
   initialBrandId?: string;
   newOpen?: boolean;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState(initialBrandId || ALL);
   const [category, setCategory] = useState<typeof ALL | IdeaCategory>(ALL);
   const [status, setStatus] = useState<typeof ALL | IdeaStatus>(ALL);
+  const [ideaDialogOpen, setIdeaDialogOpen] = useState(newOpen);
+
+  useEffect(() => {
+    function openIdeaDialog() {
+      setIdeaDialogOpen(true);
+    }
+
+    window.addEventListener(OPEN_IDEA_DIALOG_EVENT, openIdeaDialog);
+    return () => window.removeEventListener(OPEN_IDEA_DIALOG_EVENT, openIdeaDialog);
+  }, []);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("tr-TR");
@@ -108,11 +258,22 @@ export default function IdeaBankExplorer({
       : brands.find((brand) => brand.id === scope)?.name ?? "Fikirler";
 
   function chooseScope(nextScope: string): void {
+    setQuery("");
+    setCategory(ALL);
+    setStatus(ALL);
     setScope(nextScope);
     window.requestAnimationFrame(() => {
       document.getElementById("fikir-akisi")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
+
+  const closeIdeaDialog = useCallback((): void => {
+    setIdeaDialogOpen(false);
+    if (!newOpen) return;
+    const params = new URLSearchParams();
+    if (initialBrandId) params.set("brand", initialBrandId);
+    router.replace(params.size > 0 ? `/ideas?${params.toString()}` : "/ideas", { scroll: false });
+  }, [initialBrandId, newOpen, router]);
 
   function resetFilters(): void {
     setQuery("");
@@ -122,7 +283,14 @@ export default function IdeaBankExplorer({
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
+    <>
+      <IdeaCreateDialog
+        open={ideaDialogOpen}
+        brands={brands}
+        defaultBrandId={scope !== ALL && scope !== OFFICE ? scope : OFFICE}
+        onClose={closeIdeaDialog}
+      />
+      <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
       <aside aria-labelledby="idea-spaces-title" className="overflow-hidden rounded-xl border border-border-default bg-surface lg:sticky lg:top-20">
         <div className="border-b border-border-subtle px-3.5 py-3">
           <h2 id="idea-spaces-title" className="text-sm font-semibold text-foreground">Fikir alanları</h2>
@@ -204,59 +372,6 @@ export default function IdeaBankExplorer({
         </section>
       )}
 
-      {!archived && (
-        <details id="yeni-fikir" open={ideas.length === 0 || newOpen} className="group scroll-mt-20 overflow-hidden rounded-xl border border-border-default bg-surface">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 sm:px-5">
-            <span>
-              <span className="block text-sm font-semibold text-foreground">Yeni fikir yakala</span>
-              <span className="mt-0.5 block text-xs text-muted">Ham düşünceyi kaydet; geliştirmek için mükemmel olmasını bekleme.</span>
-            </span>
-            <Icon name="chevron-down" className="size-4 text-muted transition-transform group-open:rotate-180" />
-          </summary>
-          <ActionForm
-            action={createIdeaAction}
-            redirectPathPrefix="/ideas/"
-            className="grid gap-4 border-t border-border-subtle p-4 sm:p-5 lg:grid-cols-12"
-          >
-            <input type="hidden" name="status" value="Yeni" />
-            <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-3">
-              Kapsam
-              <Select name="brandId" defaultValue={initialBrandId || "__office__"}>
-                <option value="__office__">Ofis geneli</option>
-                {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
-              </Select>
-            </label>
-            <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-3">
-              Kategori
-              <Select name="category" defaultValue="Icerik">
-                {IDEA_CATEGORIES.map((value) => <option key={value} value={value}>{IDEA_CATEGORY_LABEL[value]}</option>)}
-              </Select>
-            </label>
-            <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-6">
-              Fikir başlığı
-              <Input name="title" required maxLength={180} placeholder="Örn. Ürünün seslerinden oluşan ritmik Reels" />
-            </label>
-            <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-12">
-              Fikri anlat
-              <Textarea name="body" required maxLength={8000} rows={5} placeholder="Neyi ilginç bulduk, bu fikir nasıl uygulanabilir, hangi duygu veya mesajı taşımalı?" />
-            </label>
-            <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-7">
-              İlham / kaynak bağlantısı <span className="font-normal text-muted">(Instagram, TikTok, Pinterest, YouTube veya web)</span>
-              <Input name="sourceUrl" type="url" maxLength={2000} placeholder="https://www.instagram.com/reel/…" />
-            </label>
-            <label className="grid gap-1.5 text-xs font-medium text-secondary lg:col-span-3">
-              Etiketler
-              <Input name="tags" maxLength={260} placeholder="reels, ürün, kurgu" />
-            </label>
-            <div className="flex items-end justify-end lg:col-span-2">
-              <SubmitButton pendingLabel="Kaydediliyor…" className="min-h-10 w-full rounded-[10px] bg-brand-600 px-4 text-[13px] font-semibold text-white hover:bg-brand-700">
-                Fikri kaydet
-              </SubmitButton>
-            </div>
-          </ActionForm>
-        </details>
-      )}
-
       <section className="rounded-xl border border-border-default bg-surface p-3 sm:p-4" aria-label="Fikir filtreleri">
         <div className="grid gap-3 lg:grid-cols-[minmax(14rem,1fr)_11rem_11rem_auto] lg:items-end">
           <label className="grid gap-1.5 text-xs font-medium text-secondary">
@@ -296,7 +411,7 @@ export default function IdeaBankExplorer({
 
       <div id="fikir-akisi" className="flex scroll-mt-20 flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-foreground">{archived ? "Fikir arşivi" : "Fikir akışı"}</h2>
+          <h2 className="text-base font-semibold text-foreground">{archived ? "Fikir arşivi" : scope === ALL ? "Fikir akışı" : `${selectedScopeLabel} fikirleri`}</h2>
           <p className="mt-0.5 text-xs text-muted"><strong className="text-secondary">{filtered.length}</strong> / {ideas.length} kayıt gösteriliyor</p>
         </div>
       </div>
@@ -304,10 +419,12 @@ export default function IdeaBankExplorer({
       {filtered.length === 0 ? (
         <EmptyState
           compact
-          title={ideas.length === 0 ? (archived ? "Arşivde fikir yok" : "Henüz fikir kaydedilmedi") : "Filtrelerle eşleşen fikir yok"}
-          description={ideas.length === 0
-            ? (archived ? "Arşivlenen fikirler burada saklanacak." : "İlk fikri yukarıdaki hızlı kayıt panelinden ekleyin.")
-            : "Aramayı veya filtreleri temizleyerek daha fazla kayıt görebilirsiniz."}
+          title={scopedIdeas.length === 0
+            ? (archived ? "Bu alanda arşivlenmiş fikir yok" : "Bu alanda henüz fikir yok")
+            : "Filtrelerle eşleşen fikir yok"}
+          description={scopedIdeas.length === 0
+            ? (archived ? "Bu alana ait arşivlenmiş fikirler burada görünecek." : "Üstteki “Yeni fikir” düğmesinden bu marka veya alan için ilk fikri ekleyebilirsin.")
+            : "Aramayı veya kategori ve durum filtrelerini temizleyerek daha fazla kayıt görebilirsin."}
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border-default bg-surface">
@@ -357,6 +474,7 @@ export default function IdeaBankExplorer({
         </div>
       )}
       </main>
-    </div>
+      </div>
+    </>
   );
 }

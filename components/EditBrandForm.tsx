@@ -30,11 +30,13 @@ export default function EditBrandForm({
   clusters,
   people,
   assignments,
+  triggerClassName,
 }: {
   brand: Brand;
   clusters: { id: string; label: string }[];
   people: Person[];
   assignments: BrandPersonAssignment[];
+  triggerClassName?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export default function EditBrandForm({
         onClick={() => setEditing(true)}
         aria-haspopup="dialog"
         aria-expanded="false"
-        className="text-xs font-medium text-muted hover:text-brand-600 dark:hover:text-brand-400"
+        className={triggerClassName ?? "text-xs font-medium text-muted hover:text-brand-600 dark:hover:text-brand-400"}
       >
         Düzenle
       </button>

@@ -18,6 +18,7 @@ export default function PageHeader({
   breadcrumb,
   media,
   summary,
+  summaryClassName,
   actions,
   className,
 }: {
@@ -27,6 +28,7 @@ export default function PageHeader({
   breadcrumb?: Breadcrumb[];
   media?: ReactNode;
   summary?: ReactNode;
+  summaryClassName?: string;
   actions?: ReactNode;
   className?: string;
 }) {
@@ -60,7 +62,7 @@ export default function PageHeader({
         {description && <p className="mt-1.5 max-w-2xl text-[13px] leading-5 text-muted">{description}</p>}
         </div>
       </div>
-      {summary && <div className="min-w-0 flex-1 sm:ml-auto sm:max-w-3xl">{summary}</div>}
+      {summary && <div className={cn("min-w-0 flex-1 sm:ml-auto", summaryClassName ?? "sm:max-w-3xl")}>{summary}</div>}
       {actions && <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">{actions}</div>}
     </div>
   );
