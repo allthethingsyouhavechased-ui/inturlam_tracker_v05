@@ -202,8 +202,12 @@ aynı yetkiyi yeniden doğrular. Yunus kendi yönetici rolünü kaldıramaz.
   build sırasında statik snapshot alınıp bayat veri servis edilir. (Layout `cookies()` okuduğu
   için zaten dinamik ama açıkça belirtiliyor.) `cacheComponents` KAPALI, bilinçli.
 - **async params:** Next 16'da `params` bir Promise → `const { x } = await params`.
-- **LAN:** `npm run start` → `next start -H 0.0.0.0 -p 3001`. Port 3000 v02'ye aittir;
-  geliştirme sırasında iki sürümün runtime dosyaları paylaşılmaz. Firewall notu README'de.
+- **LAN:** `npm run start` → `next start -H 0.0.0.0 -p 3000`. 2026-08-14'te v02 → v03
+  geçişi yapıldı: ekibin kullandığı canlı sürüm artık bu, v02 sunucusu durduruldu ve
+  v02'nin son verisi (28 tablo, satır satır doğrulanarak) buraya aktarıldı. **Port 3001
+  tamamen bırakıldı** — `npm run dev` de artık 3000'de çalışıyor (v02'deki düzenin aynısı).
+  Dev ve production aynı portu ve aynı `data/inturlam.db` dosyasını kullandığı için ikisi
+  AYNI ANDA çalıştırılamaz: birini başlatmadan önce diğerini durdur. Firewall notu README'de.
 - **`ALTER TABLE ... RENAME` FK'leri kırar:** SQLite bir tabloyu yeniden adlandırınca, ona referans
   veren diğer tabloların FK metnini otomatik yeni isme günceller. Bir tabloyu CHECK kısıtlaması
   gibi bir nedenle yeniden kurman gerekirse ESKİ tabloyu asla rename etme — YENİ tabloyu geçici

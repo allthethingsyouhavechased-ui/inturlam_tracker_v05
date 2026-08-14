@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev",
     "predev": "node db/prepare.mts",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3001",
+    "start": "next start -H 0.0.0.0 -p 3000",
     "prestart": "node db/prepare.mts",
     "lint": "eslint",
     "test": "node --import ./scripts/register.mjs --test \"tests/**/*.test.ts\"",

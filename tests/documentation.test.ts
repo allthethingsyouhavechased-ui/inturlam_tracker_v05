@@ -11,7 +11,7 @@ describe("v03 teknik dokümantasyonu", () => {
   it("README v03 çalışma sözleşmesini ve doğru runtime yollarını anlatır", () => {
     const readme = source("README.md");
     assert.match(readme, /^# İNTURLAM Tracker v03/m);
-    assert.match(readme, /http:\/\/localhost:3001/);
+    assert.match(readme, /http:\/\/localhost:3000/);
     assert.match(readme, /data\/uploads/);
     assert.match(readme, /docs\/v03-local-setup\.md/);
     assert.match(readme, /Görev teslim tarihleri etkinlik takviminde gösterilmez/);
@@ -50,8 +50,12 @@ describe("v03 teknik dokümantasyonu", () => {
     assert.match(claude, /inturlam_v03_session/);
     assert.match(claude, /account_sessions/);
     assert.match(claude, /TeamActor \| GuestActor/);
-    assert.match(claude, /next start -H 0\.0\.0\.0 -p 3001/);
-    assert.doesNotMatch(claude, /next start -H 0\.0\.0\.0 -p 3000/);
+    // 2026-08-14 v02 → v03 geçişi: v03 artık ekibin kullandığı canlı sürüm ve
+    // 3000 portunu devraldı. Bu assert önceden TERS yöndeydi ("3000'i alma") —
+    // amacı portun yanlışlıkla kapılmasını engellemekti; geçiş bilinçli yapıldı,
+    // bu yüzden koruma da yön değiştirdi: artık 3001'e geri dönüş regresyondur.
+    assert.match(claude, /next start -H 0\.0\.0\.0 -p 3000/);
+    assert.doesNotMatch(claude, /-p 3001/);
   });
 });
 

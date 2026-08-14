@@ -1,8 +1,10 @@
 # İNTURLAM Tracker v03
 
 İNTURLAM’ın marka, içerik, görev, ekip ve etkinlik operasyonlarını tek yerde yöneten
-Next.js tabanlı iç takip sistemi. v03, çalışan v02’den ayrı geliştirilir ve varsayılan
-olarak `http://localhost:3001` adresinde çalışır.
+Next.js tabanlı iç takip sistemi. **2026-08-14 itibarıyla ekibin kullandığı canlı
+sürüm v03’tür** — hem production hem geliştirme `http://localhost:3000` (LAN’da
+`http://<OFIS-PC-IP>:3000`) üzerinde çalışır. Bu port eskiden v02’ye aitti; geçiş
+tamamlandığı için v03 devraldı ve 3001 tamamen bırakıldı.
 
 ## Belge haritası
 
@@ -79,7 +81,7 @@ npm run dev
 ```
 
 `predev` önce tutarlı yedek alır, eski runtime upload yapısını taşır ve migration’ları
-uygular. Uygulama `http://localhost:3001` adresinde açılır.
+uygular. Uygulama `http://localhost:3000` adresinde açılır.
 
 Tamamen boş ve yeni bir geliştirme veritabanı kurmak dışında `npm run db:seed`
 çalıştırmayın. Mevcut snapshot’ı veya ofis verisini seed ile “yenilemeyin”.
@@ -102,7 +104,7 @@ npm run smoke:local
 Başka bir adres kullanılıyorsa:
 
 ```powershell
-$env:INTURLAM_SMOKE_URL = "http://127.0.0.1:3001"
+$env:INTURLAM_SMOKE_URL = "http://127.0.0.1:3000"
 npm run smoke:local
 Remove-Item Env:INTURLAM_SMOKE_URL
 ```
@@ -114,20 +116,24 @@ npm run build
 npm run start
 ```
 
-`npm run start`, `0.0.0.0:3001` üzerinde dinler. Aynı ağdaki cihazlar
-`http://<OFIS-PC-IP>:3001` adresini kullanır. IP’yi `ipconfig` ile yeniden kontrol edin;
+`npm run start`, `0.0.0.0:3000` üzerinde dinler. Aynı ağdaki cihazlar
+`http://<OFIS-PC-IP>:3000` adresini kullanır. IP’yi `ipconfig` ile yeniden kontrol edin;
 DHCP nedeniyle değişebilir.
 
-Port 3001 için firewall kuralı gerekiyorsa yönetici PowerShell’de:
+Port 3000 için firewall kuralı gerekiyorsa yönetici PowerShell’de:
 
 ```powershell
-New-NetFirewallRule -DisplayName "Inturlam Tracker v03 3001" `
-  -Direction Inbound -Protocol TCP -LocalPort 3001 `
+New-NetFirewallRule -DisplayName "Inturlam Tracker 3000" `
+  -Direction Inbound -Protocol TCP -LocalPort 3000 `
   -Action Allow -Profile Private
 ```
 
-v03’ün port 3000’e alınması normal geliştirme adımı değildir; yalnızca onaylı v02 → v03
-geçişinde, son veri snapshot’ı doğrulandıktan sonra yapılır.
+**Port 3000 geçişi (2026-08-14) tamamlandı.** v02’nin son verisi (`tasks`, `activity_log`
+dahil 28 tablo, satır satır doğrulandı) v03’e aktarıldı ve v02 sunucusu durduruldu. v02
+reposu ve veritabanı geri dönüş ihtiyacına karşı olduğu gibi duruyor — geri almak için v03’ü
+durdurup v02 dizininde `npm run start` yeterli. Port 3001 artık hiç kullanılmıyor: `npm run dev`
+de 3000’de çalışır. Dev ve production AYNI portu ve AYNI `data/inturlam.db` dosyasını
+kullandığı için ikisi aynı anda çalıştırılamaz — birini başlatmadan önce diğerini durdurun.
 
 ## Yedekleme ve geri yükleme
 

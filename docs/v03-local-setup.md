@@ -8,7 +8,7 @@ doğrulamayı ve Google test takvimini bağlamayı anlatır.
 | Sürüm | Repo | Port | Veritabanı | Upload alanı |
 |---|---|---:|---|---|
 | v02 | `C:\Users\intur\repos\inturlam-tracker` | 3000 | kendi `data/inturlam.db` dosyası | kendi runtime klasörü |
-| v03 | `C:\Users\intur\repos\inturlam-tracker-v03` | 3001 | kendi `data/inturlam.db` dosyası | `data/uploads/` |
+| v03 | `C:\Users\intur\repos\inturlam-tracker-v03` | 3000 | kendi `data/inturlam.db` dosyası | `data/uploads/` |
 
 - İki sürüm hiçbir runtime dosyasını paylaşmaz.
 - `origin`, v03 private deposuna gider.
@@ -23,7 +23,7 @@ Kontrol:
 Set-Location C:\Users\intur\repos\inturlam-tracker-v03
 git remote -v
 git status --short
-Get-NetTCPConnection -State Listen -LocalPort 3000,3001 -ErrorAction SilentlyContinue
+Get-NetTCPConnection -State Listen -LocalPort 3000 -ErrorAction SilentlyContinue
 ```
 
 ## 2. Kurulum
@@ -68,10 +68,10 @@ npm run start
 
 Adresler:
 
-- Yerel: `http://localhost:3001`
-- LAN: `http://<OFIS-PC-IP>:3001`
+- Yerel: `http://localhost:3000`
+- LAN: `http://<OFIS-PC-IP>:3000`
 
-`npm run start`, `0.0.0.0:3001` üzerinde dinler. IP adresi DHCP ile değişebileceği için
+`npm run start`, `0.0.0.0:3000` üzerinde dinler. IP adresi DHCP ile değişebileceği için
 `ipconfig` ile güncel IPv4 adresini kontrol edin.
 
 ## 4. Veri bütünlüğü
@@ -115,11 +115,11 @@ Sunucu çalışırken oturumlu kritik rotaları doğrulama:
 npm run smoke:local
 ```
 
-Smoke komutu varsayılan olarak `http://127.0.0.1:3001` adresini kullanır ve geçici
+Smoke komutu varsayılan olarak `http://127.0.0.1:3000` adresini kullanır ve geçici
 oturum kaydını test sonunda temizler. Farklı hedef için yalnızca o PowerShell oturumunda:
 
 ```powershell
-$env:INTURLAM_SMOKE_URL = "http://192.168.1.20:3001"
+$env:INTURLAM_SMOKE_URL = "http://192.168.1.20:3000"
 npm run smoke:local
 Remove-Item Env:INTURLAM_SMOKE_URL
 ```
