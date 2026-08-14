@@ -55,6 +55,12 @@ CREATE TABLE IF NOT EXISTS brand_audits (
 
 CREATE TABLE IF NOT EXISTS people (
   id          TEXT PRIMARY KEY,
+  -- Ekip girişinde yazılan ad. `id`'den AYRI: id onlarca tabloda FK olduğu için
+  -- değiştirilemez, kullanıcı adı ise ekip yönetiminden düzeltilebilmeli.
+  -- `accounts.username` DEĞİL: o sütun CHECK kısıtlamasıyla guest (marka)
+  -- hesaplarına ayrılmış, ekip satırlarında NULL olmak zorunda.
+  -- Küçük harfe indirgenmiş ASCII olarak saklanır (bkz. lib/username.ts).
+  username    TEXT,
   name        TEXT NOT NULL,
   title       TEXT,
   bio         TEXT,
@@ -94,6 +100,25 @@ CREATE TABLE IF NOT EXISTS account_sessions (
   expires_at INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Kısmi UNIQUE: kullanıcı adı benzersiz olmalı ama NULL bırakılabilmeli
+-- (kullanıcı adı henüz atanmamış eski kayıtlar).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_people_username
+  ON people(username) WHERE username IS NOT NULL;
+
+-- Başarısız giriş denemesi sayaçları. Süreç içi bir Map'ten buraya taşındı:
+-- orada sunucu yeniden başlayınca sıfırlanıyor, birden fazla örnek/worker
+-- arkasında da paylaşılmıyordu. `attempt_key` ekip girişinde `team:<id>`,
+-- guest girişinde `guest:<kullanıcı adı>` — bkz. lib/actions/identity.ts.
+-- Zamanlar epoch MİLİSANİYE (LoginThrottle ms ile çalışıyor).
+CREATE TABLE IF NOT EXISTS login_attempts (
+  attempt_key   TEXT PRIMARY KEY,
+  failures      INTEGER NOT NULL DEFAULT 0,
+  started_at    INTEGER NOT NULL,
+  blocked_until INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_started ON login_attempts(started_at);
 
 -- Ekip içi görsel sorumluluk listesi; erişim kısıtı değildir.
 CREATE TABLE IF NOT EXISTS person_brand_assignments (

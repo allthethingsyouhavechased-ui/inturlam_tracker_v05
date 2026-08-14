@@ -1,11 +1,13 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { hashPassword, validatePassword, verifyPassword } from "@/lib/auth/password";
 import { LoginThrottle } from "@/lib/auth/loginThrottle";
+import { sqliteLoginAttemptStore } from "@/lib/auth/loginThrottleStore";
+import { SECURE_COOKIE_ENV, shouldUseSecureCookie } from "@/lib/auth/cookieSecurity";
 import { IDENTITY_COOKIE } from "@/lib/auth/constants";
 import { getCurrentPerson } from "@/lib/identity";
 import {
@@ -23,7 +25,13 @@ import {
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
-const loginThrottle = new LoginThrottle(MAX_LOGIN_FAILURES, LOGIN_WINDOW_MS);
+// Sayaçlar SQLite'ta: süreç belleğinde tutulunca her yeniden başlatma sınırı
+// sıfırlıyor, ikinci bir örnek/worker de aynı hesaba baştan 5 deneme tanıyordu.
+const loginThrottle = new LoginThrottle(
+  MAX_LOGIN_FAILURES,
+  LOGIN_WINDOW_MS,
+  sqliteLoginAttemptStore(LOGIN_WINDOW_MS),
+);
 const LOGIN_FAILED = "Kullanıcı adı veya şifre hatalı.";
 
 // Olmayan, pasif veya şifresiz hesaplarda da gerçek bir scrypt doğrulaması
@@ -40,11 +48,20 @@ async function replaceSession(createToken: () => string): Promise<void> {
   if (previousToken) deleteAuthSession(previousToken);
   store.delete("inturlam_pid");
 
+  // `secure` bayrağı isteğin gerçek şemasından türetiliyor — gerekçe ve
+  // env ile elle kontrolü için bkz. lib/auth/cookieSecurity.ts.
+  const requestHeaders = await headers();
+  const secure = shouldUseSecureCookie(
+    requestHeaders.get("x-forwarded-proto"),
+    process.env[SECURE_COOKIE_ENV],
+  );
+
   const token = createToken();
   store.set(IDENTITY_COOKIE, token, {
     httpOnly: true,
     sameSite: "strict",
     path: "/",
+    secure,
   });
 }
 

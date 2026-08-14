@@ -71,7 +71,7 @@ describe("v03 guest–ekip bildirim zinciri", () => {
 
   it("ekip yanıtı, ilk planlama ve durum değişikliğini doğru guest hesabına bildirir", async () => {
     const { taskId } = seed();
-    const actor = { id: "worker", name: "Ada", title: null, bio: null, avatar_path: null, department: null, is_manager: 0, active: 1 } as const;
+    const actor = { id: "worker", username: "worker", name: "Ada", title: null, bio: null, avatar_path: null, department: null, is_manager: 0, active: 1 } as const;
     const base = { actor, taskId, taskTitle: "Ürün çekimi", brandId: "b1" };
 
     await announceTeamSharedReply({ ...base, body: "Dosyaları aldık." });

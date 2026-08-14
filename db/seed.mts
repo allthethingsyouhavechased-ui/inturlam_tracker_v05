@@ -294,14 +294,20 @@ BRANDS.forEach((b, i) => {
 // Departman ÜZERİNE YAZILMAZ: kişi zaten varsa yalnızca adı tazelenir, departman
 // da sadece boşsa doldurulur. Aksi halde arayüzden yapılan her departman
 // değişikliği bir sonraki seed'de sessizce geri alınırdı.
+// Kullanıcı adı da departman gibi ÜZERİNE YAZILMAZ: seed'deki varsayılan kişi
+// id'sidir, ama ekip yönetiminden değiştirilmiş olabilir — COALESCE ile yalnızca
+// boşsa doldurulur.
 const insertPerson = db.prepare(
-  `INSERT INTO people (id, name, department, is_manager) VALUES (?, ?, ?, ?)
+  `INSERT INTO people (id, username, name, department, is_manager) VALUES (?, ?, ?, ?, ?)
    ON CONFLICT(id) DO UPDATE SET
      name = excluded.name,
+     username = COALESCE(people.username, excluded.username),
      department = COALESCE(people.department, excluded.department),
      is_manager = MAX(people.is_manager, excluded.is_manager)`,
 );
-for (const p of PEOPLE) insertPerson.run(p.id, p.name, p.department, p.isManager ? 1 : 0);
+for (const p of PEOPLE) {
+  insertPerson.run(p.id, p.id.toLowerCase(), p.name, p.department, p.isManager ? 1 : 0);
+}
 
 const deletePerson = db.prepare(`DELETE FROM people WHERE id = ?`);
 for (const id of REMOVED_PEOPLE_IDS) deletePerson.run(id);

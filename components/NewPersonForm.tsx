@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createPersonAction } from "@/lib/actions/people";
 import { DEPARTMENTS, NO_DEPARTMENT_LABEL } from "@/lib/departments";
 import { getActionErrorMessage } from "@/lib/errorMessage";
+import { USERNAME_RULE } from "@/lib/username";
 import SubmitButton from "./SubmitButton";
 
 const inputClass =
@@ -34,6 +35,20 @@ export default function NewPersonForm({
       <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         İsim
         <input name="name" required placeholder="Örn. Ada Yılmaz" className={inputClass} />
+      </label>
+      <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        Kullanıcı adı
+        <input
+          name="username"
+          required
+          minLength={3}
+          maxLength={32}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="Örn. ada.yilmaz"
+          className={inputClass}
+        />
+        <span className="font-normal text-zinc-500 dark:text-zinc-400">{USERNAME_RULE}</span>
       </label>
       <label className="grid min-w-0 gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         Departman

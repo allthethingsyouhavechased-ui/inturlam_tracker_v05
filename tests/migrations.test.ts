@@ -342,6 +342,9 @@ describe("people profil migration'ı", () => {
       title: null,
       bio: null,
       avatar_path: null,
+      // "p1" kullanıcı adı desenine uyuyor ama 3 karakterden kısa olduğu için
+      // geri doldurulmaz — kişi eskiden olduğu gibi tam adıyla giriş yapar.
+      username: null,
       // Eşleme listesinde olmayan bir isim: departmanı boş kalır, "Diğer" sayılır.
       department: null,
       password_hash: null,

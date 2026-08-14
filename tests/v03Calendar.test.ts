@@ -192,7 +192,7 @@ describe("v03 etkinlik takvimi", () => {
     const db = seed();
     db.prepare("INSERT INTO accounts (id,kind,brand_id,username,active) VALUES ('guest:b1','guest','b1','bir-guest',1)").run();
     const eventId = saveCalendarEvent({ brandId: "b1", type: "Toplanti", title: "Aylık değerlendirme", description: null, startAt: "2026-08-18T09:00:00Z", endAt: "2026-08-18T10:00:00Z", allDay: false, location: null, guestVisible: true, accountId: "team:p1" });
-    const input = { actor: { id: "p1", name: "Ada", title: null, bio: null, avatar_path: null, department: null, is_manager: 0, active: 1 }, calendarEventId: eventId, brandId: "b1", title: "Aylık değerlendirme", typeLabel: "Toplantı" };
+    const input = { actor: { id: "p1", username: "p1", name: "Ada", title: null, bio: null, avatar_path: null, department: null, is_manager: 0, active: 1 }, calendarEventId: eventId, brandId: "b1", title: "Aylık değerlendirme", typeLabel: "Toplantı" };
     notifyGuestCalendarEvent(input);
     notifyGuestCalendarEvent(input);
     const notifications = listNotificationsForRecipient("guest:b1");

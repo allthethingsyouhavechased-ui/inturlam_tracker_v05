@@ -145,6 +145,9 @@ export interface Brand {
 
 export interface Person {
   id: string;
+  // Ekip girişinde yazılan ad (küçük harf, ASCII). `id`'den ayrı ve
+  // DEĞİŞTİRİLEBİLİR; henüz atanmamış eski kayıtlarda null (bkz. lib/username.ts).
+  username: string | null;
   name: string;
   title: string | null;
   bio: string | null;

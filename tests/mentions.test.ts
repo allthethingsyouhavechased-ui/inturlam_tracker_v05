@@ -11,6 +11,7 @@ import type { Person } from "@/lib/types";
 function person(id: string, name: string): Person {
   return {
     id,
+    username: id,
     name,
     title: null,
     bio: null,

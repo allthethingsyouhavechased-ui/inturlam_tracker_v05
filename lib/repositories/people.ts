@@ -1,11 +1,12 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import { DEPARTMENTS, NO_DEPARTMENT, type DepartmentKey } from "@/lib/departments";
+import { usernameLookupKey } from "@/lib/username";
 import type { Person } from "@/lib/types";
 
 const PUBLIC_PERSON_COLUMNS =
-  "id, name, title, bio, avatar_path, department, is_manager, active";
+  "id, username, name, title, bio, avatar_path, department, is_manager, active";
 const PUBLIC_PERSON_COLUMNS_WITH_ALIAS =
-  "p.id, p.name, p.title, p.bio, p.avatar_path, p.department, p.is_manager, p.active";
+  "p.id, p.username, p.name, p.title, p.bio, p.avatar_path, p.department, p.is_manager, p.active";
 
 export interface LoginPerson extends Person {
   has_password: number;
@@ -124,11 +125,14 @@ export function getPersonCredentials(id: string): PersonCredentials | undefined 
 export function findLoginCandidate(identifier: string): PersonCredentials | undefined {
   const needle = identifier.trim().toLocaleLowerCase("tr-TR");
   if (!needle) return undefined;
+  // Kullanıcı adı ASCII olduğu için karşılaştırması yerelden bağımsız — Türkçe
+  // katlama yalnızca id/ad yedeklerinde gerekiyor (bkz. lib/username.ts).
+  const usernameNeedle = usernameLookupKey(identifier);
 
-  const rows = plainList<PersonCredentials & { name: string }>(
+  const rows = plainList<PersonCredentials & { username: string | null; name: string }>(
     getDb()
       .prepare(
-        `SELECT p.id, p.name,
+        `SELECT p.id, p.username, p.name,
                 COALESCE(a.password_hash, p.password_hash) AS password_hash,
                 CASE WHEN p.active = 1 AND COALESCE(a.active, 1) = 1 THEN 1 ELSE 0 END AS active
            FROM people p
@@ -137,24 +141,57 @@ export function findLoginCandidate(identifier: string): PersonCredentials | unde
       .all(),
   );
 
+  // Sıra önemli: kullanıcı adı > id > ad. Kullanıcı adı ATANABİLİR bir alan
+  // olduğu için, biri başka bir kişinin id'siyle ya da adıyla aynı kullanıcı
+  // adını alırsa giriş sahibine değil ADI YAZILANA gitmeli. (Aynı kullanıcı
+  // adının ikinci kez atanması UNIQUE indeksle zaten engelli.)
   return (
+    (usernameNeedle
+      ? rows.find((row) => row.username !== null && row.username === usernameNeedle)
+      : undefined) ??
     rows.find((row) => row.id.toLocaleLowerCase("tr-TR") === needle) ??
     rows.find((row) => row.name.trim().toLocaleLowerCase("tr-TR") === needle)
   );
 }
 
+/**
+ * Kullanıcı adı başkasında mı? `exceptPersonId` verilirse o kişinin kendi
+ * kaydı sayılmaz (kendi adını yeniden kaydetmek çakışma değildir).
+ * UNIQUE indeks son savunma; bu kontrol kullanıcıya anlaşılır bir hata vermek
+ * için var (yoksa ham SQLite kısıt hatası ekrana düşerdi).
+ *
+ * Kapsam yalnız EKİP hesapları: guest (marka) kullanıcı adları `accounts`
+ * tablosunda ayrı yaşıyor ve ayrı bir giriş formundan çözülüyor, bu yüzden
+ * ikisi arasında bir çakışma belirsizlik yaratmaz.
+ */
+export function isUsernameTaken(username: string, exceptPersonId?: string): boolean {
+  const row = getDb()
+    .prepare("SELECT id FROM people WHERE username = ?")
+    .get(username) as { id: string } | undefined;
+  return Boolean(row) && row?.id !== exceptPersonId;
+}
+
+export function updatePersonUsername(id: string, username: string): void {
+  getDb().prepare("UPDATE people SET username = ? WHERE id = ?").run(username, id);
+}
+
 export function createPerson(
+  username: string,
   name: string,
   department: string | null,
   passwordHash: string,
 ): string {
+  // id hâlâ UUID: FK olarak onlarca tabloda geçiyor, kullanıcı adı değişince
+  // birlikte değişmemeli. Girişte kullanılan ad ayrı `people.username`
+  // sütununda — `accounts.username` guest (marka) hesaplarına ayrılmış,
+  // CHECK kısıtlaması ekip satırlarında NULL olmasını şart koşuyor.
   const id = crypto.randomUUID();
   const db = getDb();
   db.exec("BEGIN IMMEDIATE");
   try {
     db.prepare(
-      "INSERT INTO people (id, name, department, password_hash) VALUES (?, ?, ?, ?)",
-    ).run(id, name, department, passwordHash);
+      "INSERT INTO people (id, username, name, department, password_hash) VALUES (?, ?, ?, ?, ?)",
+    ).run(id, username, name, department, passwordHash);
     db.prepare(
       `INSERT INTO accounts
          (id, kind, person_id, brand_id, username, password_hash, active)

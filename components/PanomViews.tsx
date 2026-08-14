@@ -54,11 +54,13 @@ export default function PanomViews({
   people,
   hasIdentity,
   initialView,
+  canDeleteTasks = false,
 }: {
   myTasks: TaskWithContext[];
   people: Person[];
   hasIdentity: boolean;
   initialView: View;
+  canDeleteTasks?: boolean;
 }) {
   const [view, setView] = useState<View>(initialView);
   function changeView(next: View) {
@@ -94,7 +96,7 @@ export default function PanomViews({
           ) : (
             <>
               <div className="flex justify-end">{toggle}</div>
-              <TaskListView tasks={myTasks} people={people} />
+              <TaskListView tasks={myTasks} people={people} canDeleteTasks={canDeleteTasks} />
             </>
           )}
         </section>

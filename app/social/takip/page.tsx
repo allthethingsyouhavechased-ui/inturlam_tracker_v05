@@ -11,6 +11,8 @@ import {
   listRecentSyncRuns,
 } from "@/lib/repositories/social";
 import { classifySocial, type SocialHealth } from "@/lib/socialSilence";
+import { instagramProfileUrl } from "@/lib/instagram";
+import { safeHttpUrl } from "@/lib/urlSafety";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +24,18 @@ export default async function SocialTakipPage() {
   const rows = listBrandSocialRows();
   const runs = listRecentSyncRuns(5);
 
+  // Dış bağlantılar render'dan ÖNCE şema doğrulamasından geçiyor: `permalink`
+  // sağlayıcının (Apify) döndürdüğü ham bir alan, `handle` da elle girilen bir
+  // metin. `javascript:` şemalı bir değerin `href`e sızması tıklanabilir bir
+  // XSS demek olurdu. Yazma tarafında da guard var (lib/social/apify.ts) —
+  // buradaki kontrol o düzeltmeden ÖNCE kaydedilmiş satırları da kapsıyor.
   const withHealth = rows
-    .map((row) => ({ row, health: classifySocial(row, SOCIAL_SILENCE_DAYS, today) }))
+    .map((row) => ({
+      row,
+      health: classifySocial(row, SOCIAL_SILENCE_DAYS, today),
+      profileUrl: instagramProfileUrl(row.handle),
+      permalink: safeHttpUrl(row.last_post_permalink),
+    }))
     .sort(
       (a, b) =>
         HEALTH_ORDER.indexOf(a.health) - HEALTH_ORDER.indexOf(b.health) ||
@@ -124,7 +136,7 @@ export default async function SocialTakipPage() {
                 </tr>
               </thead>
               <tbody>
-                {withHealth.map(({ row, health }) => (
+                {withHealth.map(({ row, health, profileUrl, permalink }) => (
                   <tr
                     key={row.brand_id}
                     className="border-b border-black/5 last:border-0 dark:border-white/5"
@@ -139,14 +151,18 @@ export default async function SocialTakipPage() {
                       </Link>
                     </td>
                     <td className="px-3 py-2">
-                      <a
-                        href={`https://www.instagram.com/${row.handle}/`}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="text-zinc-500 hover:text-brand-600 dark:text-zinc-400 dark:hover:text-brand-400"
-                      >
-                        @{row.handle}
-                      </a>
+                      {profileUrl ? (
+                        <a
+                          href={profileUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="text-zinc-500 hover:text-brand-600 dark:text-zinc-400 dark:hover:text-brand-400"
+                        >
+                          @{row.handle}
+                        </a>
+                      ) : (
+                        <span className="text-zinc-500 dark:text-zinc-400">@{row.handle}</span>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <SocialHealthBadge
@@ -160,9 +176,9 @@ export default async function SocialTakipPage() {
                     </td>
                     <td className="px-3 py-2 tabular-nums text-zinc-600 dark:text-zinc-300">
                       {row.last_post_at ? (
-                        row.last_post_permalink ? (
+                        permalink ? (
                           <a
-                            href={row.last_post_permalink}
+                            href={permalink}
                             target="_blank"
                             rel="noreferrer noopener"
                             className="hover:text-brand-600 dark:hover:text-brand-400"

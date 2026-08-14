@@ -1,4 +1,5 @@
 import type { FetchOptions, FetchResult, FetchedPost, SocialProvider } from "@/lib/social/types";
+import { safeHttpUrl } from "@/lib/urlSafety";
 
 // Apify'ın `apify/instagram-post-scraper` aktörü: bir istekte birden çok
 // kullanıcı adı alır, her biri için son gönderileri döndürür.
@@ -186,8 +187,13 @@ export function createApifyProvider(): SocialProvider {
         const externalId = item.id ?? item.shortCode ?? null;
         if (!postedAt || !externalId) continue;
 
+        // Sağlayıcının `url` alanı DOĞRULANMADAN saklanamaz: bu değer Takip
+        // tablosunda `href` olarak çiziliyor, `javascript:` şemalı bir kayıt
+        // tıklanabilir bir XSS'e dönerdi. Şema düşerse kendi kurduğumuz
+        // shortCode adresine, o da yoksa `null`'a düşülür.
         const permalink =
-          item.url ?? (item.shortCode ? `https://www.instagram.com/p/${item.shortCode}/` : null);
+          safeHttpUrl(item.url) ??
+          (item.shortCode ? `https://www.instagram.com/p/${item.shortCode}/` : null);
         const mediaType = item.type ?? null;
         const caption = item.caption?.slice(0, 500) ?? null;
 

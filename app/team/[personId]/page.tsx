@@ -46,6 +46,20 @@ export default async function PersonProfilePage({
             {person.active === 0 && <Badge tone="neutral">Pasif</Badge>}
           </div>
           <p className="mt-1.5 text-[15px] text-secondary">{person.title ?? "Unvan eklenmemiş"}</p>
+          {/* Kullanıcı adı yalnızca kişinin kendisine ve yöneticilere gösteriliyor.
+              Giriş ekranı bilerek kişi listesi göstermiyor ve tek jenerik hata
+              mesajı veriyor (kullanıcı enumerasyonuna karşı); geçerli kullanıcı
+              adlarını tüm ekibe listelemek o kararı sulandırırdı. */}
+          {canEdit && (
+            <p className="mt-1 text-[13px] text-muted">
+              Kullanıcı adı:{" "}
+              {person.username ? (
+                <span className="font-medium text-secondary">@{person.username}</span>
+              ) : (
+                <span className="font-medium text-amber-700 dark:text-amber-300">belirlenmedi</span>
+              )}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>{departmentLabel(person.department)}</span>
             <span aria-hidden="true">·</span>

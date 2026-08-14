@@ -95,7 +95,9 @@ describe("yönetici mutasyon sınırı", () => {
     assert.match(taskPage, /canDeleteTask && <DeleteTaskButton/);
 
     const tasksPage = fs.readFileSync(path.join(process.cwd(), "app/tasks/page.tsx"), "utf8");
-    assert.match(tasksPage, /canDeleteTasks=\{me\.is_manager === 1\}/);
+    // Kural artık satır içinde tekrarlanmıyor, tek yerde: `canDeleteTasks()`
+    // (lib/auth/authorization.ts) — o da aynı `is_manager === 1` kontrolünü yapar.
+    assert.match(tasksPage, /canDeleteTasks=\{canDeleteTasks\(me\)\}/);
 
     const taskExplorer = fs.readFileSync(path.join(process.cwd(), "components/TaskExplorer.tsx"), "utf8");
     assert.match(taskExplorer, /canDeleteTasks=\{canDeleteTasks\}/);

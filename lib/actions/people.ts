@@ -13,11 +13,14 @@ import { requireSession } from "@/lib/identity";
 import {
   createPerson,
   getPerson,
+  isUsernameTaken,
   setPersonActive,
   setPersonManager,
   updatePersonPassword,
   updatePersonProfile,
+  updatePersonUsername,
 } from "@/lib/repositories/people";
+import { normalizeUsername, USERNAME_RULE } from "@/lib/username";
 import { deleteAuthSessionsForPerson } from "@/lib/repositories/authSessions";
 import { deleteAuthSessionsForAccount } from "@/lib/repositories/authSessions";
 import { setGuestAccountActive, upsertGuestAccount } from "@/lib/repositories/accounts";
@@ -47,17 +50,52 @@ export async function createPersonAction(formData: FormData) {
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   if (!name) throw new Error("İsim zorunlu.");
   if (name.length > 80) throw new Error("İsim en fazla 80 karakter olabilir.");
+
+  const username = normalizeUsername(String(formData.get("username") ?? ""));
+  if (!username) throw new Error(USERNAME_RULE);
+  if (isUsernameTaken(username)) throw new Error("Bu kullanıcı adı zaten kullanılıyor.");
+
   const passwordError = validatePassword(password);
   if (passwordError) throw new Error(passwordError);
   if (password !== confirmPassword) throw new Error("Şifreler eşleşmiyor.");
 
   createPerson(
+    username,
     name,
     normalizeDepartment(formData.get("department")),
     hashPassword(password),
   );
   revalidatePath("/", "layout");
   revalidatePath("/team/manage");
+}
+
+/**
+ * Kullanıcı adını değiştirir. Yetki profil düzenlemeyle AYNI kuralda: kişinin
+ * kendisi ya da bir yönetici. Oturumlar token tabanlı olduğu için ad değişimi
+ * açık oturumları düşürmez — kişi bir sonraki girişte yeni adı kullanır.
+ */
+export async function updatePersonUsernameAction(formData: FormData) {
+  const actor = await requireSession();
+  const personId = String(formData.get("personId") ?? "").trim();
+  if (!personId) throw new Error("Kişi bulunamadı.");
+  if (actor.id !== personId && actor.is_manager !== 1) {
+    throw new Error("Kullanıcı adını yalnızca kendisi ya da bir yönetici değiştirebilir.");
+  }
+
+  const person = getPerson(personId);
+  if (!person) throw new Error("Kişi bulunamadı.");
+
+  const username = normalizeUsername(String(formData.get("username") ?? ""));
+  if (!username) throw new Error(USERNAME_RULE);
+  if (isUsernameTaken(username, person.id)) {
+    throw new Error("Bu kullanıcı adı zaten kullanılıyor.");
+  }
+
+  updatePersonUsername(person.id, username);
+  revalidatePath("/", "layout");
+  revalidatePath("/team/manage");
+  revalidatePath(`/team/${person.id}`);
+  revalidatePath("/settings/profile");
 }
 
 export async function deactivatePersonAction(personId: string) {

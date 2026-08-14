@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ChangeUsernameForm from "@/components/ChangeUsernameForm";
 import EditPersonProfileForm from "@/components/EditPersonProfileForm";
 import PersonAvatar from "@/components/PersonAvatar";
 import Badge from "@/components/ui/Badge";
@@ -52,6 +53,7 @@ export default async function ProfileSettingsPage({
       )}
 
       <EditPersonProfileForm person={person} />
+      <ChangeUsernameForm person={person} />
     </section>
   );
 }

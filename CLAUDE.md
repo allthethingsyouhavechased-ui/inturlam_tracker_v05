@@ -25,6 +25,37 @@ aynı yetkiyi yeniden doğrular. Yunus kendi yönetici rolünü kaldıramaz.
 - `lib/repositories/*` — tüm SQL burada (senkron, prepared statements). `brands.ts`'te
   `listBrandRelations()` (karşı markanın bilgisini normalize eder) ve `getBrandAudit()` da var.
 - `lib/actions/*` — `"use server"` mutasyonları; repo çağır + `revalidatePath("/", "layout")`.
+- **Ekip kullanıcı adı `people.username`'de.** `accounts.username` DEĞİL: o sütunun CHECK'i
+  ekip satırlarında NULL olmasını şart koşuyor, kullanıcı adı orada yalnız guest (marka)
+  hesaplarına ait. `people.id` de kullanılamaz — onlarca tabloda FK, değiştirilemez. Biçim
+  kuralları `lib/username.ts`'te (`normalizeUsername` — 3-32 karakter, yalnız ASCII
+  harf/rakam/`.`/`_`/`-`, küçük harfe indirgenmiş). Türkçe harf BİLEREK dışarıda: "İ/ı"
+  katlaması yerele göre değiştiği için benzersizlik kontrolü ortamdan ortama farklı sonuç
+  verirdi. `findLoginCandidate` sırayla kullanıcı adı → id → tam ad dener. Ekip ve guest
+  kullanıcı adları ayrı tablolarda ve ayrı giriş formlarından çözüldüğü için aralarındaki
+  bir çakışma belirsizlik yaratmaz. `migratePeopleUsernameIfNeeded` sütunu eklerken id'si
+  zaten insan-okunabilir olan kayıtları geri dolduruyor; UUID id'liler boş kalır.
+- **Görev silme kuralı tek yerde: `canDeleteTasks()` (`lib/auth/authorization.ts`).** Sunucu
+  tarafı guard'ı `requireManager()` (aynı `is_manager === 1` kuralı), arayüz tarafı bu
+  yardımcıyı çağırıyor — sayfalarda `me.is_manager === 1` satır içi tekrarı yazma.
+  `TaskListView`/`PanomViews`'un `canDeleteTasks` prop'u varsayılan `false`: yeni bir çağıran
+  geçirmeyi unutursa düğme gizli kalır.
+- **Oturum çerezinin `secure` bayrağı isteğin şemasından türetiliyor** (`lib/auth/cookieSecurity.ts`).
+  Sabit `true` olsaydı LAN'daki düz HTTP dağıtımında hiç kimse giriş yapamazdı; hiç olmasaydı
+  HTTPS arkasında token düz metin gidebilirdi. `x-forwarded-proto` okunur, `SESSION_COOKIE_SECURE`
+  env'i ile her iki yönde elle ezilebilir. `next.config.ts`'teki HSTS başlığı düz HTTP'de
+  tarayıcılarca zaten yok sayılır — LAN kullanımını bozmaz.
+- **Dış bağlantılar `href`e girmeden ÖNCE `safeHttpUrl()` (`lib/urlSafety.ts`) ile şema
+  doğrulamasından geçer.** Yalnız http/https; başka her şey `null` (bağlantı hiç verilmez).
+  Apify'ın döndürdüğü `url` alanı hem yazılırken (`lib/social/apify.ts`) hem render edilirken
+  (`app/social/takip/page.tsx`) süzülüyor. Yeni bir dış bağlantı alanı eklerken bu guard'ı da ekle.
+- **Giriş deneme sayaçları `login_attempts` tablosunda, süreç belleğinde DEĞİL.** `LoginThrottle`
+  bir `LoginAttemptStore` alıyor; üretimde `sqliteLoginAttemptStore()`, testlerde bellek store'u.
+  Map'te tutulunca sunucu her yeniden başladığında sınır sıfırlanıyor ve ikinci bir örnek/worker
+  aynı hesaba baştan 5 deneme tanıyordu. Ekip ve guest girişleri anahtarı `team:`/`guest:` ile
+  önekliyor. Budama yazma yolunda ve eşiği `Date.now()` değil YAZILAN DENEMENİN damgasından
+  alıyor — sınıf saati dışarıdan alabildiği için ikisi karışınca budama az önce yazılan satırı
+  siliyordu.
 - `lib/identity.ts` — HttpOnly `inturlam_v03_session` cookie'sindeki rastgele anahtarı
   `account_sessions` tablosunda doğrulayıp `TeamActor | GuestActor` kimliğini çözer.
   Cookie'de ham kişi/marka id'si veya rol tutulmaz. `lib/actions/identity.ts`

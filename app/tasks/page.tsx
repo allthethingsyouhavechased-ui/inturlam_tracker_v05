@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import Icon from "@/components/ui/Icon";
 import { currentWeekRange, todayISO } from "@/lib/date";
 import { isDepartmentId, NO_DEPARTMENT } from "@/lib/departments";
+import { canDeleteTasks } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
 import { listPersonalTaskTargets } from "@/lib/repositories/personalTargets";
@@ -106,7 +107,7 @@ export default async function AllTasksPage({
         focusToday={today}
         focusWeekEnd={weekEnd}
         initialView={initialView}
-        canDeleteTasks={me.is_manager === 1}
+        canDeleteTasks={canDeleteTasks(me)}
         archivedCount={archivedCount}
       />
     </div>

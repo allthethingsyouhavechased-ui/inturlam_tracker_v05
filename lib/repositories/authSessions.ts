@@ -4,7 +4,7 @@ import { getDb, plainOne } from "@/lib/db/client";
 import type { Actor, GuestActor, Person, TeamActor } from "@/lib/types";
 
 const PUBLIC_PERSON_COLUMNS =
-  "p.id, p.name, p.title, p.bio, p.avatar_path, p.department, p.is_manager, p.active";
+  "p.id, p.username, p.name, p.title, p.bio, p.avatar_path, p.department, p.is_manager, p.active";
 
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");

@@ -21,6 +21,7 @@ import { controlClass } from "@/components/ui/Input";
 import { CONTENT_TYPES, CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { updateTaskDetailsAction } from "@/lib/actions/tasks";
 import { addTeamSharedCommentAction } from "@/lib/actions/guestTasks";
+import { canDeleteTasks } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
 import { canReviewClientRequests } from "@/lib/requestAccess";
 import { listActivityForEntity } from "@/lib/repositories/activity";
@@ -44,7 +45,7 @@ export default async function TaskPage({
   params: Promise<{ taskId: string }>;
 }) {
   const me = await requirePageSession();
-  const canDeleteTask = me.is_manager === 1;
+  const canDeleteTask = canDeleteTasks(me);
   const { taskId } = await params;
   const task = getTask(taskId);
   if (!task) notFound();

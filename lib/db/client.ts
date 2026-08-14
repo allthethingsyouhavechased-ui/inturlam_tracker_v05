@@ -46,6 +46,7 @@ function createConnection(): DatabaseSync {
   migratePeopleProfilesIfNeeded(db);
   migratePeopleDepartmentIfNeeded(db);
   migratePeopleAuthIfNeeded(db);
+  migratePeopleUsernameIfNeeded(db);
   migrateV03TaskColumnsIfNeeded(db);
   migrateTaskTemplateDifficultyIfNeeded(db);
   migrateV03AccountsIfNeeded(db);
@@ -293,6 +294,39 @@ function migratePeopleDepartmentIfNeeded(db: DatabaseSync): void {
     const department = LEGACY_DEPARTMENT_FIRST_NAMES[firstName];
     if (department) update.run(department, row.id);
   }
+}
+
+// people.username — ekip giriş adının kişi id'sinden ayrılması. Eskiden giriş
+// ekranına yazılan metin doğrudan `people.id` (ya da tam ad) ile eşleştiriliyordu;
+// id ise onlarca tabloda FK olduğu için değiştirilemez, dolayısıyla kullanıcı adı
+// da düzeltilemiyordu. `accounts.username` kullanılamaz: o sütunun CHECK'i ekip
+// satırlarında NULL olmasını şart koşuyor. Sütun eklenirken geri doldurma: id'si
+// zaten insan okunabilir bir kısaltma olan kayıtlar ("yunus", "erhan") onu
+// kullanıcı adı olarak devralır — bu kişiler değişiklikten sonra da AYNI metinle
+// giriş yapar. UUID id'li kayıtlar (arayüzden eklenen ekip üyeleri) desene
+// uymadığı için boş kalır; onlar hesap yönetiminde "belirlenmedi" görünür ve
+// giriş için eskiden beri işleyen tam-ad eşleşmesini kullanmaya devam eder.
+function migratePeopleUsernameIfNeeded(db: DatabaseSync): void {
+  const peopleExists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='people'`)
+    .get();
+  if (!peopleExists) return;
+
+  const columns = db.prepare(`PRAGMA table_info(people)`).all() as { name: string }[];
+  if (columns.some((column) => column.name === "username")) return;
+
+  db.exec(`ALTER TABLE people ADD COLUMN username TEXT`);
+  // Desen lib/username.ts'teki USERNAME_PATTERN'in SQL karşılığı (GLOB
+  // büyük/küçük harfe duyarlı, karakter sınıflarıyla yazılıyor). UUID'ler
+  // 36 karakter olduğu için uzunluk üst sınırına takılıp elenir.
+  db.exec(
+    `UPDATE people
+        SET username = lower(id)
+      WHERE username IS NULL
+        AND length(id) BETWEEN 3 AND 32
+        AND id GLOB '[A-Za-z0-9]*'
+        AND NOT id GLOB '*[^A-Za-z0-9._-]*'`,
+  );
 }
 
 // Mevcut LAN kurulumunda hesaplar şifresizdi. Düz sütunlarla veri kaybetmeden

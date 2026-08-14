@@ -21,3 +21,19 @@ export function assertCanDeactivatePerson(personId: string): void {
     throw new Error("Sistem yöneticisi pasife alınamaz.");
   }
 }
+
+// Görev SİLME yalnız yöneticilerde. Panodaki diğer işlemler (durum, öncelik,
+// atama, düzenleme) ortak iş havuzu mantığıyla herkese açık kalıyor — silme
+// ayrıldı çünkü tek geri alınamayan işlem o: giden görevle birlikte yorumları,
+// ekleri ve durum geçmişi de gidiyor.
+type TaskActor = Pick<Person, "is_manager"> | null | undefined;
+
+export function canDeleteTasks(person: TaskActor): boolean {
+  return person?.is_manager === 1;
+}
+
+export function assertCanDeleteTasks(person: TaskActor): void {
+  if (!canDeleteTasks(person)) {
+    throw new Error("Görev silme yetkisi yalnızca yöneticilerde.");
+  }
+}

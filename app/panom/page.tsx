@@ -6,6 +6,7 @@ import PanomInsightPanels from "@/components/PanomInsightPanels";
 import PersonalDeadlineRadar from "@/components/PersonalDeadlineRadar";
 import PageHeader from "@/components/ui/PageHeader";
 import { currentWeekRange, todayISO } from "@/lib/date";
+import { canDeleteTasks } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
 import { listPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
 import { getBrandMonthlyProgress, getPersonMonthlyProgress, listPersonMonthlyContributions } from "@/lib/repositories/progress";
@@ -144,6 +145,7 @@ export default async function PanomPage() {
         people={people}
         hasIdentity={Boolean(me)}
         initialView={initialView}
+        canDeleteTasks={canDeleteTasks(me)}
       />
     </div>
   );

@@ -68,6 +68,14 @@ export default async function TeamManagementPage() {
                     )}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-muted">
+                    {person.username ? (
+                      <span className="font-medium text-secondary">@{person.username}</span>
+                    ) : (
+                      <span className="font-medium text-amber-700 dark:text-amber-300">
+                        kullanıcı adı belirlenmedi
+                      </span>
+                    )}
+                    {" · "}
                     {[person.title, person.department].filter(Boolean).join(" · ") || "Profil bilgisi bekleniyor"}
                   </span>
                 </span>
@@ -130,7 +138,10 @@ export default async function TeamManagementPage() {
                 key={person.id}
                 className={`flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 ${index > 0 ? "border-t border-border-subtle" : ""}`}
               >
-                <span className="text-sm text-secondary">{person.name}</span>
+                <span className="min-w-0 truncate text-sm text-secondary">
+                  {person.name}
+                  {person.username && <span className="ml-2 text-xs text-muted">@{person.username}</span>}
+                </span>
                 <DeactivatePersonButton personId={person.id} active={false} />
               </div>
             ))}

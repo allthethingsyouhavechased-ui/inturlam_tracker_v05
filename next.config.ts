@@ -30,6 +30,15 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
+          // HTTPS'e kilitleme. Tarayıcılar HSTS'i YALNIZCA güvenli bir bağlantı
+          // üzerinden gelirse dikkate alır; LAN'daki düz HTTP dağıtımında başlık
+          // sessizce yok sayılır, yani bu satır oradaki kullanımı bozmaz. Buna
+          // karşılık uygulama bir gün TLS arkasına alınırsa ilk isteğin HTTP'ye
+          // düşmesini (ve oturum çerezinin düz metin gitmesini) engeller.
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
           { key: "Referrer-Policy", value: "same-origin" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "Content-Security-Policy", value: contentSecurityPolicy },
