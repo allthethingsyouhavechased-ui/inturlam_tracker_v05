@@ -212,7 +212,14 @@ export default async function BrandPage({
               defaultBrandId={brand.id}
               triggerLabel="Görev oluştur"
             />
-            {canManageBrand && <EditBrandForm brand={brand} clusters={clusters} />}
+            {canManageBrand && (
+              <EditBrandForm
+                brand={brand}
+                clusters={clusters}
+                people={people}
+                assignments={assignments}
+              />
+            )}
           </>
         }
       />

@@ -232,5 +232,7 @@ describe("saf yardımcı fonksiyonlar (lib/socialPlan.ts)", () => {
     assert.match(assetPage, /canlı stoktur/);
     assert.match(assetPage, /eksik teslim anlamına gelmez/);
     assert.match(assetPage, /monthly_content_completed/);
+    assert.match(assetPage, /w-full rounded-lg border/);
+    assert.doesNotMatch(assetPage, /max-w-3xl rounded-lg border/);
   });
 });

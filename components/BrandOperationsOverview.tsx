@@ -81,6 +81,9 @@ export default function BrandOperationsOverview({
           <Link href={calendarLink(month, brand.id, "Cekim")} className="ui-press inline-flex min-h-9 items-center gap-1.5 rounded-[9px] border border-border-default bg-surface-subtle px-3 text-xs font-semibold text-secondary hover:border-brand-300 hover:text-foreground">
             <Icon name="calendar" className="size-3.5" /> Çekimler
           </Link>
+          <Link href={`/brands/${brand.id}/reports?month=${month}`} className="ui-press inline-flex min-h-9 items-center gap-1.5 rounded-[9px] border border-border-default bg-surface-subtle px-3 text-xs font-semibold text-secondary hover:border-brand-300 hover:text-foreground">
+            <Icon name="reports" className="size-3.5" /> Etkinlik raporları
+          </Link>
         </div>
       </div>
 

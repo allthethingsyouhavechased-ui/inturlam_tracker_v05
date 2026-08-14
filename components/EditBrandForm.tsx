@@ -5,9 +5,10 @@ import { createPortal } from "react-dom";
 import Icon from "@/components/ui/Icon";
 import { updateBrandAction } from "@/lib/actions/brands";
 import { getActionErrorMessage } from "@/lib/errorMessage";
-import type { Brand } from "@/lib/types";
+import type { Brand, BrandPersonAssignment, Person } from "@/lib/types";
 import BrandLogoPicker from "./BrandLogoPicker";
 import ClusterSelect from "./ClusterSelect";
+import PersonAvatar from "./PersonAvatar";
 import SubmitButton from "./SubmitButton";
 
 const inputClass =
@@ -27,9 +28,13 @@ function useIsClient(): boolean {
 export default function EditBrandForm({
   brand,
   clusters,
+  people,
+  assignments,
 }: {
   brand: Brand;
   clusters: { id: string; label: string }[];
+  people: Person[];
+  assignments: BrandPersonAssignment[];
 }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +43,7 @@ export default function EditBrandForm({
   const dialogRef = useRef<HTMLDivElement>(null);
   const savingRef = useRef(saving);
   const isClient = useIsClient();
+  const assignedPersonIds = new Set(assignments.map((assignment) => assignment.person_id));
 
   useEffect(() => {
     savingRef.current = saving;
@@ -154,33 +160,38 @@ export default function EditBrandForm({
           className="max-h-[calc(100dvh-10rem)] space-y-5 overflow-y-auto p-5 sm:p-6"
         >
           <input type="hidden" name="brandId" value={brand.id} />
+          <input type="hidden" name="responsibilitySelectionPresent" value="1" />
 
-          <BrandLogoPicker currentLogoPath={brand.logo_path} />
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className={labelClass}>
-              Marka adı
-              <input name="name" required defaultValue={brand.name} className={inputClass} />
-            </label>
-            <label className={labelClass}>
-              Kategori
-              <ClusterSelect
-                clusters={clusters}
-                defaultValue={
-                  clusters.some((c) => c.id === brand.cluster) ? brand.cluster : undefined
-                }
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              Instagram
-              <input
-                name="instagramHandle"
-                defaultValue={brand.instagram_handle ?? ""}
-                placeholder="kullaniciadi"
-                className={inputClass}
-              />
-            </label>
+          <div className="grid items-end gap-4 border-b border-border-subtle pb-5 lg:grid-cols-[11rem_minmax(0,1fr)]">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-secondary">Marka logosu</p>
+              <BrandLogoPicker currentLogoPath={brand.logo_path} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className={labelClass}>
+                Marka adı
+                <input name="name" required defaultValue={brand.name} className={inputClass} />
+              </label>
+              <label className={labelClass}>
+                Kategori
+                <ClusterSelect
+                  clusters={clusters}
+                  defaultValue={
+                    clusters.some((c) => c.id === brand.cluster) ? brand.cluster : undefined
+                  }
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                Instagram
+                <input
+                  name="instagramHandle"
+                  defaultValue={brand.instagram_handle ?? ""}
+                  placeholder="kullaniciadi"
+                  className={inputClass}
+                />
+              </label>
+            </div>
           </div>
 
           <div className="space-y-4 border-t border-border-subtle pt-4">
@@ -267,6 +278,31 @@ export default function EditBrandForm({
               </label>
             </div>
           </div>
+
+          <details className="group border-t border-border-subtle pt-4">
+            <summary className="ui-press flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-[10px] border border-border-default bg-surface px-3.5 py-2.5 hover:bg-surface-hover [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-secondary">Marka sorumluları</span>
+                <span className="mt-0.5 block text-[11px] text-muted">{assignedPersonIds.size > 0 ? `${assignedPersonIds.size} kişi atanmış` : "Henüz sorumlu atanmadı"}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-brand-600 dark:text-brand-300">
+                Düzenle <Icon name="chevron-down" className="size-4 transition-transform group-open:rotate-180" />
+              </span>
+            </summary>
+            <fieldset className="mt-3 space-y-3">
+              <legend className="sr-only">Marka sorumluları</legend>
+              <p className="text-xs text-muted">Birden fazla kişi seçebilirsin. Seçimler kişisel marka ve ilerleme analizlerini besler.</p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {people.map((person) => (
+                  <label key={person.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[9px] border border-border-default bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-hover has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50 dark:has-[:checked]:bg-brand-950/30">
+                    <input type="checkbox" name="responsiblePersonId" value={person.id} defaultChecked={assignedPersonIds.has(person.id)} className="size-4 shrink-0 accent-brand-600" />
+                    <PersonAvatar name={person.name} avatarPath={person.avatar_path} size="xs" />
+                    <span className="min-w-0 truncate text-xs font-semibold text-foreground">{person.name}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </details>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-4">
             <SubmitButton>Kaydet</SubmitButton>

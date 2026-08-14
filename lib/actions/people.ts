@@ -21,7 +21,10 @@ import {
 import { deleteAuthSessionsForPerson } from "@/lib/repositories/authSessions";
 import { deleteAuthSessionsForAccount } from "@/lib/repositories/authSessions";
 import { setGuestAccountActive, upsertGuestAccount } from "@/lib/repositories/accounts";
-import { replacePersonBrandAssignments } from "@/lib/repositories/brandAssignments";
+import { getBrand } from "@/lib/repositories/brands";
+import {
+  replaceBrandPersonAssignments,
+} from "@/lib/repositories/brandAssignments";
 import { deleteUploadedFile, validateImageFiles, withSavedImageFiles } from "@/lib/uploads";
 import type { Person } from "@/lib/types";
 
@@ -122,15 +125,18 @@ export async function resetPersonPasswordAction(formData: FormData) {
   revalidatePath("/whoami");
 }
 
-export async function savePersonBrandAssignmentsAction(formData: FormData) {
+export async function saveBrandPersonAssignmentsAction(formData: FormData) {
   const actor = await requireSession();
   assertAccountManager(actor);
-  const personId = String(formData.get("personId") ?? "").trim();
-  if (!getPerson(personId)) throw new Error("Kişi bulunamadı.");
-  const brandIds = formData.getAll("brandId").map(String);
-  replacePersonBrandAssignments(personId, brandIds, actor.id);
+  const brandId = String(formData.get("brandId") ?? "").trim();
+  if (!getBrand(brandId)) throw new Error("Marka bulunamadı.");
+  const personIds = formData.getAll("personId").map(String);
+  replaceBrandPersonAssignments(brandId, personIds, actor.id);
+  revalidatePath("/");
   revalidatePath("/panom");
+  revalidatePath("/panom/markalar");
   revalidatePath("/team/manage");
+  revalidatePath(`/brands/${brandId}`);
 }
 
 export async function saveGuestAccountAction(formData: FormData) {

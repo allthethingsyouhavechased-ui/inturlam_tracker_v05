@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ArchiveBrandButton from "@/components/ArchiveBrandButton";
 import BrandLogo from "@/components/BrandLogo";
+import BrandResponsibilitiesDialog from "@/components/BrandResponsibilitiesDialog";
 import ClusterManager from "@/components/ClusterManager";
 import DeleteBrandButton from "@/components/DeleteBrandButton";
 import NewBrandForm from "@/components/NewBrandForm";
@@ -9,7 +10,9 @@ import PageHeader from "@/components/ui/PageHeader";
 import { requirePageSession } from "@/lib/identity";
 import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
 import { listArchivedBrands, listBrandsWithOpenCounts } from "@/lib/repositories/brands";
+import { listAllPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
 import { groupBrandsByCluster, listClusters } from "@/lib/repositories/clusters";
+import { listActivePeople } from "@/lib/repositories/people";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +22,8 @@ export default async function BrandsPage() {
   const brands = listBrandsWithOpenCounts();
   const archived = listArchivedBrands();
   const clusters = listClusters();
+  const responsibilityPeople = canManageBrands ? listActivePeople() : [];
+  const assignments = canManageBrands ? listAllPersonBrandAssignments() : [];
   const groups = groupBrandsByCluster(brands, clusters);
 
   const brandCountByCluster = new Map<string, number>();
@@ -37,6 +42,7 @@ export default async function BrandsPage() {
         description={`${brands.length} aktif markanın çalışma alanları, açık iş yükleri ve içerik akışları.`}
         actions={canManageBrands && (
           <div className="relative flex w-full max-w-[calc(100vw-2rem)] flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:max-w-none sm:flex-wrap sm:overflow-visible sm:pb-0">
+            <BrandResponsibilitiesDialog brands={brands} people={responsibilityPeople} assignments={assignments} />
             <ClusterManager
               clusters={clusters.map((cluster) => ({
                 id: cluster.id,

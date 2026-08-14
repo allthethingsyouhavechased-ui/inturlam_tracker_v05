@@ -42,10 +42,10 @@ export default async function SocialVarlikPage() {
 
   return (
     <div className="space-y-5">
-      <div>
+      <div className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Hazır içerik varlığı</h2>
         <p className="mt-1 text-xs text-muted">Yayına hazır stok ve marka bazlı aylık hedef karşılaştırması.</p>
-        <p className="mt-2 max-w-3xl rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2 text-xs leading-5 text-secondary">
+        <p className="w-full rounded-lg border border-border-subtle bg-surface-subtle px-4 py-2.5 text-xs leading-5 text-secondary">
           Hazır varlık sayıları canlı stoktur ve içerikler paylaşıldıkça azalır. Bu azalma eksik teslim anlamına gelmez; aylık teslim durumu marka sayfasından ayrıca işaretlenir.
         </p>
       </div>

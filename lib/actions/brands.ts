@@ -12,6 +12,10 @@ import {
   setBrandArchived,
   updateBrand,
 } from "@/lib/repositories/brands";
+import {
+  listBrandPersonAssignments,
+  replaceBrandPersonAssignments,
+} from "@/lib/repositories/brandAssignments";
 import { deleteUploadedFile, deleteUploadedFiles, replaceBrandLogo } from "@/lib/uploads";
 import { listUploadPathsForBrand } from "@/lib/repositories/uploadReferences";
 
@@ -41,6 +45,12 @@ function cleanNonNegativeInt(value: FormDataEntryValue | null, label: string): n
   const parsed = Number(text);
   if (!Number.isSafeInteger(parsed)) throw new Error(`${label} geçersiz.`);
   return parsed;
+}
+
+function sameIds(left: string[], right: string[]): boolean {
+  const a = [...new Set(left)].sort();
+  const b = [...new Set(right)].sort();
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 export async function createBrandAction(formData: FormData) {
@@ -73,7 +83,7 @@ export async function createBrandAction(formData: FormData) {
 }
 
 export async function updateBrandAction(formData: FormData) {
-  await requireManager();
+  const actor = await requireManager();
   const id = String(formData.get("brandId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
 
@@ -97,6 +107,9 @@ export async function updateBrandAction(formData: FormData) {
     formData.get("annualShootAllowance"),
     "Yıllık çekim hakkı",
   );
+  const responsibilitySelectionPresent = formData.get("responsibilitySelectionPresent") === "1";
+  const responsiblePersonIds = formData.getAll("responsiblePersonId").map(String).filter(Boolean);
+  const currentResponsiblePersonIds = listBrandPersonAssignments(id).map((item) => item.person_id);
 
   const update = (logoPath?: string) => updateBrand({
     id,
@@ -114,7 +127,7 @@ export async function updateBrandAction(formData: FormData) {
   });
 
   const logo = extractLogoFile(formData);
-  const changed =
+  const brandChanged =
     logo !== null ||
     current.name !== name ||
     current.cluster !== cluster ||
@@ -125,20 +138,35 @@ export async function updateBrandAction(formData: FormData) {
     current.tier !== tier ||
     current.monthly_shoot_allowance !== monthlyShootAllowance ||
     current.annual_shoot_allowance !== annualShootAllowance;
-  if (!changed) return;
-  if (logo) {
-    await replaceBrandLogo(logo, current.logo_path, (logoPath) => update(logoPath));
-  } else update();
+  const assignmentsChanged = responsibilitySelectionPresent
+    && !sameIds(responsiblePersonIds, currentResponsiblePersonIds);
+  if (!brandChanged && !assignmentsChanged) return;
+  if (brandChanged) {
+    if (logo) {
+      await replaceBrandLogo(logo, current.logo_path, (logoPath) => update(logoPath));
+    } else update();
+  }
+  if (assignmentsChanged) {
+    replaceBrandPersonAssignments(id, responsiblePersonIds, actor.person.id);
+  }
 
   await recordActivity({
     action: "brand.update",
     entityType: "brand",
     entityId: id,
     brandId: id,
-    summary: `“${name}” marka bilgilerini güncelledi`,
+    summary: assignmentsChanged && !brandChanged
+      ? `“${name}” marka sorumlularını güncelledi`
+      : assignmentsChanged
+        ? `“${name}” marka bilgilerini ve sorumlularını güncelledi`
+        : `“${name}” marka bilgilerini güncelledi`,
   });
 
   revalidatePath("/", "layout");
+  revalidatePath("/panom");
+  revalidatePath("/panom/markalar");
+  revalidatePath("/team/manage");
+  revalidatePath(`/brands/${id}`);
 }
 
 export async function archiveBrandAction(brandId: string) {

@@ -111,17 +111,22 @@ export default async function HomePage({
     personalBrands.map((brand) => brand.progress),
   );
   const personalDeadlines = openTasks
-    .filter((task) => task.assignee_id === me.id && task.due_date !== null && task.due_date <= weekEnd)
+    .filter((task) => (
+      task.assignee_id === me.id
+      && (task.status === "Beklemede" || task.status === "DevamEdiyor")
+      && task.due_date !== null
+      && task.due_date <= weekEnd
+    ))
     .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
   const revisionTasks = allTasks
-    .filter((task) => task.active_revision_id !== null && (me.is_manager === 1 || task.assignee_id === me.id))
+    .filter((task) => task.active_revision_id !== null && task.assignee_id === me.id)
     .sort((a, b) => {
       const aOver = (a.active_revision_elapsed_minutes ?? 0) > (a.active_revision_target_minutes ?? Infinity);
       const bOver = (b.active_revision_elapsed_minutes ?? 0) > (b.active_revision_target_minutes ?? Infinity);
       return Number(bOver) - Number(aOver) || (b.active_revision_elapsed_minutes ?? 0) - (a.active_revision_elapsed_minutes ?? 0);
     });
   const reviewTasks = allTasks
-    .filter((task) => task.status === "Incelemede" && (me.is_manager === 1 || task.assignee_id === me.id))
+    .filter((task) => task.status === "Incelemede" && task.assignee_id === me.id)
     .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
 
   const socialHealth = listBrandSocialRows().map((row) => ({
@@ -155,12 +160,6 @@ export default async function HomePage({
         syncBroken={lastSocialRun?.status === "error"}
       />
 
-      <HomeFocusPanel
-        personalDeadlines={personalDeadlines}
-        revisionTasks={revisionTasks}
-        reviewTasks={reviewTasks}
-      />
-
       <HomeBrandProgress
         month={month}
         personalBrands={personalBrands}
@@ -169,6 +168,14 @@ export default async function HomePage({
         portfolioProgress={portfolioProgress}
         portfolioStatusCounts={portfolioStatusCounts}
         personalProgress={personalProgress}
+        personalFocus={(
+          <HomeFocusPanel
+            personalDeadlines={personalDeadlines}
+            revisionTasks={revisionTasks}
+            reviewTasks={reviewTasks}
+            compact
+          />
+        )}
       />
     </div>
   );

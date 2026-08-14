@@ -52,6 +52,14 @@ describe("aylık analiz navigasyonu", () => {
     assert.match(source("app/panom/katkim/page.tsx"), /month=\$\{month\}/);
     assert.match(source("app/panom/markalar/page.tsx"), /month=\$\{month\}/);
   });
+
+  it("katkı dökümünü durum analizinin altındaki geniş sütunda tutar", () => {
+    const contribution = source("app/panom/katkim/page.tsx");
+    const analysis = contribution.indexOf("Durum analizi");
+    const breakdown = contribution.indexOf("Katkı dökümü");
+    const rightColumn = contribution.indexOf('className="min-w-0 space-y-5"');
+    assert.ok(rightColumn >= 0 && analysis > rightColumn && breakdown > analysis);
+  });
 });
 
 describe("kapsam açıklamaları", () => {

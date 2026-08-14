@@ -417,6 +417,19 @@ CREATE TABLE IF NOT EXISTS calendar_events (
   last_synced_at    TEXT
 );
 
+-- Toplantı ve çekimlerin ekip içi sonuç kaydı. Etkinlikten ayrı tutulur; böylece
+-- guest takvim DTO'su yalnızca paylaşılan takvim alanlarını taşımaya devam eder.
+CREATE TABLE IF NOT EXISTS calendar_event_reports (
+  event_id       TEXT PRIMARY KEY REFERENCES calendar_events(id) ON DELETE CASCADE,
+  participants   TEXT,
+  summary        TEXT,
+  decisions      TEXT,
+  next_steps     TEXT,
+  updated_by_id  TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS calendar_sync_state (
   key        TEXT PRIMARY KEY,
   value      TEXT,

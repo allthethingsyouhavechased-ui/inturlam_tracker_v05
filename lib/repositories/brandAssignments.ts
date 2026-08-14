@@ -40,21 +40,21 @@ export function listBrandPersonAssignments(brandId: string): BrandPersonAssignme
   );
 }
 
-export function replacePersonBrandAssignments(
-  personId: string,
-  brandIds: string[],
+export function replaceBrandPersonAssignments(
+  brandId: string,
+  personIds: string[],
   assignedBy: string,
 ): void {
   const db = getDb();
-  const unique = [...new Set(brandIds.filter(Boolean))];
+  const unique = [...new Set(personIds.filter(Boolean))];
   db.exec("BEGIN IMMEDIATE");
   try {
-    db.prepare("DELETE FROM person_brand_assignments WHERE person_id = ?").run(personId);
+    db.prepare("DELETE FROM person_brand_assignments WHERE brand_id = ?").run(brandId);
     const insert = db.prepare(
       `INSERT INTO person_brand_assignments (person_id, brand_id, assigned_by)
-       SELECT ?, id, ? FROM brands WHERE id = ? AND archived = 0`,
+       SELECT id, ?, ? FROM people WHERE id = ? AND active = 1`,
     );
-    for (const brandId of unique) insert.run(personId, assignedBy, brandId);
+    for (const personId of unique) insert.run(brandId, assignedBy, personId);
     db.exec("COMMIT");
   } catch (error) {
     db.exec("ROLLBACK");

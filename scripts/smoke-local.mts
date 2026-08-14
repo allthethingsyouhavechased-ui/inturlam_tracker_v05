@@ -32,10 +32,11 @@ function occurrenceCount(value: string, fragment: string): number {
 }
 
 try {
-  const [currentResponse, selectedResponse, brandResponse, homeResponse, panomResponse, contributionResponse, assignedBrandsResponse, tasksResponse, reportsResponse] = await Promise.all([
+  const [currentResponse, selectedResponse, brandResponse, brandEventReportsResponse, homeResponse, panomResponse, contributionResponse, assignedBrandsResponse, tasksResponse, reportsResponse] = await Promise.all([
     fetch(`${baseUrl}/calendar?month=${month}`, { headers }),
     fetch(`${baseUrl}/calendar?month=${month}&day=${selectedDate}`, { headers }),
     fetch(`${baseUrl}/brands/${brand.id}`, { headers }),
+    fetch(`${baseUrl}/brands/${brand.id}/reports?month=${month}`, { headers }),
     fetch(`${baseUrl}/`, { headers }),
     fetch(`${baseUrl}/panom`, { headers }),
     fetch(`${baseUrl}/panom/katkim`, { headers }),
@@ -47,6 +48,7 @@ try {
   assert.equal(currentResponse.status, 200, "Güncel ay takvimi açılamadı.");
   assert.equal(selectedResponse.status, 200, "Seçili gün takvimi açılamadı.");
   assert.equal(brandResponse.status, 200, "Marka sayfası açılamadı.");
+  assert.equal(brandEventReportsResponse.status, 200, "Marka etkinlik raporları açılamadı.");
   assert.equal(homeResponse.status, 200, "Bugün sayfası açılamadı.");
   assert.equal(panomResponse.status, 200, "Panom açılamadı.");
   assert.equal(contributionResponse.status, 200, "Katkı detay sayfası açılamadı.");
@@ -54,10 +56,11 @@ try {
   assert.equal(tasksResponse.status, 200, "Görevler sayfası açılamadı.");
   assert.equal(reportsResponse.status, 200, "Raporlar sayfası açılamadı.");
 
-  const [currentHtml, selectedHtml, brandHtml, homeHtml, panomHtml, contributionHtml, assignedBrandsHtml, tasksHtml, reportsHtml] = await Promise.all([
+  const [currentHtml, selectedHtml, brandHtml, brandEventReportsHtml, homeHtml, panomHtml, contributionHtml, assignedBrandsHtml, tasksHtml, reportsHtml] = await Promise.all([
     currentResponse.text(),
     selectedResponse.text(),
     brandResponse.text(),
+    brandEventReportsResponse.text(),
     homeResponse.text(),
     panomResponse.text(),
     contributionResponse.text(),
@@ -73,6 +76,8 @@ try {
   assert.ok(selectedHtml.includes(`value="${selectedDate}T10:00"`), "Seçili gün bitiş alanına taşınmalı.");
   assert.ok(currentHtml.includes('name="colorKey"') && currentHtml.includes('value="rose"'), "Takvim etkinlik rengi seçimini göstermeli.");
   assert.ok(brandHtml.includes("ÇEKİM HAKLARI") && brandHtml.includes("YILLIK"), "Marka sayfası yıllık çekim hakkını göstermeli.");
+  assert.ok(brandHtml.includes("Etkinlik raporları"), "Marka sayfası etkinlik raporlarına bağlanmalı.");
+  assert.ok(brandEventReportsHtml.includes("Toplantı ve çekim raporları"), "Marka etkinlik raporu çalışma alanını göstermeli.");
   assert.ok(homeHtml.includes("AYLIK ÜRETİM AKIŞI") && homeHtml.includes("Atanmış markalar toplamı"), "Bugün sayfası atanmış marka toplamını ve üretim akışını göstermeli.");
   assert.ok(panomHtml.includes("Üzerimdeki markalar") && panomHtml.includes("Bu ayki katkım"), "Panom kişisel araç düğmelerini göstermeli.");
   assert.ok(!panomHtml.includes("Ekipte gecikmiş / bu hafta teslim"), "Panom ekip geneli görev panelini göstermemeli.");
@@ -87,6 +92,7 @@ try {
     calendarCurrent: currentResponse.status,
     calendarSelected: selectedResponse.status,
     brand: brandResponse.status,
+    brandEventReports: brandEventReportsResponse.status,
     home: homeResponse.status,
     panom: panomResponse.status,
     contribution: contributionResponse.status,

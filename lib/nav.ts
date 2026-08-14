@@ -19,7 +19,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/", label: "Bugün", icon: "home" },
       { href: "/panom", label: "Panom", icon: "board" },
-      { href: "/requests", label: "Talepler", icon: "inbox" },
       { href: "/tasks", label: "Görevler", icon: "tasks" },
       { href: "/calendar", label: "Takvim", icon: "calendar" },
     ],
@@ -39,6 +38,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/team", label: "Ekip", icon: "team" },
       { href: "/reports", label: "Raporlar", icon: "reports" },
+      { href: "/requests", label: "Talepler", icon: "inbox" },
       { href: "/activity", label: "Aktivite", icon: "activity" },
     ],
   },
@@ -79,6 +79,9 @@ export function routeContextForPathname(pathname: string): RouteContext {
   if (pathname.startsWith("/requests/")) return { section: "Talepler", label: "Talep değerlendirme" };
   if (pathname.startsWith("/brands/") && pathname.includes("/content/")) {
     return { section: "Markalar", label: "İçerik detayı" };
+  }
+  if (pathname.startsWith("/brands/") && pathname.endsWith("/reports")) {
+    return { section: "Markalar", label: "Etkinlik raporları" };
   }
   if (pathname.startsWith("/brands/")) return { section: "Markalar", label: "Marka çalışma alanı" };
   if (pathname.startsWith("/team/manage")) return { section: "Ekip", label: "Hesap yönetimi" };

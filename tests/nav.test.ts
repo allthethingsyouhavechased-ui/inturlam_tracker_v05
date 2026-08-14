@@ -37,12 +37,21 @@ describe("NAV_GROUPS bilgi mimarisi", () => {
     assert.equal(new Set(hrefs).size, hrefs.length);
   });
 
-  it("Bugün, Panom, Talepler, Görevler ve Takvim aynı çalışma grubundadır", () => {
+  it("Bugün, Panom, Görevler ve Takvim çalışma grubundadır", () => {
     const calisma = NAV_GROUPS.find((group) => group.id === "calisma");
     assert.ok(calisma);
     assert.deepEqual(
       calisma.items.map((item) => item.href),
-      ["/", "/panom", "/requests", "/tasks", "/calendar"],
+      ["/", "/panom", "/tasks", "/calendar"],
+    );
+  });
+
+  it("Talepler organizasyonda Raporlar'ın hemen altındadır", () => {
+    const organizasyon = NAV_GROUPS.find((group) => group.id === "organizasyon");
+    assert.ok(organizasyon);
+    assert.deepEqual(
+      organizasyon.items.map((item) => item.href),
+      ["/team", "/reports", "/requests", "/activity"],
     );
   });
 
@@ -75,5 +84,9 @@ describe("routeContextForPathname", () => {
     assert.deepEqual(routeContextForPathname("/team/manage"), { section: "Ekip", label: "Hesap yönetimi" });
     assert.deepEqual(routeContextForPathname("/settings/profile"), { section: "Ayarlar", label: "Profil bilgileri" });
     assert.deepEqual(routeContextForPathname("/settings/security"), { section: "Ayarlar", label: "Güvenlik" });
+  });
+
+  it("marka etkinlik raporu rotasını marka çalışma alanından ayırır", () => {
+    assert.deepEqual(routeContextForPathname("/brands/b1/reports"), { section: "Markalar", label: "Etkinlik raporları" });
   });
 });

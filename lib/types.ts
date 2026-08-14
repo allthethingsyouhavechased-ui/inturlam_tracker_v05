@@ -376,6 +376,18 @@ export interface CalendarEvent {
   last_synced_at: string | null;
 }
 
+export interface CalendarEventReport {
+  event_id: string;
+  participants: string | null;
+  summary: string | null;
+  decisions: string | null;
+  next_steps: string | null;
+  updated_by_id: string | null;
+  updated_by_name: string | null;
+  created_at: string | null;
+  report_updated_at: string | null;
+}
+
 // Görev şablonu: bir içerik türü için standart iş akışı.
 export interface TaskTemplate {
   id: string;
@@ -434,7 +446,8 @@ export type ActivityEntityType =
   | "cluster"
   | "template"
   | "request"
-  | "idea";
+  | "idea"
+  | "calendar_event";
 
 export interface ActivityEntry {
   id: string;

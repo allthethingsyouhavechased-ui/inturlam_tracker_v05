@@ -13,12 +13,10 @@ import { canManageRoles, ROLE_ADMIN_PERSON_ID } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
 import {
   saveGuestAccountAction,
-  savePersonBrandAssignmentsAction,
   setGuestAccountActiveAction,
 } from "@/lib/actions/people";
 import { listBrands } from "@/lib/repositories/brands";
 import { listGuestAccounts } from "@/lib/repositories/accounts";
-import { listAllPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
 import { listInactivePeople, listLoginPeople } from "@/lib/repositories/people";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +30,6 @@ export default async function TeamManagementPage() {
   const canEditRoles = canManageRoles(currentPerson);
   const brands = listBrands();
   const guestAccounts = listGuestAccounts();
-  const assignments = listAllPersonBrandAssignments();
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -99,25 +96,6 @@ export default async function TeamManagementPage() {
               </div>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="mt-8" aria-labelledby="brand-assignments-title">
-        <h2 id="brand-assignments-title" className="mb-1 text-sm font-semibold text-foreground">Panom marka atamaları</h2>
-        <p className="mb-3 text-xs text-muted">Bu seçimler yalnızca “Üzerimdeki markalar” özetini besler; ekip erişimini kısıtlamaz.</p>
-        <div className="space-y-3">
-          {people.map((person) => {
-            const selected = new Set(assignments.filter((item) => item.person_id === person.id).map((item) => item.brand_id));
-            return (
-              <ActionForm key={person.id} action={savePersonBrandAssignmentsAction} successMessage="Marka atamaları kaydedildi." className="rounded-xl border border-border-default bg-surface p-4">
-                <input type="hidden" name="personId" value={person.id} />
-                <div className="mb-3 flex items-center justify-between gap-3"><span className="text-sm font-semibold text-foreground">{person.name}</span><SubmitButton className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-500 disabled:cursor-wait disabled:opacity-70">Kaydet</SubmitButton></div>
-                <div className="flex flex-wrap gap-2">
-                  {brands.map((brand) => <label key={brand.id} className="inline-flex items-center gap-2 rounded-lg border border-border-default px-2.5 py-2 text-xs text-secondary"><input type="checkbox" name="brandId" value={brand.id} defaultChecked={selected.has(brand.id)} />{brand.name}</label>)}
-                </div>
-              </ActionForm>
-            );
-          })}
         </div>
       </section>
 
