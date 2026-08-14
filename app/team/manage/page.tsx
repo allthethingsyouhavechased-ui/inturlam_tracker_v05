@@ -88,6 +88,16 @@ export default async function TeamManagementPage() {
                   <Icon name="user" className="size-3.5" />
                   Profili düzenle
                 </Link>
+                {/* Kullanıcı adı Güvenlik sekmesinde. Bağlantı buradan da veriliyor:
+                    arayüzden eklenen (UUID id'li) hesapların kullanıcı adı boş
+                    başlıyor ve onu yalnızca bir yönetici atayabiliyor. */}
+                <Link
+                  href={`/settings/security?person=${person.id}`}
+                  className="ui-press inline-flex min-h-9 items-center gap-1.5 rounded-[9px] px-2.5 text-xs font-semibold text-secondary hover:bg-surface-hover hover:text-foreground"
+                >
+                  <Icon name="shield" className="size-3.5" />
+                  Kullanıcı adı
+                </Link>
                 {canEditRoles && person.id !== ROLE_ADMIN_PERSON_ID && (
                   <ManagerRoleButton personId={person.id} isManager={person.is_manager === 1} />
                 )}

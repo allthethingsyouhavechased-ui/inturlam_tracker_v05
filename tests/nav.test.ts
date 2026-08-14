@@ -37,13 +37,20 @@ describe("NAV_GROUPS bilgi mimarisi", () => {
     assert.equal(new Set(hrefs).size, hrefs.length);
   });
 
-  it("Bugün, Panom, Görevler ve Takvim çalışma grubundadır", () => {
+  it("Bugün, Panom ve Görevler çalışma grubundadır", () => {
     const calisma = NAV_GROUPS.find((group) => group.id === "calisma");
     assert.ok(calisma);
     assert.deepEqual(
       calisma.items.map((item) => item.href),
-      ["/", "/panom", "/tasks", "/calendar"],
+      ["/", "/panom", "/tasks"],
     );
+  });
+
+  it("Takvim organizasyon grubunda, Ekip'in hemen altındadır", () => {
+    const organizasyon = NAV_GROUPS.find((group) => group.id === "organizasyon");
+    assert.ok(organizasyon);
+    const hrefs = organizasyon.items.map((item) => item.href);
+    assert.equal(hrefs.indexOf("/calendar"), hrefs.indexOf("/team") + 1);
   });
 
   it("Talepler organizasyonda Raporlar'ın hemen altındadır", () => {
@@ -51,7 +58,7 @@ describe("NAV_GROUPS bilgi mimarisi", () => {
     assert.ok(organizasyon);
     assert.deepEqual(
       organizasyon.items.map((item) => item.href),
-      ["/team", "/reports", "/requests", "/activity"],
+      ["/team", "/calendar", "/reports", "/requests", "/activity"],
     );
   });
 

@@ -20,7 +20,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/", label: "Bugün", icon: "home" },
       { href: "/panom", label: "Panom", icon: "board" },
       { href: "/tasks", label: "Görevler", icon: "tasks" },
-      { href: "/calendar", label: "Takvim", icon: "calendar" },
     ],
   },
   {
@@ -37,6 +36,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     label: "Organizasyon",
     items: [
       { href: "/team", label: "Ekip", icon: "team" },
+      // Takvim "Çalışma" grubundan buraya alındı: ekranın kendisi kişisel bir
+      // yapılacaklar listesi değil, ekibin ay geneline yayılmış teslim
+      // planını gösteriyor.
+      { href: "/calendar", label: "Takvim", icon: "calendar" },
       { href: "/reports", label: "Raporlar", icon: "reports" },
       { href: "/requests", label: "Talepler", icon: "inbox" },
       { href: "/activity", label: "Aktivite", icon: "activity" },
