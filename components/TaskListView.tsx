@@ -9,6 +9,7 @@ import TaskCommentsPanel from "@/components/TaskCommentsPanel";
 import TaskDueDateEdit from "@/components/TaskDueDateEdit";
 import TaskDifficultySelect from "@/components/TaskDifficultySelect";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
+import TaskQuickRevisionDialog from "@/components/TaskQuickRevisionDialog";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
 import Icon from "@/components/ui/Icon";
@@ -329,12 +330,21 @@ export default function TaskListView({
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    {t.revision_count > 0 ? (
-                      <Link href={`/tasks/${t.id}`} className={`inline-flex min-w-[6rem] items-center gap-1 whitespace-nowrap text-xs font-semibold ${isRevisionOverTarget(t.active_revision_elapsed_minutes, t.active_revision_target_minutes) ? "text-danger dark:text-rose-300" : t.active_revision_id ? "text-violet-700 dark:text-violet-300" : "text-secondary"}`}>
-                        R{t.revision_count}
-                        <span className="font-normal text-muted">· {formatRevisionDuration(t.active_revision_elapsed_minutes ?? t.total_revision_minutes)}</span>
-                      </Link>
-                    ) : <span className="text-muted">—</span>}
+                    <div className="flex min-w-[7rem] flex-col items-start gap-1">
+                      {t.status === "Incelemede" && t.pending_delivery_id && t.pending_delivery_version && (
+                        <TaskQuickRevisionDialog
+                          taskTitle={t.title}
+                          deliveryId={t.pending_delivery_id}
+                          deliveryVersion={t.pending_delivery_version}
+                        />
+                      )}
+                      {t.revision_count > 0 ? (
+                        <Link href={`/tasks/${t.id}`} className={`inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold ${isRevisionOverTarget(t.active_revision_elapsed_minutes, t.active_revision_target_minutes) ? "text-danger dark:text-rose-300" : t.active_revision_id ? "text-violet-700 dark:text-violet-300" : "text-secondary"}`}>
+                          R{t.revision_count}
+                          <span className="font-normal text-muted">· {formatRevisionDuration(t.active_revision_elapsed_minutes ?? t.total_revision_minutes)}</span>
+                        </Link>
+                      ) : !t.pending_delivery_id ? <span className="text-muted">—</span> : null}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <TaskStatusSelect taskId={t.id} status={t.status} />

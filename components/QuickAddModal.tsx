@@ -17,7 +17,7 @@ import {
 } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import { NEW_CONTENT_VALUE, resolveQuickAddContentId } from "@/lib/quickAdd";
-import type { Person } from "@/lib/types";
+import type { ContentType, Person } from "@/lib/types";
 
 const NEW_CONTENT = NEW_CONTENT_VALUE;
 
@@ -30,6 +30,7 @@ interface ContentOption {
   id: string;
   brand_id: string;
   title: string;
+  type: ContentType;
 }
 
 const inputClass = controlClass();
@@ -56,6 +57,7 @@ export default function QuickAddModal({
   people,
   defaultAssigneeId,
   defaultBrandId,
+  canSetWeight = false,
   // Takvimden açıldığında: tıklanan gün teslim tarihi olarak hazır gelir ve
   // modal doğrudan açılır (bkz. app/calendar/page.tsx — orada `key` gün +
   // `yeni` parametresinden türetildiği için her yeni istek yeni bir instance).
@@ -69,6 +71,7 @@ export default function QuickAddModal({
   people: Person[];
   defaultAssigneeId: string | null;
   defaultBrandId?: string;
+  canSetWeight?: boolean;
   defaultDueDate?: string;
   initialOpen?: boolean;
   triggerLabel?: string;
@@ -92,10 +95,11 @@ export default function QuickAddModal({
   const [brandId, setBrandId] = useState(initialBrandId);
   const [contentId, setContentId] = useState<string>(NEW_CONTENT);
   const [newContentTitle, setNewContentTitle] = useState("");
-  const [newContentType, setNewContentType] = useState(CONTENT_TYPES[0]);
+  const [taskType, setTaskType] = useState(CONTENT_TYPES[0]);
   const [taskTitle, setTaskTitle] = useState("");
   const [priority, setPriority] = useState(TASK_PRIORITIES[1]);
   const [difficulty, setDifficulty] = useState(TASK_DIFFICULTIES[1]);
+  const [weightPoints, setWeightPoints] = useState("1");
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId ?? "");
   const [dueDate, setDueDate] = useState(defaultDueDate);
 
@@ -146,9 +150,11 @@ export default function QuickAddModal({
   function reset() {
     setContentId(NEW_CONTENT);
     setNewContentTitle("");
+    setTaskType(CONTENT_TYPES[0]);
     setTaskTitle("");
     setPriority(TASK_PRIORITIES[1]);
     setDifficulty(TASK_DIFFICULTIES[1]);
+    setWeightPoints("1");
     setAssigneeId(defaultAssigneeId ?? "");
     setDueDate(defaultDueDate);
     setError(null);
@@ -168,15 +174,17 @@ export default function QuickAddModal({
           const fd = new FormData();
           fd.set("brandId", brandId);
           fd.set("title", newContentTitle.trim() || taskTitle.trim());
-          fd.set("type", newContentType);
+          fd.set("type", taskType);
           targetContentId = await createContentItemAction(fd);
         }
 
         const fd2 = new FormData();
         fd2.set("contentItemId", targetContentId);
         fd2.set("title", taskTitle.trim());
+        fd2.set("contentType", taskType);
         fd2.set("priority", priority);
         fd2.set("difficulty", difficulty);
+        fd2.set("weightPoints", weightPoints);
         if (assigneeId) fd2.set("assigneeId", assigneeId);
         if (dueDate) fd2.set("dueDate", dueDate);
         await createTaskAction(fd2);
@@ -218,7 +226,7 @@ export default function QuickAddModal({
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">YENİ KAYIT</p>
                 <h2 id="quickadd-title" className="mt-1 text-lg font-semibold tracking-[-0.015em]">Görev oluştur</h2>
-                <p className="mt-1 text-xs text-muted">Marka, içerik ve sorumluyu tek akışta belirle.</p>
+                <p className="mt-1 text-xs text-muted">Marka, tür, iş yükü ve sorumluyu tek akışta belirle.</p>
               </div>
               <button
                 type="button"
@@ -238,6 +246,7 @@ export default function QuickAddModal({
                   onChange={(e) => {
                     setBrandId(e.target.value);
                     setContentId(NEW_CONTENT);
+                    setTaskType(CONTENT_TYPES[0]);
                   }}
                   className={inputClass}
                 >
@@ -253,7 +262,12 @@ export default function QuickAddModal({
                 Bağlı çalışma
                 <select
                   value={effectiveContentId}
-                  onChange={(e) => setContentId(e.target.value)}
+                  onChange={(e) => {
+                    const nextContentId = e.target.value;
+                    setContentId(nextContentId);
+                    const selected = contentsForBrand.find((content) => content.id === nextContentId);
+                    setTaskType(selected?.type ?? CONTENT_TYPES[0]);
+                  }}
                   className={inputClass}
                 >
                   {contentsForBrand.map((c) => (
@@ -266,7 +280,7 @@ export default function QuickAddModal({
               </label>
 
               {effectiveContentId === NEW_CONTENT && (
-                <div className="grid gap-3 rounded-xl border border-dashed border-border-strong bg-surface-subtle p-3 sm:grid-cols-[1fr_auto]">
+                <div className="rounded-xl border border-dashed border-border-strong bg-surface-subtle p-3">
                   <label className="grid gap-1.5 text-xs font-medium text-secondary">
                     Çalışma / proje başlığı
                     <input
@@ -276,36 +290,36 @@ export default function QuickAddModal({
                       className={inputClass}
                     />
                   </label>
-                  <label className="grid gap-1.5 text-xs font-medium text-secondary">
-                    Görev türü
-                    <select
-                      value={newContentType}
-                      onChange={(e) => setNewContentType(e.target.value as (typeof CONTENT_TYPES)[number])}
-                      className={inputClass}
-                    >
-                      {CONTENT_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {CONTENT_TYPE_LABEL[t]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                 </div>
               )}
 
-              <label className="grid gap-1.5 text-xs font-medium text-secondary">
-                Görev başlığı
-                <input
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  placeholder="Örn. Kapak görseli hazırla"
-                  className={inputClass}
-                  autoFocus
-                />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
                 <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                  Görev başlığı
+                  <input
+                    value={taskTitle}
+                    onChange={(e) => setTaskTitle(e.target.value)}
+                    placeholder="Örn. Kapak görseli hazırla"
+                    className={inputClass}
+                    autoFocus
+                  />
+                </label>
+                <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                  Görev türü
+                  <select
+                    value={taskType}
+                    onChange={(e) => setTaskType(e.target.value as ContentType)}
+                    className={inputClass}
+                  >
+                    {CONTENT_TYPES.map((type) => (
+                      <option key={type} value={type}>{CONTENT_TYPE_LABEL[type]}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-6">
+                <label className={`min-w-0 grid gap-1.5 text-xs font-medium text-secondary ${canSetWeight ? "sm:col-span-2" : "sm:col-span-3"}`}>
                   Öncelik
                   <select
                     value={priority}
@@ -319,7 +333,7 @@ export default function QuickAddModal({
                     ))}
                   </select>
                 </label>
-                <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                <label className={`min-w-0 grid gap-1.5 text-xs font-medium text-secondary ${canSetWeight ? "sm:col-span-2" : "sm:col-span-3"}`}>
                   Zorluk
                   <select
                     value={difficulty}
@@ -333,7 +347,27 @@ export default function QuickAddModal({
                     ))}
                   </select>
                 </label>
-                <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                {canSetWeight && (
+                  <label className="min-w-0 grid gap-1.5 text-xs font-medium text-secondary sm:col-span-2">
+                    Puan
+                    <input
+                      name="weightPoints"
+                      type="number"
+                      min={1}
+                      max={100}
+                      step={1}
+                      required
+                      value={weightPoints}
+                      onChange={(event) => setWeightPoints(event.target.value)}
+                      className={inputClass}
+                      aria-describedby="quickadd-weight-help"
+                    />
+                    <span id="quickadd-weight-help" className="text-[10px] font-normal leading-4 text-muted">
+                      Aylık ilerleme ağırlığı
+                    </span>
+                  </label>
+                )}
+                <label className="min-w-0 grid gap-1.5 text-xs font-medium text-secondary sm:col-span-3">
                   Atanan
                   <select
                     value={assigneeId}
@@ -348,7 +382,7 @@ export default function QuickAddModal({
                     ))}
                   </select>
                 </label>
-                <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                <label className="min-w-0 grid gap-1.5 text-xs font-medium text-secondary sm:col-span-3">
                   Teslim tarihi
                   <input
                     type="date"

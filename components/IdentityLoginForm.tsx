@@ -7,16 +7,26 @@ import SubmitButton from "@/components/SubmitButton";
 const inputClass =
   "min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-950";
 
-export default function IdentityLoginForm({
-  personId,
-}: {
-  personId: string;
-}) {
+export default function IdentityLoginForm() {
   const [state, action] = useActionState(loginPerson, {});
 
   return (
     <form action={action} className="space-y-4">
-      <input type="hidden" name="personId" value={personId} />
+      <label className="grid gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+        Kullanıcı adı / ID
+        <input
+          name="username"
+          type="text"
+          required
+          maxLength={120}
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoFocus
+          className={inputClass}
+        />
+      </label>
       <label className="grid gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-200">
         Şifre
         <input
@@ -25,7 +35,6 @@ export default function IdentityLoginForm({
           required
           maxLength={128}
           autoComplete="current-password"
-          autoFocus
           className={inputClass}
         />
       </label>

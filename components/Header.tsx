@@ -37,6 +37,7 @@ export default async function Header() {
               contents={contents}
               people={people}
               defaultAssigneeId={person.id}
+              canSetWeight={person.is_manager === 1}
               triggerLabel="Yeni görev"
               triggerClassName="header-quick-add ui-press inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm hover:bg-brand-700"
             />

@@ -56,6 +56,7 @@ export interface ContentSummary {
   id: string;
   brand_id: string;
   title: string;
+  type: ContentType;
   status: ContentStatus;
 }
 
@@ -65,7 +66,7 @@ export function listAllContentSummaries(): ContentSummary[] {
   return plainList<ContentSummary>(
     getDb()
       .prepare(
-        `SELECT ci.id, ci.brand_id, ci.title, ci.status FROM content_items ci
+        `SELECT ci.id, ci.brand_id, ci.title, ci.type, ci.status FROM content_items ci
           WHERE ci.archived = 0 AND ${visibleContentCondition("ci")}
           ORDER BY ci.created_at DESC`,
       )

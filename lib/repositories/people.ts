@@ -116,6 +116,33 @@ export function getPersonCredentials(id: string): PersonCredentials | undefined 
   );
 }
 
+// Ekip giriş ekranı oturum açılmadan kişi listesini göstermediği için yazılan
+// kimlik hem people.id hem de tam ad olabilir. SQLite NOCASE yalnızca ASCII
+// harfleri güvenilir biçimde katladığından Türkçe karşılaştırma JS tarafında
+// yapılır. Pasif ve şifresiz hesaplar bilerek burada elenmez; giriş action'ı
+// bunların tamamını tek jenerik hata arkasında birleştirir.
+export function findLoginCandidate(identifier: string): PersonCredentials | undefined {
+  const needle = identifier.trim().toLocaleLowerCase("tr-TR");
+  if (!needle) return undefined;
+
+  const rows = plainList<PersonCredentials & { name: string }>(
+    getDb()
+      .prepare(
+        `SELECT p.id, p.name,
+                COALESCE(a.password_hash, p.password_hash) AS password_hash,
+                CASE WHEN p.active = 1 AND COALESCE(a.active, 1) = 1 THEN 1 ELSE 0 END AS active
+           FROM people p
+           LEFT JOIN accounts a ON a.kind = 'team' AND a.person_id = p.id`,
+      )
+      .all(),
+  );
+
+  return (
+    rows.find((row) => row.id.toLocaleLowerCase("tr-TR") === needle) ??
+    rows.find((row) => row.name.trim().toLocaleLowerCase("tr-TR") === needle)
+  );
+}
+
 export function createPerson(
   name: string,
   department: string | null,

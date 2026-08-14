@@ -3,7 +3,9 @@ import { NO_DEPARTMENT, type DepartmentKey } from "@/lib/departments";
 import { departmentPeopleCondition } from "@/lib/repositories/people";
 import { ARCHIVE_AFTER_DAYS } from "@/lib/taskArchive";
 import { plannedTaskCondition } from "@/lib/taskPlanning";
+import { assertWeightPoints } from "@/lib/progress";
 import type {
+  ContentType,
   Task,
   TaskDifficulty,
   TaskPriority,
@@ -28,7 +30,7 @@ const LAST_COMMENT_ORDER = "ORDER BY c.created_at DESC, c.rowid DESC LIMIT 1";
 const WITH_CONTEXT_SELECT = `
   SELECT t.*, p.name AS assignee_name,
          p.avatar_path AS assignee_avatar_path,
-         ci.title AS content_title, ci.type AS content_type,
+         ci.title AS content_title, COALESCE(t.type_override, ci.type) AS content_type,
          b.id AS brand_id, b.name AS brand_name,
          (SELECT COUNT(*) FROM comments c WHERE c.task_id = t.id) AS comment_count,
          (SELECT c.body FROM comments c
@@ -53,7 +55,13 @@ const WITH_CONTEXT_SELECT = `
            ORDER BY rr.round_number DESC LIMIT 1) AS active_revision_elapsed_minutes,
          COALESCE((SELECT SUM(MAX(0, CAST((unixepoch(rr.completed_at) - unixepoch(rr.started_at)) / 60 AS INTEGER)))
             FROM task_revision_rounds rr
-           WHERE rr.task_id = t.id AND rr.completed_at IS NOT NULL), 0) AS total_revision_minutes
+           WHERE rr.task_id = t.id AND rr.completed_at IS NOT NULL), 0) AS total_revision_minutes,
+         (SELECT d.id FROM task_deliveries d
+           WHERE d.task_id = t.id AND d.status = 'Beklemede'
+           ORDER BY d.version_number DESC LIMIT 1) AS pending_delivery_id,
+         (SELECT d.version_number FROM task_deliveries d
+           WHERE d.task_id = t.id AND d.status = 'Beklemede'
+           ORDER BY d.version_number DESC LIMIT 1) AS pending_delivery_version
   FROM tasks t
   JOIN content_items ci ON ci.id = t.content_item_id
   JOIN brands b ON b.id = ci.brand_id
@@ -297,23 +305,28 @@ export function createTask(input: {
   title: string;
   assigneeId: string | null;
   dueDate: string;
+  contentType?: ContentType;
+  weightPoints?: number;
   difficulty?: TaskDifficulty;
   priority?: TaskPriority;
 }): string {
   if (!input.dueDate) throw new Error("Teslim tarihi zorunlu.");
+  const weightPoints = assertWeightPoints(input.weightPoints ?? 1);
   const id = crypto.randomUUID();
   getDb()
     .prepare(
-      "INSERT INTO tasks (id, content_item_id, title, assignee_id, due_date, difficulty, priority) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO tasks (id, content_item_id, title, type_override, assignee_id, due_date, difficulty, priority, weight_points) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .run(
       id,
       input.contentItemId,
       input.title,
+      input.contentType ?? null,
       input.assigneeId,
       input.dueDate,
       input.difficulty ?? "Orta",
       input.priority ?? "Normal",
+      weightPoints,
     );
   return id;
 }
@@ -327,7 +340,7 @@ export function updateTaskRepeat(id: string, repeatDays: number | null): void {
 // Tekrar eden görevin bir sonraki örneğini açar. Tarih, ESKİ görevin teslim
 // tarihine göre kayar (bugüne göre değil) — geç tamamlanan haftalık iş takvimi
 // kaydırmasın. Tarihi yoksa bugünden itibaren hesaplanır.
-export function createNextOccurrence(task: Task, _today: string): string {
+export function createNextOccurrence(task: Task & { content_type?: ContentType }, _today: string): string {
   void _today;
   const base = task.due_date;
   if (!base) throw new Error("Tekrar eden görev için önce teslim tarihi atanmalı.");
@@ -336,13 +349,14 @@ export function createNextOccurrence(task: Task, _today: string): string {
   const id = crypto.randomUUID();
   getDb()
     .prepare(
-      `INSERT INTO tasks (id, content_item_id, title, priority, difficulty, assignee_id, due_date, notes, repeat_days)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, content_item_id, title, type_override, priority, difficulty, assignee_id, due_date, notes, repeat_days)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
       task.content_item_id,
       task.title,
+      task.content_type ?? task.type_override,
       task.priority,
       task.difficulty,
       task.assignee_id,
@@ -504,6 +518,7 @@ export function updateTaskAssignee(id: string, assigneeId: string | null): boole
 export function updateTaskDetails(input: {
   id: string;
   title: string;
+  contentType: ContentType;
   dueDate: string;
   notes: string | null;
 }, attachments: Array<{ filePath: string; originalName: string | null }> = []): void {
@@ -512,9 +527,9 @@ export function updateTaskDetails(input: {
   db.exec("BEGIN IMMEDIATE");
   try {
     const result = db.prepare(
-      "UPDATE tasks SET title = ?, due_date = ?, notes = ?, updated_at = datetime('now') WHERE id = ?",
+      "UPDATE tasks SET title = ?, type_override = ?, due_date = ?, notes = ?, updated_at = datetime('now') WHERE id = ?",
     )
-    .run(input.title, input.dueDate, input.notes, input.id);
+    .run(input.title, input.contentType, input.dueDate, input.notes, input.id);
     if (Number(result.changes) !== 1) throw new Error("Görev bulunamadı.");
     const insertAttachment = db.prepare(
       "INSERT INTO task_attachments (id, task_id, file_path, original_name) VALUES (?, ?, ?, ?)",

@@ -206,9 +206,10 @@ export default async function BrandPage({
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <QuickAddModal
                     brands={[{ id: brand.id, name: brand.name }]}
-                    contents={items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title }))}
+                    contents={items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title, type: item.type }))}
                     people={people}
                     defaultAssigneeId={me?.id ?? null}
+                    canSetWeight={me.is_manager === 1}
                     defaultBrandId={brand.id}
                     triggerLabel="Görev oluştur"
                     triggerClassName={buttonClass({ size: "sm", className: "col-span-2 w-full" })}

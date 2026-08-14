@@ -3,13 +3,15 @@
 import { useRef, useState } from "react";
 import { createTaskAction } from "@/lib/actions/tasks";
 import {
+  CONTENT_TYPES,
+  CONTENT_TYPE_LABEL,
   TASK_DIFFICULTIES,
   TASK_DIFFICULTY_LABEL,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABEL,
 } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
-import type { Person } from "@/lib/types";
+import type { ContentType, Person } from "@/lib/types";
 import SubmitButton from "./SubmitButton";
 
 const inputClass =
@@ -17,10 +19,14 @@ const inputClass =
 
 export default function NewTaskForm({
   contentItemId,
+  defaultContentType,
+  canSetWeight = false,
   people,
   defaultAssigneeId,
 }: {
   contentItemId: string;
+  defaultContentType: ContentType;
+  canSetWeight?: boolean;
   people: Person[];
   defaultAssigneeId?: string | null;
 }) {
@@ -38,7 +44,11 @@ export default function NewTaskForm({
           setError(getActionErrorMessage(e));
         }
       }}
-      className="grid gap-3 sm:grid-cols-2 sm:items-end xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto_auto]"
+      className={`grid gap-3 sm:grid-cols-2 sm:items-end ${
+        canSetWeight
+          ? "xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto_auto_auto_auto]"
+          : "xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto_auto_auto]"
+      }`}
     >
       <input type="hidden" name="contentItemId" value={contentItemId} />
       <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -49,6 +59,14 @@ export default function NewTaskForm({
           placeholder="Örn. Çekim, Kurgu, Onay…"
           className={inputClass}
         />
+      </label>
+      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        Görev türü
+        <select name="contentType" required className={inputClass} defaultValue={defaultContentType}>
+          {CONTENT_TYPES.map((type) => (
+            <option key={type} value={type}>{CONTENT_TYPE_LABEL[type]}</option>
+          ))}
+        </select>
       </label>
       <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         Zorluk
@@ -89,8 +107,23 @@ export default function NewTaskForm({
         Teslim
         <input type="date" name="dueDate" required className={inputClass} />
       </label>
+      {canSetWeight && (
+        <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          Puan
+          <input
+            type="number"
+            name="weightPoints"
+            min={1}
+            max={100}
+            step={1}
+            required
+            defaultValue={1}
+            className={inputClass}
+          />
+        </label>
+      )}
       <SubmitButton>Ekle</SubmitButton>
-      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400 sm:col-span-2 xl:col-span-6">{error}</p>}
+      {error && <p role="alert" className={`text-xs text-rose-600 dark:text-rose-400 sm:col-span-2 ${canSetWeight ? "xl:col-span-8" : "xl:col-span-7"}`}>{error}</p>}
     </form>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import CommentIcon from "@/components/CommentIcon";
 import PersonAvatar from "@/components/PersonAvatar";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
+import TaskQuickRevisionDialog from "@/components/TaskQuickRevisionDialog";
 import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
 import Icon from "@/components/ui/Icon";
 import {
@@ -143,6 +144,13 @@ export default function TaskGridCard({
           </span>
         </div>
         <div className="mt-1 flex min-h-6 items-center justify-end gap-1.5">
+          {task.status === "Incelemede" && task.pending_delivery_id && task.pending_delivery_version && (
+            <TaskQuickRevisionDialog
+              taskTitle={task.title}
+              deliveryId={task.pending_delivery_id}
+              deliveryVersion={task.pending_delivery_version}
+            />
+          )}
           {task.comment_count > 0 && (
             <Link
               href={`/tasks/${task.id}`}

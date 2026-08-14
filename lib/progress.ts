@@ -51,3 +51,14 @@ export function assertWeightPoints(value: number): number {
   }
   return value;
 }
+
+export function resolveTaskCreationWeight(value: unknown, canSetWeight: boolean): number {
+  const raw = value === null || value === undefined || String(value).trim() === ""
+    ? 1
+    : Number(value);
+  const weight = assertWeightPoints(raw);
+  if (!canSetWeight && weight !== 1) {
+    throw new Error("Görev ağırlığını yalnızca yöneticiler belirleyebilir.");
+  }
+  return weight;
+}

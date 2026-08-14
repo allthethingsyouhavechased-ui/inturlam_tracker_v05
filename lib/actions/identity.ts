@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/repositories/authSessions";
 import { getGuestCredentials } from "@/lib/repositories/accounts";
 import {
+  findLoginCandidate,
   getPersonCredentials,
   updatePersonPassword,
 } from "@/lib/repositories/people";
@@ -22,6 +24,11 @@ import {
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
 const loginThrottle = new LoginThrottle(MAX_LOGIN_FAILURES, LOGIN_WINDOW_MS);
+const LOGIN_FAILED = "Kullanıcı adı veya şifre hatalı.";
+
+// Olmayan, pasif veya şifresiz hesaplarda da gerçek bir scrypt doğrulaması
+// çalıştırılır. Böylece hesap varlığı yanıt süresinden ölçülemez.
+const DUMMY_PASSWORD_HASH = hashPassword(randomBytes(32).toString("hex"));
 
 export interface IdentityActionState {
   error?: string;
@@ -45,23 +52,25 @@ export async function loginPerson(
   _state: IdentityActionState,
   formData: FormData,
 ): Promise<IdentityActionState> {
-  const personId = String(formData.get("personId") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const credentials = getPersonCredentials(personId);
-  if (!credentials || credentials.active !== 1) return { error: "Hesap bulunamadı." };
-  if (loginThrottle.isBlocked(personId)) {
+  if (!username || !password) return { error: LOGIN_FAILED };
+
+  const credentials = findLoginCandidate(username);
+  const throttleKey = `team:${credentials?.id ?? username.toLocaleLowerCase("tr-TR")}`;
+  if (loginThrottle.isBlocked(throttleKey)) {
     return { error: "Çok fazla hatalı deneme yapıldı. 15 dakika sonra tekrar dene." };
   }
 
-  if (!credentials.password_hash) {
-    return { error: "Bu hesabın şifresi henüz etkin değil. Bir yöneticiden şifre belirlemesini iste." };
-  } else if (!verifyPassword(password, credentials.password_hash)) {
-    loginThrottle.recordFailure(personId);
-    return { error: "Şifre hatalı." };
+  const usable =
+    credentials?.active === 1 && credentials.password_hash ? credentials : undefined;
+  if (!verifyPassword(password, usable?.password_hash ?? DUMMY_PASSWORD_HASH) || !usable) {
+    loginThrottle.recordFailure(throttleKey);
+    return { error: LOGIN_FAILED };
   }
 
-  loginThrottle.reset(personId);
-  await replaceSession(() => createAuthSession(personId));
+  loginThrottle.reset(throttleKey);
+  await replaceSession(() => createAuthSession(usable.id));
   revalidatePath("/", "layout");
   redirect("/");
 }

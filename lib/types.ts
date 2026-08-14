@@ -225,6 +225,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   difficulty: TaskDifficulty | null;
+  type_override: ContentType | null;
   assignee_id: string | null;
   due_date: string | null;
   notes: string | null;
@@ -505,6 +506,8 @@ export interface TaskWithContext extends Task {
   active_revision_target_minutes: number | null;
   active_revision_elapsed_minutes: number | null;
   total_revision_minutes: number;
+  pending_delivery_id: string | null;
+  pending_delivery_version: number | null;
   // Panom'un birleşik board'unda bir görevin "neden burada" olduğunu gösteren
   // rozetler (Benim/Gecikmiş/Bu hafta gibi) — sunucuda hesaplanıp düz veri
   // olarak taşınır (Server→Client Component sınırında fonksiyon geçirilemez).

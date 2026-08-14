@@ -87,6 +87,8 @@ export default async function ContentPage({
         </div>
         <NewTaskForm
           contentItemId={content.id}
+          defaultContentType={content.type}
+          canSetWeight={me.is_manager === 1}
           people={people}
           defaultAssigneeId={me?.id ?? null}
         />

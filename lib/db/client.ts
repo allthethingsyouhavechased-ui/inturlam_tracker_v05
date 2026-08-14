@@ -90,6 +90,7 @@ function migrateV03TaskColumnsIfNeeded(db: DatabaseSync): void {
   const additions: ReadonlyArray<readonly [string, string]> = [
     ["weight_points", "INTEGER NOT NULL DEFAULT 1 CHECK (weight_points BETWEEN 1 AND 100)"],
     ["difficulty", "TEXT CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel'))"],
+    ["type_override", "TEXT CHECK (type_override IN ('Reel','Post','Story','Foto','Kampanya','Video','Carousel','KurumsalKimlik','Diger'))"],
     ["origin", "TEXT NOT NULL DEFAULT 'team' CHECK (origin IN ('team','guest'))"],
     ["requested_date", "TEXT"],
     ["guest_brief", "TEXT"],
@@ -100,6 +101,16 @@ function migrateV03TaskColumnsIfNeeded(db: DatabaseSync): void {
       db.exec(`ALTER TABLE tasks ADD COLUMN ${name} ${definition}`);
     }
   }
+  // Görev türü eskiden bağlı çalışmadan okunuyordu. Sütun ilk kez eklendiğinde
+  // o anki görünen değeri göreve kopyala; bundan sonra çalışma türü değişse bile
+  // mevcut görevlerin anlamı sessizce değişmesin.
+  db.exec(`
+    UPDATE tasks
+       SET type_override = (
+         SELECT ci.type FROM content_items ci WHERE ci.id = tasks.content_item_id
+       )
+     WHERE type_override IS NULL
+  `);
 }
 
 function migrateTaskTemplateDifficultyIfNeeded(db: DatabaseSync): void {

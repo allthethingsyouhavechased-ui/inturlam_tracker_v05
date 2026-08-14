@@ -125,15 +125,15 @@ export function applyTemplateToContent(input: {
   const items = listTemplateItems(input.templateId);
   if (items.length === 0) return 0;
 
-  const content = plainOne<{ target_date: string | null }>(
-    db.prepare("SELECT target_date FROM content_items WHERE id = ?").get(input.contentItemId),
+  const content = plainOne<{ target_date: string | null; type: ContentType }>(
+    db.prepare("SELECT target_date, type FROM content_items WHERE id = ?").get(input.contentItemId),
   );
   if (!content) throw new Error("İçerik bulunamadı.");
   if (!content.target_date) throw new Error("Şablonu uygulamadan önce içerik hedef tarihini belirleyin.");
 
   const insert = db.prepare(
-    `INSERT INTO tasks (id, content_item_id, title, priority, difficulty, assignee_id, due_date)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tasks (id, content_item_id, title, type_override, priority, difficulty, assignee_id, due_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   db.exec("BEGIN");
@@ -143,6 +143,7 @@ export function applyTemplateToContent(input: {
         crypto.randomUUID(),
         input.contentItemId,
         item.title,
+        content.type,
         item.priority,
         item.difficulty,
         item.assignee_id ?? input.defaultAssigneeId,

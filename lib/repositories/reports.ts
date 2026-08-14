@@ -864,7 +864,7 @@ export function listTaskDetailReport(
   const statement = getDb().prepare(
     `SELECT t.id AS task_id, t.title AS title,
             b.name AS brand_name, b.cluster AS cluster,
-            ci.title AS content_title, ci.type AS content_type,
+            ci.title AS content_title, COALESCE(t.type_override, ci.type) AS content_type,
             p.name AS assignee_name, p.department AS department,
             t.status, t.priority, t.due_date, t.created_at, t.completed_at,
             t.archived_at,

@@ -15,7 +15,8 @@ olarak `http://localhost:3001` adresinde çalışır.
 ## v03’te neler var?
 
 - **Birleşik hesap altyapısı:** Ana girişte Ekip girişi ve Guest girişi ayrıdır.
-  Ekip hesapları kişi rolleriyle, guest hesapları tek bir markayla kapsamlanır.
+  Ekip üyeleri kişi ID’si veya tam adı ve şifresiyle giriş yapar; guest hesapları
+  kullanıcı adı ve şifreyle tek bir markaya kapsamlanır.
 - **Guest marka portalı:** Guest yalnızca kendi marka dashboard’unu, bu hesaptan açılan
   görevleri ve açıkça paylaşılmış etkinlikleri görür. İç teslim tarihi, görev sahibi,
   ağırlık, iç notlar ve iç yorumlar guest veri sözleşmesine girmez.

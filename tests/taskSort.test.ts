@@ -17,6 +17,7 @@ function task(over: Partial<TaskWithContext> = {}): TaskWithContext {
     status: "Beklemede" as TaskStatus,
     priority: "Normal" as TaskPriority,
     difficulty: "Orta",
+    type_override: "Reel",
     assignee_id: null,
     due_date: null,
     notes: null,
@@ -46,6 +47,8 @@ function task(over: Partial<TaskWithContext> = {}): TaskWithContext {
     active_revision_target_minutes: null,
     active_revision_elapsed_minutes: null,
     total_revision_minutes: 0,
+    pending_delivery_id: null,
+    pending_delivery_version: null,
     personal_target_date: null,
     ...over,
   };

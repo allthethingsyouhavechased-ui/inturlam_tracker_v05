@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   -- NULL yalnızca migration öncesi görevler ve henüz ekipçe planlanmamış guest
   -- talepleri içindir. Yeni ekip görevleri uygulama katmanında seçim ister.
   difficulty      TEXT CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel')),
+  type_override   TEXT CHECK (type_override IN ('Reel','Post','Story','Foto','Kampanya','Video','Carousel','KurumsalKimlik','Diger')),
   assignee_id     TEXT REFERENCES people(id) ON DELETE SET NULL,
   due_date        TEXT,
   notes           TEXT,

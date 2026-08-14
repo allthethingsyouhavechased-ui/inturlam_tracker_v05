@@ -14,15 +14,8 @@ import {
   decideTeamTaskDeliveryAction,
 } from "@/lib/actions/deliveries";
 import { formatDateTime } from "@/lib/date";
+import { TASK_REVISION_TARGET_OPTIONS } from "@/lib/taskRevisions";
 import type { TaskDelivery, TaskStatus } from "@/lib/types";
-
-const TARGET_OPTIONS = [
-  { value: 60, label: "1 saat" },
-  { value: 240, label: "4 saat" },
-  { value: 480, label: "8 saat" },
-  { value: 1440, label: "1 gün (24 saat)" },
-  { value: 2880, label: "2 gün" },
-] as const;
 
 const inputClass = controlClass();
 
@@ -140,7 +133,7 @@ function PendingDecision({ delivery }: { delivery: TaskDelivery }) {
           <label className="grid gap-1 text-[11px] font-medium text-secondary">
             Hedef süre
             <select name="revisionTargetMinutes" required defaultValue="480" className={inputClass}>
-              {TARGET_OPTIONS.map((option) => (
+              {TASK_REVISION_TARGET_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>

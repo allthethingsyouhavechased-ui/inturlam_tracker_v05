@@ -18,7 +18,7 @@ import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskWeightSelect from "@/components/TaskWeightSelect";
 import PageHeader from "@/components/ui/PageHeader";
 import { controlClass } from "@/components/ui/Input";
-import { CONTENT_TYPE_LABEL } from "@/lib/constants";
+import { CONTENT_TYPES, CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { updateTaskDetailsAction } from "@/lib/actions/tasks";
 import { addTeamSharedCommentAction } from "@/lib/actions/guestTasks";
 import { requirePageSession } from "@/lib/identity";
@@ -114,10 +114,18 @@ export default async function TaskPage({
               <p className="mt-1 text-xs text-muted">Brief, teslim tarihi ve ekip bildirimini tek yerde güncelle.</p>
             </div>
             <input type="hidden" name="taskId" value={task.id} />
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13rem]">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_13rem]">
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Görev başlığı
                 <input name="title" required maxLength={200} defaultValue={task.title} className={inputClass} />
+              </label>
+              <label className="grid gap-1.5 text-xs font-medium text-secondary">
+                Görev türü
+                <select name="contentType" required defaultValue={task.content_type} className={inputClass}>
+                  {CONTENT_TYPES.map((type) => (
+                    <option key={type} value={type}>{CONTENT_TYPE_LABEL[type]}</option>
+                  ))}
+                </select>
               </label>
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Teslim tarihi

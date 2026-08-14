@@ -277,6 +277,7 @@ describe("görev detay düzenleme", () => {
     updateTaskDetails({
       id: "t-edit",
       title: "Revize görev başlığı",
+      contentType: "Reel",
       dueDate: "2026-08-10",
       notes: "Yeni brief notu",
     });

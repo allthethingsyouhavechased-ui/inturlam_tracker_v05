@@ -2,15 +2,8 @@ import ActionForm from "@/components/ActionForm";
 import SubmitButton from "@/components/SubmitButton";
 import { completeTaskRevisionAction, startTaskRevisionAction } from "@/lib/actions/tasks";
 import { formatRevisionDuration, isRevisionOverTarget } from "@/lib/taskMetadata";
+import { TASK_REVISION_TARGET_OPTIONS } from "@/lib/taskRevisions";
 import type { TaskRevisionRound, TaskStatus } from "@/lib/types";
-
-const TARGET_OPTIONS = [
-  { value: 60, label: "1 saat" },
-  { value: 240, label: "4 saat" },
-  { value: 480, label: "8 saat" },
-  { value: 1440, label: "1 gün (24 saat)" },
-  { value: 2880, label: "2 gün" },
-] as const;
 
 export default function TaskRevisionPanel({
   taskId,
@@ -79,7 +72,7 @@ export default function TaskRevisionPanel({
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Hedef süre
                 <select name="targetMinutes" defaultValue="480" className="min-h-11 rounded-xl border border-border-default bg-surface px-3 text-sm outline-none focus:border-brand-500">
-                  {TARGET_OPTIONS.map((option) => (
+                  {TASK_REVISION_TARGET_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>

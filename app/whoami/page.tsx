@@ -25,7 +25,7 @@ export default function WhoAmIPage() {
           </span>
           <h2 className="mt-5 text-lg font-semibold text-foreground">Ekip girişi</h2>
           <p className="mt-1 text-sm leading-6 text-secondary">Panom, görevler, markalar, raporlar ve iç operasyon alanı.</p>
-          <span className="mt-5 inline-flex text-sm font-semibold text-brand-600 group-hover:text-brand-700">Ekip hesabını seç →</span>
+          <span className="mt-5 inline-flex text-sm font-semibold text-brand-600 group-hover:text-brand-700">Ekip hesabıyla giriş →</span>
         </Link>
 
         <Link href="/whoami/guest" className="group rounded-xl border border-border-default bg-surface p-6 shadow-sm transition hover:border-brand-300 hover:bg-surface-hover">

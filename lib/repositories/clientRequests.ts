@@ -388,12 +388,13 @@ export function approveClientRequest(
     );
     db.prepare(
       `INSERT INTO tasks
-         (id, content_item_id, title, priority, difficulty, assignee_id, due_date, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, content_item_id, title, type_override, priority, difficulty, assignee_id, due_date, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       taskId,
       contentItemId,
       request.title,
+      request.content_type,
       input.priority,
       input.difficulty ?? "Orta",
       input.assigneeId,

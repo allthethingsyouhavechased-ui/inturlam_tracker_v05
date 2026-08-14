@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { recordActivity } from "@/lib/activity";
 import { activeAssigneeId } from "@/lib/assignees";
 import {
+  CONTENT_TYPES,
   REPEAT_OPTIONS,
   TASK_DIFFICULTIES,
   TASK_DIFFICULTY_LABEL,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/constants";
 import { formatDateShort, todayISO } from "@/lib/date";
 import { announceGuestTaskPlanned, announceGuestTaskStatus } from "@/lib/guestTaskCommunications";
-import { assertWeightPoints } from "@/lib/progress";
+import { assertWeightPoints, resolveTaskCreationWeight } from "@/lib/progress";
 import { requireManager, requireSession } from "@/lib/identity";
 import { notifyTaskUpdate } from "@/lib/notifications";
 import { setPersonalTaskTarget } from "@/lib/repositories/personalTargets";
@@ -42,7 +43,7 @@ import {
   updateTaskStatus,
   updateTaskWeight,
 } from "@/lib/repositories/tasks";
-import type { TaskDifficulty, TaskPriority, TaskStatus } from "@/lib/types";
+import type { ContentType, TaskDifficulty, TaskPriority, TaskStatus } from "@/lib/types";
 import { listUploadPathsForTaskIds } from "@/lib/repositories/uploadReferences";
 import {
   deleteUploadedFile,
@@ -75,23 +76,31 @@ function requiredDate(value: FormDataEntryValue | string | null): string {
 }
 
 export async function createTaskAction(formData: FormData): Promise<string> {
-  await requireSession();
+  const actor = await requireSession();
   const contentItemId = String(formData.get("contentItemId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const priorityRaw = String(formData.get("priority") ?? "Normal") as TaskPriority;
   const priority = TASK_PRIORITIES.includes(priorityRaw) ? priorityRaw : "Normal";
   const difficulty = String(formData.get("difficulty") ?? "") as TaskDifficulty;
+  const contentType = String(formData.get("contentType") ?? "") as ContentType;
+  const weightPoints = resolveTaskCreationWeight(
+    formData.get("weightPoints"),
+    actor.is_manager === 1,
+  );
 
   if (!contentItemId) throw new Error("İçerik bulunamadı.");
   if (!title) throw new Error("Görev başlığı zorunlu.");
   if (title.length > 200) throw new Error("Görev başlığı en fazla 200 karakter olabilir.");
   if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Zorluk derecesi seçilmeli.");
+  if (!CONTENT_TYPES.includes(contentType)) throw new Error("Görev türü seçilmeli.");
 
   const id = createTask({
     contentItemId,
     title,
     assigneeId: activeAssigneeId(cleanText(formData.get("assigneeId"))),
     dueDate: requiredDate(formData.get("dueDate")),
+    contentType,
+    weightPoints,
     difficulty,
     priority,
   });
@@ -263,13 +272,15 @@ export async function updateTaskDetailsAction(formData: FormData) {
   if ((notifyMessage?.length ?? 0) > 1000) throw new Error("Bildirim notu en fazla 1000 karakter olabilir.");
   const task = getTask(id);
   if (!task) throw new Error("Görev bulunamadı.");
+  const contentType = String(formData.get("contentType") ?? "") as ContentType;
+  if (!CONTENT_TYPES.includes(contentType)) throw new Error("Geçerli bir görev türü seçin.");
 
   const images = extractImageFiles(formData);
   validateImageFiles(images);
 
   const dueDate = requiredDate(formData.get("dueDate"));
   await withSavedImageFiles(images, "tasks", (saved) =>
-    updateTaskDetails({ id, title, dueDate, notes }, saved),
+    updateTaskDetails({ id, title, contentType, dueDate, notes }, saved),
   );
 
   if (task.origin === "guest" && !task.due_date) {

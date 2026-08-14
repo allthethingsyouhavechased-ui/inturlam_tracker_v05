@@ -19,7 +19,7 @@ interface GuestTaskRow {
 const GUEST_TASK_SELECT = `
   SELECT t.id, t.title, t.status, t.requested_date,
          COALESCE(t.guest_brief, '') AS brief,
-         ci.title AS content_title, ci.type AS content_type,
+         ci.title AS content_title, COALESCE(t.type_override, ci.type) AS content_type,
          b.id AS brand_id, b.name AS brand_name,
          t.created_at, t.updated_at
     FROM tasks t
@@ -101,8 +101,8 @@ export function createGuestTask(input: {
     db.prepare(
       `INSERT INTO tasks
          (id, content_item_id, title, status, priority, assignee_id, due_date,
-          weight_points, origin, requested_date, guest_brief, created_by_account_id)
-       VALUES (?, ?, ?, 'Beklemede', 'Normal', NULL, NULL, 1, 'guest', ?, ?, ?)`,
+          type_override, weight_points, origin, requested_date, guest_brief, created_by_account_id)
+       VALUES (?, ?, ?, 'Beklemede', 'Normal', NULL, NULL, 'Diger', 1, 'guest', ?, ?, ?)`,
     ).run(taskId, contentId, input.title, input.requestedDate, input.brief, input.accountId);
     const insertAttachment = db.prepare(
       `INSERT INTO task_shared_attachments (id, task_id, account_id, file_path, original_name)
