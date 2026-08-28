@@ -47,7 +47,7 @@ export default function TaskRepeatSelect({
           </option>
         ))}
       </select>
-      {error && <span role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</span>}
+      {error && <span role="alert" className="text-xs text-danger">{error}</span>}
     </span>
   );
 }

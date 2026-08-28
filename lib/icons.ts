@@ -30,4 +30,5 @@ export type IconName =
   | "alert"
   | "arrow-right"
   | "filter"
-  | "archive";
+  | "archive"
+  | "undo";

@@ -86,7 +86,7 @@ export default function CountStepper({
           className="w-14 rounded-md border border-brand-400 bg-white px-1.5 py-1 text-center text-sm tabular-nums outline-none focus:border-brand-500 dark:border-brand-700 dark:bg-zinc-900"
         />
         {error && (
-          <span role="alert" className="max-w-24 text-[10px] text-rose-600 dark:text-rose-400">
+          <span role="alert" className="max-w-24 text-[10px] text-danger">
             {error}
           </span>
         )}
@@ -124,7 +124,7 @@ export default function CountStepper({
         +
       </button>
       {error && (
-        <span role="alert" className="max-w-24 text-[10px] text-rose-600 dark:text-rose-400">
+        <span role="alert" className="max-w-24 text-[10px] text-danger">
           {error}
         </span>
       )}

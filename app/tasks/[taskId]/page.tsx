@@ -17,6 +17,7 @@ import TaskRevisionPanel from "@/components/TaskRevisionPanel";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskWeightSelect from "@/components/TaskWeightSelect";
 import PageHeader from "@/components/ui/PageHeader";
+import SectionJumpNav from "@/components/SectionJumpNav";
 import { controlClass } from "@/components/ui/Input";
 import { CONTENT_TYPES, CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { updateTaskDetailsAction } from "@/lib/actions/tasks";
@@ -35,6 +36,16 @@ import { listSharedAttachments, listSharedComments } from "@/lib/repositories/gu
 import { markTaskNotificationsReadForPerson } from "@/lib/repositories/notifications";
 import { daysUntilArchive } from "@/lib/taskArchive";
 
+// Basliktan atlanabilen bolumler. Kimlikler sayfadaki `id` degerleriyle
+// birebir; `SectionJumpNav` hangi bolumde olundugunu da isaretliyor.
+const JUMP_SECTIONS = [
+  { id: "gorev-ayrintilari", label: "Ayrıntılar" },
+  { id: "is-akisi", label: "İş akışı" },
+  { id: "teslim", label: "Teslim" },
+  { id: "revize", label: "Revize" },
+  { id: "yorumlar", label: "Yorumlar" },
+  { id: "hareketler", label: "Hareketler" },
+] as const;
 export const dynamic = "force-dynamic";
 
 const inputClass = controlClass();
@@ -82,16 +93,19 @@ export default async function TaskPage({
         ]}
       />
 
-      {task.origin === "guest" && <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm dark:border-amber-900 dark:bg-amber-950/20"><p className="font-semibold text-foreground">Guest tarafından açıldı · İstenen tarih {task.requested_date}</p><p className="mt-1 whitespace-pre-wrap text-xs text-secondary">{task.guest_brief}</p>{!task.due_date && <p className="mt-2 text-xs font-semibold text-amber-800 dark:text-amber-300">Planlanacak: iç teslim tarihini ve görev sahibini atayın.</p>}</div>}
+      <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-5 overflow-x-auto border-y border-border-subtle bg-background/90 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6">
+        <SectionJumpNav sections={JUMP_SECTIONS} />
+      </div>
+
+      {task.origin === "guest" && <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm dark:border-amber-900 dark:bg-amber-950/20"><p className="font-semibold text-foreground">Guest tarafından açıldı · İstenen tarih {task.requested_date}</p><p className="mt-1 whitespace-pre-wrap text-xs text-secondary">{task.guest_brief}</p>{!task.due_date && <p className="mt-2 text-xs font-semibold text-warning">Planlanacak: iç teslim tarihini ve görev sahibini atayın.</p>}</div>}
 
       {(task.status === "Yayinlandi" || task.archived_at !== null) && (
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-default bg-surface-subtle px-4 py-3 text-sm">
+        <div className="mb-5 rounded-xl border border-border-default bg-surface-subtle px-4 py-3 text-sm">
           <p className="text-secondary">
             {task.archived_at !== null
               ? "Bu görev arşivde; listelerde görünmüyor fakat kayıtları korunuyor."
               : `Yayınlandı; ${daysUntilArchive(task.completed_at)} gün sonra otomatik arşivlenecek.`}
           </p>
-          <ArchiveTaskButton taskId={task.id} archived={task.archived_at !== null} />
         </div>
       )}
 
@@ -109,7 +123,7 @@ export default async function TaskPage({
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <main className="min-w-0 space-y-5">
-          <form action={updateTaskDetailsAction} className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
+          <form id="gorev-ayrintilari" action={updateTaskDetailsAction} className="scroll-mt-24 space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
             <div className="border-b border-border-subtle pb-4">
               <h2 className="text-base font-semibold text-foreground">Görev ayrıntıları</h2>
               <p className="mt-1 text-xs text-muted">Brief, teslim tarihi ve ekip bildirimini tek yerde güncelle.</p>
@@ -149,6 +163,7 @@ export default async function TaskPage({
             </div>
           </form>
 
+          <div id="teslim" className="scroll-mt-24">
           <TaskDeliveryPanel
             taskId={task.id}
             taskStatus={task.status}
@@ -157,15 +172,18 @@ export default async function TaskPage({
             archived={task.archived_at !== null}
             deliveries={deliveries}
           />
+          </div>
 
+          <div id="revize" className="scroll-mt-24">
           <TaskRevisionPanel
             taskId={task.id}
             status={task.status}
             archived={task.archived_at !== null}
             rounds={revisionRounds}
           />
+          </div>
 
-          <section className="rounded-xl border border-border-default bg-surface">
+          <section id="yorumlar" className="scroll-mt-24 rounded-xl border border-border-default bg-surface">
             <div className="border-b border-border-subtle px-4 py-3 sm:px-5">
               <h2 className="text-sm font-semibold text-foreground">Yorumlar <span className="font-normal text-muted">· {comments.length}</span></h2>
             </div>
@@ -188,7 +206,7 @@ export default async function TaskPage({
         </main>
 
         <aside className="space-y-4 xl:sticky xl:top-20">
-          <section className="rounded-xl border border-border-default bg-surface p-4">
+          <section id="is-akisi" className="scroll-mt-24 rounded-xl border border-border-default bg-surface p-4">
             <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">İŞ AKIŞI</h2>
             <div className="mt-4 space-y-4">
               <label className="grid gap-1.5 text-xs font-medium text-muted">Durum<TaskStatusSelect taskId={task.id} status={task.status} locked={task.origin === "guest" && !task.due_date} />{task.origin === "guest" && !task.due_date && <span className="text-[10px] leading-4 text-amber-500">Durumu ilerletmek için önce iç teslim tarihini planlayın.</span>}</label>
@@ -201,9 +219,16 @@ export default async function TaskPage({
             {(task.repeat_days ?? 0) > 0 && (
               <p className="mt-4 border-t border-border-subtle pt-3 text-[11px] leading-5 text-muted">Yayınlandığında {task.repeat_days} gün ileri tarihli yeni görev açılır.</p>
             )}
+            <div className="mt-4 border-t border-border-subtle pt-4">
+              <ArchiveTaskButton
+                taskId={task.id}
+                archived={task.archived_at !== null}
+                published={task.status === "Yayinlandi"}
+              />
+            </div>
           </section>
 
-          <section className="overflow-hidden rounded-xl border border-border-default bg-surface">
+          <section id="hareketler" className="scroll-mt-24 overflow-hidden rounded-xl border border-border-default bg-surface">
             <div className="border-b border-border-subtle px-4 py-3">
               <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">HAREKETLER</h2>
             </div>

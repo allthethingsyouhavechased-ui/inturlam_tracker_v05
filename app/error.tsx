@@ -15,10 +15,10 @@ export default function ErrorBoundary({
 
   return (
     <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm dark:border-rose-900 dark:bg-rose-950/40">
-      <h2 className="mb-1 font-semibold text-rose-700 dark:text-rose-300">
+      <h2 className="mb-1 font-semibold text-danger">
         Bir şeyler ters gitti
       </h2>
-      <p className="mb-4 text-rose-600 dark:text-rose-400">
+      <p className="mb-4 text-danger">
         İşlem tamamlanamadı. Sayfayı yeniden deneyebilir veya güvenli biçimde geri dönebilirsiniz.
       </p>
       <button

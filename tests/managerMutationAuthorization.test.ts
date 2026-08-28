@@ -103,7 +103,11 @@ describe("yönetici mutasyon sınırı", () => {
     assert.match(taskExplorer, /canDeleteTasks=\{canDeleteTasks\}/);
 
     const taskList = fs.readFileSync(path.join(process.cwd(), "components/TaskListView.tsx"), "utf8");
-    assert.match(taskList, /canDeleteTasks && \([\s\S]*bulkDeleteTasksAction/);
+    // Toplu silme artik geri alinabilir: dugme `deleteSelected()`i cagiriyor,
+    // gercek action geri alma penceresi dolunca calisiyor (lib/undoQueue.ts).
+    // Yetki siniri degismedi — kontrol hala `canDeleteTasks` ile perdeleniyor.
+    assert.match(taskList, /canDeleteTasks && \([\s\S]*onClick=\{deleteSelected\}/);
+    assert.match(taskList, /function deleteSelected\(\)[\s\S]*bulkDeleteTasksAction/);
 
     const templatesPage = fs.readFileSync(path.join(process.cwd(), "app/templates/page.tsx"), "utf8");
     const templateManager = fs.readFileSync(path.join(process.cwd(), "components/TemplateManager.tsx"), "utf8");

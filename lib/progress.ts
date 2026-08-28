@@ -1,4 +1,4 @@
-import type { MonthlyProgress, TaskStatus } from "@/lib/types";
+import type { MonthlyProgress, TaskDifficulty, TaskStatus } from "@/lib/types";
 
 export const TASK_STATUS_COEFFICIENT: Readonly<Record<TaskStatus, number>> = {
   Beklemede: 0,
@@ -7,6 +7,19 @@ export const TASK_STATUS_COEFFICIENT: Readonly<Record<TaskStatus, number>> = {
   Onaylandi: 0.9,
   Yayinlandi: 1,
 };
+
+export const DIFFICULTY_DEFAULT_WEIGHT: Readonly<Record<TaskDifficulty, number>> = {
+  Kolay: 1,
+  Orta: 2,
+  Zor: 3,
+  Ozel: 5,
+};
+
+export function formatPoints(value: number): string {
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
 
 export interface WeightedTask {
   status: TaskStatus;
@@ -52,13 +65,17 @@ export function assertWeightPoints(value: number): number {
   return value;
 }
 
-export function resolveTaskCreationWeight(value: unknown, canSetWeight: boolean): number {
-  const raw = value === null || value === undefined || String(value).trim() === ""
-    ? 1
-    : Number(value);
-  const weight = assertWeightPoints(raw);
-  if (!canSetWeight && weight !== 1) {
+export function resolveTaskCreationWeight(
+  value: unknown,
+  canSetWeight: boolean,
+  difficulty: TaskDifficulty,
+): number {
+  const blank = value === null || value === undefined || String(value).trim() === "";
+  if (blank) return DIFFICULTY_DEFAULT_WEIGHT[difficulty];
+  if (!canSetWeight) {
     throw new Error("Görev ağırlığını yalnızca yöneticiler belirleyebilir.");
   }
+  const raw = Number(value);
+  const weight = assertWeightPoints(raw);
   return weight;
 }

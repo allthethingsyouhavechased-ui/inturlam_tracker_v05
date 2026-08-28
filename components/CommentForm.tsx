@@ -1,6 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import MentionTextarea from "@/components/MentionTextarea";
+import { buttonClass } from "@/components/ui/Button";
+import { controlClass } from "@/components/ui/Input";
 import { addCommentAction } from "@/lib/actions/comments";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 
@@ -11,8 +14,10 @@ interface PendingImage {
 
 export default function CommentForm({ taskId }: { taskId: string }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Metin artık form DOM'undan değil state'ten okunuyor: `@` önerisi seçildiğinde
+  // bileşenin metni değiştirmesi gerekiyor (bkz. MentionTextarea).
+  const [body, setBody] = useState("");
   const [images, setImages] = useState<PendingImage[]>([]);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +42,7 @@ export default function CommentForm({ taskId }: { taskId: string }) {
 
   function reset() {
     formRef.current?.reset();
+    setBody("");
     setImages((prev) => {
       for (const img of prev) URL.revokeObjectURL(img.url);
       return [];
@@ -51,7 +57,7 @@ export default function CommentForm({ taskId }: { taskId: string }) {
         setError(null);
         const fd = new FormData();
         fd.set("taskId", taskId);
-        fd.set("body", bodyRef.current?.value ?? "");
+        fd.set("body", body);
         for (const { file } of images) fd.append("images", file);
         startTransition(async () => {
           try {
@@ -64,12 +70,13 @@ export default function CommentForm({ taskId }: { taskId: string }) {
       }}
       className="flex flex-col gap-2"
     >
-      <textarea
-        ref={bodyRef}
+      <MentionTextarea
         name="body"
         rows={2}
-        placeholder="Bir not ekle…"
-        className="w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900"
+        value={body}
+        onValueChange={setBody}
+        placeholder="Bir not ekle… (@ ile kişi etiketle)"
+        className={controlClass("min-h-16 resize-y py-2")}
       />
       {images.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -85,7 +92,7 @@ export default function CommentForm({ taskId }: { taskId: string }) {
                 type="button"
                 onClick={() => removeImage(i)}
                 aria-label="Görseli kaldır"
-                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-xs leading-none text-white opacity-0 transition-opacity group-hover:opacity-100"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger-solid text-xs leading-none text-white opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
               >
                 ×
               </button>
@@ -93,9 +100,9 @@ export default function CommentForm({ taskId }: { taskId: string }) {
           ))}
         </div>
       )}
-      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
       <div className="flex items-center justify-between gap-2">
-        <label className="cursor-pointer text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 dark:hover:text-brand-400">
+        <label className="cursor-pointer text-xs font-medium text-muted hover:text-brand-600 dark:hover:text-brand-400">
           📎 Görsel ekle
           <input
             ref={fileInputRef}
@@ -106,12 +113,8 @@ export default function CommentForm({ taskId }: { taskId: string }) {
             onChange={(e) => addFiles(e.target.files)}
           />
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="inline-flex items-center justify-center rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-500 disabled:opacity-50"
-        >
-          {pending ? "…" : "Yorum ekle"}
+        <button type="submit" disabled={pending} className={buttonClass({ size: "sm" })}>
+          {pending ? "Ekleniyor…" : "Yorum ekle"}
         </button>
       </div>
     </form>

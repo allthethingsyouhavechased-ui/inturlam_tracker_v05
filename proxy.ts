@@ -3,10 +3,27 @@ import { IDENTITY_COOKIE } from "@/lib/auth/constants";
 import { getActorForSession } from "@/lib/repositories/authSessions";
 import { canReviewClientRequests } from "@/lib/requestAccess";
 
-const PUBLIC_PATHS = ["/whoami", "/inturlam-logo.jpg", "/logos"];
+// `/manifest.webmanifest` giriş kontrolünün DIŞINDA olmalı: tarayıcı "ana ekrana
+// ekle" için onu oturum çerezi olmadan da isteyebiliyor, gate'lenirse istek
+// /whoami'ye yönleniyor ve uygulama adı/ikonu hiç okunmuyor. İçinde gizli veri yok.
+const PUBLIC_PATHS = [
+  "/whoami",
+  "/manifest.webmanifest",
+
+  "/inturlam-logo.jpg",
+  "/logos",
+];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+// Giriş/kimlik seçim ekranları. Oturumu OLAN biri buraya gelirse giriş formu
+// gösterilmez, kendi ana ekranına gönderilir: aksi halde uygulama kabuğu
+// (sidebar + üst çubuk) çevresinde bir giriş formu çiziliyor ve ekran "hem
+// giriş yapmışım hem yapmamışım" gibi görünüyordu.
+function isLoginPath(pathname: string): boolean {
+  return pathname === "/whoami" || pathname.startsWith("/whoami/");
 }
 
 function unauthenticatedResponse(request: NextRequest, hadCookie: boolean): NextResponse {
@@ -37,25 +54,33 @@ function forbiddenClientRequestResponse(request: NextRequest): NextResponse {
 }
 
 export function proxy(request: NextRequest): NextResponse {
-  if (isPublicPath(request.nextUrl.pathname)) return NextResponse.next();
-
+  const pathname = request.nextUrl.pathname;
   const token = request.cookies.get(IDENTITY_COOKIE)?.value;
   const actor = token ? getActorForSession(token) : undefined;
+
+  // Oturumu olmayan için giriş ekranları ve marka logoları serbest. Bu kontrol
+  // aktörü ÇÖZDÜKTEN sonra: giriş yapmış biri giriş ekranına düşmemeli.
+  if (!actor && isPublicPath(pathname)) return NextResponse.next();
+
   if (actor?.kind === "guest") {
-    if (isGuestPath(request.nextUrl.pathname)) return NextResponse.next();
+    if (isLoginPath(pathname)) return NextResponse.redirect(new URL("/guest", request.url));
+    if (isPublicPath(pathname)) return NextResponse.next();
+    if (isGuestPath(pathname)) return NextResponse.next();
     return request.method === "GET" || request.method === "HEAD"
       ? NextResponse.redirect(new URL("/guest", request.url))
       : NextResponse.json({ error: "Bu alan için yetkin yok." }, { status: 403 });
   }
   if (actor?.kind === "team") {
     const person = actor.person;
-    if (isGuestPath(request.nextUrl.pathname)) {
+    if (isLoginPath(pathname)) return NextResponse.redirect(new URL("/", request.url));
+    if (isPublicPath(pathname)) return NextResponse.next();
+    if (isGuestPath(pathname)) {
       return NextResponse.redirect(new URL("/", request.url));
     }
-    if (isReportPath(request.nextUrl.pathname) && person.is_manager !== 1) {
+    if (isReportPath(pathname) && person.is_manager !== 1) {
       return forbiddenClientRequestResponse(request);
     }
-    if (isClientRequestPath(request.nextUrl.pathname) && !canReviewClientRequests(person)) {
+    if (isClientRequestPath(pathname) && !canReviewClientRequests(person)) {
       return forbiddenClientRequestResponse(request);
     }
     return NextResponse.next();

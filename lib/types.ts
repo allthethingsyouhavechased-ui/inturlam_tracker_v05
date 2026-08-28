@@ -39,7 +39,19 @@ export type TaskRevisionReason =
   | "Diger";
 export type AccountKind = "team" | "guest";
 export type CalendarEventType = "Toplanti" | "Cekim" | "Diger";
-export type CalendarEventColor = "auto" | "purple" | "blue" | "cyan" | "green" | "amber" | "rose" | "slate";
+export type CalendarEventColor =
+  | "auto"
+  | "lavender"
+  | "sage"
+  | "purple"
+  | "coral"
+  | "amber"
+  | "orange"
+  | "cyan"
+  | "slate"
+  | "blue"
+  | "green"
+  | "rose";
 export type IdeaScope = "office" | "brand";
 export type IdeaCategory = "Icerik" | "Kampanya" | "Gorsel" | "Strateji" | "Ofis" | "Diger";
 export type IdeaStatus = "Yeni" | "Gelistiriliyor" | "Hazir" | "Kullanildi";
@@ -124,6 +136,7 @@ export interface Brand {
   name: string;
   cluster: Cluster;
   sort_order: number;
+  accent_hue: number;
   archived: number;
   logo_path: string | null;
   instagram_handle: string | null;
@@ -189,6 +202,7 @@ export interface PersonBrandAssignment {
   brand_id: string;
   brand_name: string;
   brand_logo_path: string | null;
+  brand_accent_hue: number;
   created_at: string;
 }
 
@@ -359,6 +373,7 @@ export interface CalendarEvent {
   id: string;
   brand_id: string | null;
   brand_name?: string | null;
+  brand_accent_hue?: number | null;
   type: CalendarEventType;
   color_key: CalendarEventColor;
   title: string;
@@ -498,6 +513,7 @@ export interface TaskWithContext extends Task {
   content_type: ContentType;
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
   // Yorum özeti: kartın altında ve liste görünümünün "Yorum" sütununda,
   // görevi açmadan "burada bir konuşma var mı" sorusunu cevaplar.
   comment_count: number;

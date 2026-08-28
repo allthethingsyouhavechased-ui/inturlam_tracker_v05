@@ -14,7 +14,7 @@ export default function DeleteTaskButton({ taskId }: { taskId: string }) {
           startTransition(() => deleteTaskAction(taskId));
         }
       }}
-      className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-500 disabled:opacity-50"
+      className="text-xs font-medium text-danger hover:text-rose-500 disabled:opacity-50"
     >
       {pending ? "Siliniyor…" : "Görevi sil"}
     </button>

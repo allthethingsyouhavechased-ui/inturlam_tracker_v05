@@ -2,21 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import PersonAvatar from "@/components/PersonAvatar";
 import Icon from "@/components/ui/Icon";
 import { setActiveBrandAction } from "@/lib/actions/activeWork";
+import { readTeamWorkstream, rememberTeamWorkstream } from "@/lib/uiPreferences";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import {
   groupPeopleByDepartment,
   type DepartmentKey,
   type DepartmentRow,
 } from "@/lib/departments";
 import type {
-  Brand,
-  Person,
-  PersonActiveWork,
-  TaskWithContext,
-} from "@/lib/types";
+  PersonTaskPreview,
+  PersonTaskWorkSummary,
+} from "@/lib/repositories/activeWork";
+import type { Brand, Person, PersonActiveWork } from "@/lib/types";
 
 function formatUpdatedAt(value: string): string {
   const isoValue = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
@@ -32,7 +33,7 @@ function formatUpdatedAt(value: string): string {
 const workstreamTone: Record<DepartmentKey, { dot: string; badge: string }> = {
   video: {
     dot: "bg-sky-500",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    badge: "bg-sky-500/10 text-info",
   },
   design: {
     dot: "bg-violet-500",
@@ -40,11 +41,11 @@ const workstreamTone: Record<DepartmentKey, { dot: string; badge: string }> = {
   },
   social: {
     dot: "bg-emerald-500",
-    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    badge: "bg-emerald-500/10 text-success",
   },
   management: {
     dot: "bg-amber-500",
-    badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    badge: "bg-amber-500/10 text-warning",
   },
   other: {
     dot: "bg-zinc-400",
@@ -52,17 +53,22 @@ const workstreamTone: Record<DepartmentKey, { dot: string; badge: string }> = {
   },
 };
 
+// `useSyncExternalStore` bir abonelik istiyor; tercih yalnizca bu bilesenin
+// kendi tiklamasiyla degistigi icin dinlenecek harici bir olay yok.
+const subscribeWorkstream = () => () => {};
 export default function ActiveWorkBoard({
   people,
   brands,
   selections,
-  tasks,
+  taskSummaries,
+  taskPreviews,
   currentPersonId,
 }: {
   people: Person[];
   brands: Brand[];
   selections: PersonActiveWork[];
-  tasks: TaskWithContext[];
+  taskSummaries: PersonTaskWorkSummary[];
+  taskPreviews: PersonTaskPreview[];
   currentPersonId: string | null;
 }) {
   const router = useRouter();
@@ -91,9 +97,28 @@ export default function ActiveWorkBoard({
   const currentWorkstreamId = workstreamRows.find((row) =>
     row.people.some((person) => person.id === currentPersonId),
   )?.id;
-  const [selectedWorkstreamId, setSelectedWorkstreamId] = useState<DepartmentKey | "all">(
-    currentWorkstreamId ?? workstreamRows[0]?.id ?? "all",
+  // Seçim KALICI: kullanıcı "Tümü"ye geçtiyse sayfadan çıkıp dönünce yine
+  // "Tümü" görsün. Depoda kayıt yoksa kişinin kendi departmanına düşer.
+  // Sunucu anlık görüntüsü daima varsayılan olduğu için SSR çıktısı sabit;
+  // hatırlanan seçim hydration'dan sonra uygulanıyor (bkz. CollapsiblePanel).
+  const storedWorkstreamId = useSyncExternalStore(
+    subscribeWorkstream,
+    readTeamWorkstream,
+    () => null,
   );
+  const [override, setOverride] = useState<DepartmentKey | "all" | null>(null);
+  const fallbackWorkstreamId = currentWorkstreamId ?? workstreamRows[0]?.id ?? "all";
+  const knownIds = new Set<string>(["all", ...workstreamRows.map((row) => row.id)]);
+  const selectedWorkstreamId: DepartmentKey | "all" = override
+    ?? (storedWorkstreamId && knownIds.has(storedWorkstreamId)
+      ? (storedWorkstreamId as DepartmentKey | "all")
+      : fallbackWorkstreamId);
+
+  function chooseWorkstream(next: DepartmentKey | "all") {
+    setOverride(next);
+    rememberTeamWorkstream(next);
+    setQuery("");
+  }
   const [query, setQuery] = useState("");
   const visibleWorkstreams = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
@@ -135,22 +160,12 @@ export default function ActiveWorkBoard({
   }
 
   return (
-    <section className="space-y-3" aria-labelledby="active-work-title">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-muted">KAPASİTE</p>
-          <h2 id="active-work-title" className="mt-1 text-base font-semibold text-foreground">
-            Aktif çalışma dağılımı
-          </h2>
-          <p className="mt-1 text-xs text-muted">
-            Ekip üyeleri çalışma alanlarına göre satırlarda; aktif marka ve açık işleri kişi kartında.
-          </p>
-        </div>
-        <p className="text-[11px] text-muted">
-          Değişiklikler ekipte en geç 15 saniye içinde görünür.
-        </p>
-      </div>
-
+    <section className="space-y-3" aria-label="Aktif çalışma dağılımı">
+      {/* "KAPASİTE / Aktif çalışma dağılımı" başlık bloğu kaldırıldı: sayfa
+          başlığı (PageHeader) zaten aynı şeyi söylüyordu, alt satırlar
+          ("…15 saniye içinde görünür") ise uygulama detayıydı ve kalıcı yer
+          tutuyordu. Bölümün erişilebilir adı `aria-labelledby` yerine artık
+          doğrudan `aria-label`da (aşağıdaki filtre bölümünde). */}
       {!currentPersonId && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border-default border-l-[3px] border-l-amber-500 bg-surface px-4 py-3 text-sm text-secondary">
           <span>Kendi çalışma markanı seçmek için önce kimliğini belirle.</span>
@@ -176,7 +191,7 @@ export default function ActiveWorkBoard({
         <nav aria-label="Departman filtresi" className="flex min-w-0 gap-1 overflow-x-auto pb-1 lg:pb-0">
           <button
             type="button"
-            onClick={() => { setSelectedWorkstreamId("all"); setQuery(""); }}
+            onClick={() => chooseWorkstream("all")}
             aria-pressed={selectedWorkstreamId === "all" && !query}
             className={`ui-press min-h-9 shrink-0 rounded-[9px] px-3 text-xs font-semibold ${
               selectedWorkstreamId === "all" && !query
@@ -190,7 +205,7 @@ export default function ActiveWorkBoard({
             <button
               key={row.id}
               type="button"
-              onClick={() => { setSelectedWorkstreamId(row.id); setQuery(""); }}
+              onClick={() => chooseWorkstream(row.id)}
               aria-pressed={selectedWorkstreamId === row.id && !query}
               className={`ui-press min-h-9 shrink-0 rounded-[9px] px-3 text-xs font-semibold ${
                 selectedWorkstreamId === row.id && !query
@@ -224,7 +239,8 @@ export default function ActiveWorkBoard({
             currentPersonId={currentPersonId}
             selections={selections}
             brands={brands}
-            tasks={tasks}
+            taskSummaries={taskSummaries}
+            taskPreviews={taskPreviews}
             selectedBrandId={selectedBrandId}
             pending={pending}
             changeBrand={changeBrand}
@@ -246,7 +262,8 @@ function WorkstreamSection({
   currentPersonId,
   selections,
   brands,
-  tasks,
+  taskSummaries,
+  taskPreviews,
   selectedBrandId,
   pending,
   changeBrand,
@@ -256,7 +273,8 @@ function WorkstreamSection({
   currentPersonId: string | null;
   selections: PersonActiveWork[];
   brands: Brand[];
-  tasks: TaskWithContext[];
+  taskSummaries: PersonTaskWorkSummary[];
+  taskPreviews: PersonTaskPreview[];
   selectedBrandId: string;
   pending: boolean;
   changeBrand: (nextBrandId: string) => void;
@@ -295,14 +313,12 @@ function WorkstreamSection({
               ? selectedBrandId
               : (storedSelection?.brand_id ?? "");
             const selectedBrand = brands.find((brand) => brand.id === brandId);
-            const personTasks = brandId
-              ? tasks.filter(
-                  (task) =>
-                    task.assignee_id === person.id &&
-                    task.brand_id === brandId &&
-                    task.status !== "Yayinlandi",
-                )
-              : [];
+            const taskSummary = taskSummaries.find(
+              (summary) => summary.person_id === person.id,
+            ) ?? { person_id: person.id, open_count: 0, overdue_count: 0 };
+            const personTasks = taskPreviews.filter(
+              (task) => task.person_id === person.id,
+            );
 
             return (
               <article
@@ -326,7 +342,7 @@ function WorkstreamSection({
                     <span
                       className={`mt-0.5 flex items-center gap-1.5 text-[11px] ${
                         selectedBrand
-                          ? "text-emerald-600 dark:text-emerald-400"
+                          ? "text-success"
                           : "text-muted"
                       }`}
                     >
@@ -344,6 +360,17 @@ function WorkstreamSection({
                     </span>
                   )}
                 </header>
+
+                <div className="mt-2 flex gap-1.5 px-1 text-[10px] font-semibold tabular-nums">
+                  <span className="rounded-md bg-surface-muted px-2 py-1 text-secondary">
+                    {taskSummary.open_count} açık iş
+                  </span>
+                  {taskSummary.overdue_count > 0 && (
+                    <span className="rounded-md bg-rose-50 px-2 py-1 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+                      {taskSummary.overdue_count} geciken
+                    </span>
+                  )}
+                </div>
 
                 <div className="mt-2">
                   {isCurrent ? (
@@ -391,24 +418,28 @@ function WorkstreamSection({
                 <div className="mt-3 space-y-1">
                   {personTasks.slice(0, 2).map((task) => (
                     <Link
-                      key={task.id}
-                      href={`/tasks/${task.id}`}
-                      className="flex min-h-9 items-center gap-2 rounded-[8px] border border-border-subtle bg-surface px-2.5 text-[11px] text-secondary hover:border-border-strong hover:text-foreground"
+                      key={task.task_id}
+                      href={`/tasks/${task.task_id}`}
+                      data-brand-accent
+                      style={brandAccentStyle(task.brand_accent_hue)}
+                      className="brand-stripe flex min-h-9 items-center gap-2 rounded-r-[8px] border border-border-subtle bg-surface px-2.5 text-[11px] text-secondary hover:border-border-strong hover:text-foreground"
                     >
-                      <span className="size-1.5 shrink-0 rounded-full bg-brand-500" />
-                      <span className="min-w-0 flex-1 truncate font-medium">{task.title}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{task.title}</span>
+                        <span className="block truncate text-[10px] text-muted">{task.brand_name}</span>
+                      </span>
                     </Link>
                   ))}
 
-                  {selectedBrand && personTasks.length === 0 && (
+                  {taskSummary.open_count === 0 && (
                     <div className="rounded-[9px] border border-dashed border-border-subtle px-3 py-2 text-center text-[11px] text-muted">
-                      Bu marka için açık görev yok.
+                      Açık görev yok.
                     </div>
                   )}
 
-                  {personTasks.length > 2 && (
+                  {taskSummary.open_count > personTasks.length && (
                     <p className="rounded-lg bg-surface-muted px-3 py-1.5 text-center text-[11px] font-medium text-secondary">
-                      +{personTasks.length - 2} görev daha
+                      +{taskSummary.open_count - personTasks.length} görev daha
                     </p>
                   )}
                 </div>

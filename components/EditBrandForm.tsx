@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
+import { controlClass } from "@/components/ui/Input";
 import { updateBrandAction } from "@/lib/actions/brands";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { Brand, BrandPersonAssignment, Person } from "@/lib/types";
@@ -11,8 +13,7 @@ import ClusterSelect from "./ClusterSelect";
 import PersonAvatar from "./PersonAvatar";
 import SubmitButton from "./SubmitButton";
 
-const inputClass =
-  "w-full rounded-md border border-border-default bg-surface-elevated px-3 py-2 text-sm text-foreground outline-none placeholder:text-faint focus:border-brand-500";
+const inputClass = controlClass();
 
 const labelClass = "grid gap-1.5 text-xs font-medium text-secondary";
 const emptySubscribe = () => () => {};
@@ -101,7 +102,7 @@ export default function EditBrandForm({
         onClick={() => setEditing(true)}
         aria-haspopup="dialog"
         aria-expanded="false"
-        className={triggerClassName ?? "text-xs font-medium text-muted hover:text-brand-600 dark:hover:text-brand-400"}
+        className={triggerClassName ?? buttonClass({ variant: "ghost", className: "px-2 text-xs" })}
       >
         Düzenle
       </button>
@@ -140,7 +141,7 @@ export default function EditBrandForm({
             type="button"
             onClick={() => !savingRef.current && setEditing(false)}
             aria-label="Kapat"
-            className="ui-press inline-flex size-9 shrink-0 items-center justify-center rounded-[9px] text-muted hover:bg-surface-hover hover:text-foreground"
+            className={buttonClass({ variant: "ghost", className: "size-11 !p-0 md:size-10" })}
           >
             <Icon name="close" className="size-[17px]" />
           </button>
@@ -282,7 +283,7 @@ export default function EditBrandForm({
           </div>
 
           <details className="group border-t border-border-subtle pt-4">
-            <summary className="ui-press flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-[10px] border border-border-default bg-surface px-3.5 py-2.5 hover:bg-surface-hover [&::-webkit-details-marker]:hidden">
+            <summary className="ui-press flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-md border border-border-default bg-surface px-3.5 py-2.5 hover:bg-surface-hover md:min-h-10 [&::-webkit-details-marker]:hidden">
               <span className="min-w-0">
                 <span className="block text-xs font-semibold uppercase tracking-wider text-secondary">Marka sorumluları</span>
                 <span className="mt-0.5 block text-[11px] text-muted">{assignedPersonIds.size > 0 ? `${assignedPersonIds.size} kişi atanmış` : "Henüz sorumlu atanmadı"}</span>
@@ -296,7 +297,7 @@ export default function EditBrandForm({
               <p className="text-xs text-muted">Birden fazla kişi seçebilirsin. Seçimler kişisel marka ve ilerleme analizlerini besler.</p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {people.map((person) => (
-                  <label key={person.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[9px] border border-border-default bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-hover has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50 dark:has-[:checked]:bg-brand-950/30">
+                  <label key={person.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border-default bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-hover md:min-h-10 has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50 dark:has-[:checked]:bg-brand-950/30">
                     <input type="checkbox" name="responsiblePersonId" value={person.id} defaultChecked={assignedPersonIds.has(person.id)} className="size-4 shrink-0 accent-brand-600" />
                     <PersonAvatar name={person.name} avatarPath={person.avatar_path} size="xs" />
                     <span className="min-w-0 truncate text-xs font-semibold text-foreground">{person.name}</span>
@@ -312,11 +313,11 @@ export default function EditBrandForm({
               type="button"
               disabled={saving}
               onClick={() => setEditing(false)}
-              className="text-xs font-medium text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className={buttonClass({ variant: "ghost" })}
             >
               Vazgeç
             </button>
-            {error && <p role="alert" className="basis-full text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+            {error && <p role="alert" className="basis-full text-xs text-danger">{error}</p>}
           </div>
         </form>
       </div>

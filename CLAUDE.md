@@ -20,8 +20,16 @@ aynı yetkiyi yeniden doğrular. Yunus kendi yönetici rolünü kaldıramaz.
 
 ## Katmanlar
 
-- `lib/db/client.ts` — `getDb()` singleton (globalThis, WAL + FK pragmas). Şemayı `lib/db/schema.sql`'den okur,
-  ardından `migrateBrandsTableIfNeeded()` çalışır (aşağıya bak).
+- `lib/db/client.ts` — SADECE bağlantı: `getDb()` singleton (globalThis, WAL + FK pragmas), şemayı
+  `lib/db/schema.sql`'den okur, `runPendingMigrations()` çağırır, `plainList`/`plainOne` yardımcıları.
+  62 satır; şema evrimini bilmez.
+- **`lib/db/migrations.ts` — göçler ve SIRALARI.** `MIGRATIONS` dizisi kimlik + fonksiyon çiftleri
+  tutuyor, `runPendingMigrations()` `schema_migrations` tablosuna bakıp YALNIZCA uygulanmamışları
+  sırayla çalıştırıyor ve kaydediyor. Yeni göç = dizinin SONUNA tek satır. **Kimlikler asla
+  değiştirilmez** — yeniden adlandırmak o göçü üretimde bir kez daha çalıştırır.
+  `schema_migrations` yoksa hepsi bir kez çalışıp kaydedilir (tek seferlik geri doldurma; hepsi
+  idempotent olduğu için güvenli). `seedClustersIfNeeded` bilerek AYRICA her açılışta çağrılıyor:
+  o bir göç değil, markaya elle yazılmış kategori id'sini `clusters`a adopte eden bir uzlaştırma.
 - `lib/repositories/*` — tüm SQL burada (senkron, prepared statements). `brands.ts`'te
   `listBrandRelations()` (karşı markanın bilgisini normalize eder) ve `getBrandAudit()` da var.
 - `lib/actions/*` — `"use server"` mutasyonları; repo çağır + `revalidatePath("/", "layout")`.
@@ -349,6 +357,30 @@ biri gerçekten değiştiğinde bugüne çekilir (yalnızca adı düzeltip kayde
   hem gerçek `<button>` hem de `buttonClass({variant,size})` (Link gibi başka öğeleri buton gibi
   göstermek için) export ediyor. Async form gönderiminde hâlâ `SubmitButton` (useFormStatus ile
   çift gönderimi engeller) — o da artık aynı `buttonClass`'ı kullanıyor, ayrıca stil yazma.
+- **Semantik renkler de temaya göre kendi değerini değiştirir (2026-08-27).** `text-danger` /
+  `text-success` / `text-warning` / `text-info` yazarken AYRICA `dark:` gerekmez —
+  `--danger` vb. hem `:root`ta hem `.dark`ta tanımlı. Eski `text-rose-600 dark:text-rose-400`
+  ikilisi bu token'a taşındı (66 yer). **Dolu zemin için `bg-danger-solid`** kullan:
+  `--danger` koyu temada beyaz metnin okunamayacağı kadar açılıyor, bu yüzden dolu buton için
+  iki temada da aynı kalan ayrı bir token var.
+- **Tipografi ölçeği artık token: `text-display` / `text-h1` / `text-h2` / `text-body` /
+  `text-caption` / `text-eyebrow`.** Boy + satır yüksekliği + tracking + ağırlık birlikte
+  geliyor. Yeni ekranda `text-[11px] tracking-[-0.025em]` gibi elle değer YAZMA — tracking
+  boy-özeldir (büyüdükçe negatif, küçüldükçe pozitif), tek sabit değer bir uçta hep yanlış olur.
+- **Spring eğrisi YALNIZCA sürüklemede.** `.ui-press`/`.ui-surface` varsayılanı 160ms
+  `--motion-ease-standard`; hover en fazla 1px kalkar, gölge almaz. `--motion-spring` (360ms)
+  ve `--shadow-lift` sadece `.ui-surface[data-dragging="true"]` içindir — sürükleme
+  kullanıcının kendi ivmesini taşıyan tek fiziksel etkileşim. Hover günde yüzlerce kez
+  görülüyor; orada spring tarama hızını düşürüyor.
+- **`--shadow-lift` koyu temada AYRI tanımlı.** Siyah gölge `#0c0c0e` zeminde görünmez; koyu
+  temada yükseklik dış kenardaki ince highlight ile anlatılıyor. Temaya duyarlı yeni bir token
+  eklersen `tests/designTokens.test.ts`teki listeye de ekle.
+- **Azaltılmış hareket = SIFIR hareket DEĞİL.** `prefers-reduced-motion` bloğu dönüşümü
+  kaldırıyor ama renk/opaklık/odak geçişlerini koruyor. `prefers-reduced-transparency` üst
+  çubuğun buzlu camını düzleştiriyor, `prefers-contrast: more` hairline kenarlıkları güçlü
+  tona çıkarıyor.
+- **İç içe kutularda eşmerkezli yarıçap.** `Card` `--card-radius`/`--card-pad` yayınlıyor;
+  iç kontrol `rounded-[calc(var(--card-radius)-var(--card-pad))]` ile dış köşeyle hizalanır.
 - **Metin kontrastı iki temada da ≥ 4.5:1 olmalı.** Yeni kodda tercih edilen yol `text-muted`
   (yukarıdaki token — teması otomatik değişir). Eski `text-zinc-500 dark:text-zinc-400` ikilisi
   de hâlâ geçerli/doğru, ikisi aynı amaca hizmet ediyor. Kırmızı `text-rose-600 dark:text-rose-400`,
@@ -383,15 +415,60 @@ biri gerçekten değiştiğinde bugüne çekilir (yalnızca adı düzeltip kayde
   44×44'e çıkarır (`globals.css`); `min-h-11` vermek satır yüksekliğini şişirirdi.
 - **Hata mesajlarına `role="alert"`**, ikon-only butonlara `aria-label`, form gönderim
   butonları için `SubmitButton` (useFormStatus ile çift gönderimi engeller).
-- Yarıçap hiyerarşisi (2026-08-11 revizyonu — "yumuşak kart" yönü daha büyük dış yarıçap seçti):
-  dış panel/kart `rounded-2xl` (`components/ui/Card.tsx`), form/buton `rounded-xl`/`rounded-lg`
-  (`components/ui/Button.tsx`/`Input.tsx`, boyuta göre), rozet/avatar `rounded-full`. Eski kodda
-  hâlâ `rounded-lg`/`rounded-md` iç kart olarak geçebilir, bu bir hata değil — kademeli göç.
+- Yarıçap hiyerarşisi (2026-08-28 Portföy Şeridi revizyonu): yüzey/kart 10px
+  (`components/ui/Card.tsx`), form/buton 8px (`components/ui/Button.tsx`/`Input.tsx`),
+  rozet 6px; `rounded-full` yalnız avatar ve sayaçta. Marka şeridinin geldiği sol köşeler
+  keskindir. Eski `rounded-2xl` kullanımları yeni yüzeylerde kopyalanacak emsal değildir.
+
+## Test felsefesi (2026-08-27 ayıklaması)
+
+Bir dönem 75 test dosyasının 32'si `readFileSync` ile KAYNAK KODU okuyup regex eşliyordu —
+ızgara şablonu, sınıf string'i, başlık metni. Bunlar davranış doğrulamıyor, kodun aynı
+kalmasını şart koşuyordu: her görsel değişiklik gerçek bir regresyona işaret etmeyen kırık
+üretiyordu. O grup kaldırıldı.
+
+**Yeni assert yazarken ölçüt:** bu satır bir KULLANICI DAVRANIŞINI mı, yoksa bir TASARIM
+TERCİHİNİ mi kilitliyor? İkincisiyse yazma. Kalanlar birinci gruptan: yetki guard'ları
+(`pageSessionGuards`, `managerMutationAuthorization`, `proxyAuth`, `ciSecurity`),
+erişilebilirlik sözleşmeleri (`role="dialog"`, `aria-modal`, dnd `announcements`), form alan
+adları, bileşen kablolaması ve bilgi SIRASI.
+
+Saf mantık için gerçek birim testi yaz — `tests/taskFilterParams.test.ts`,
+`tests/undoQueue.test.ts`, `tests/shortcuts.test.ts` örnek. Tasarım sistemi kuralları için
+`tests/designTokens.test.ts`: CSS'i ayrıştırıp token ÇİFTLERİNİ doğruluyor (temaya duyarlı her
+token iki temada da tanımlı mı, kendine referans var mı), renk DEĞERİNİ değil — palet değişince
+kırılmaz, kural bozulunca kırılır.
 
 ## Genişletirken
 
 Yeni alan/özellik: `schema.sql` (CREATE TABLE IF NOT EXISTS) → `types.ts` → repo → action → sayfa.
 Şema mevcut DB'ye `getDb()` her açılışta `IF NOT EXISTS` ile uygulanır; tablo ekleme güvenli.
-Var olan bir tabloya sütun eklemek veya CHECK kısıtlamasını genişletmek için `client.ts`'teki
-migration deseni (yukarı bak) örnek alınarak yeni bir migration fonksiyonu eklenmeli — hâlâ
-genel bir migration sistemi yok, her değişiklik kendi idempotent fonksiyonunu yazıyor.
+Var olan bir tabloya sütun eklemek veya CHECK kısıtlamasını genişletmek için
+`lib/db/migrations.ts`'e yeni bir fonksiyon yaz ve `MIGRATIONS` dizisinin SONUNA yeni bir
+kimlikle ekle. Guard yazmak artık zorunlu değil (runner her göçü zaten bir kez çalıştırıyor),
+ama eski göçler kendi "sütun var mı" guard'larını ikinci güvenlik ağı olarak koruyor.
+
+## Yeni bölüm/kısayol/filtre eklerken
+
+- **Klavye kısayolu:** `lib/shortcuts.ts` (saf tanım) + `components/KeyboardShortcuts.tsx`
+  (tek dinleyici, layout'ta). `G`+harf gitme hedefleri `GO_TO_ROUTES`ta; bir test bunların
+  gerçekten `NAV_GROUPS`ta var olduğunu doğruluyor, ölü kısayol kalamaz. Kısayolla açılan
+  pencere giriş animasyonunu ATLAR (`QuickAddModal`daki `instant`): günde onlarca kez
+  yapılan bir hareket 220ms bekleyemez.
+- **`/tasks` filtresi:** doğrulama ve URL yazımı `lib/taskFilterParams.ts`te tek yerde.
+  Filtre state'i istemcide kalır (her tıklamada sunucu render'ı listeyi yavaşlatırdı) ama
+  `history.replaceState` ile adres çubuğuna yazılır — `router.replace` DEĞİL, o sunucu
+  render'ı tetikler; `pushState` de değil, her tuş vuruşu geçmişe kayıt ekler.
+  Yeni bir filtre eklerken `TaskFilterState`e alan ekle, `parseTaskFilterParams`ta doğrula.
+- **Kayıtlı görünüm** (`lib/savedViews.ts`) sadece bu sorgu dizesini `localStorage`da tutar;
+  sunucuda karşılığı yok, paylaşım adres çubuğundaki bağlantıyla yapılır.
+- **Yıkıcı işlem:** `confirm()` yerine `runUndoable()` (`lib/undoQueue.ts`). İşlem geri alma
+  süresi dolana kadar HİÇ çalışmaz; arayüz iyimser olarak günceller, "Geri al" onu geri sarar.
+  Veritabanında `deleted_at` yok — onlarca görev sorgusuna "silinmişleri hariç tut" eklemek
+  gerekirdi ve unutulan tek bir sorgu silinmiş işi rapora sızdırırdı.
+- **Hızlı görev penceresinin listeleri** `lib/actions/quickAdd.ts`ten, pencere ilk AÇILDIĞINDA
+  çekilir. `Header` layout'ta olduğu için oraya sorgu EKLEME: uygulamanın her isteğinde çalışır.
+- **`@` etiketleme:** `components/MentionTextarea.tsx`. Metnin sahibi çağıran (`value` +
+  `onValueChange`); kişi listesi ilk `@` yazılana kadar okunmaz.
+- **Sürükle-bırak:** her `DndContext`e `accessibility={{ announcements, screenReaderInstructions }}`
+  geç (`lib/dndAnnouncements.ts`) — yoksa @dnd-kit İngilizce duyuru üretir.

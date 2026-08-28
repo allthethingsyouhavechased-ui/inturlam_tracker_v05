@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import Icon from "@/components/ui/Icon";
 import { isNavActive, visibleNavGroups } from "@/lib/nav";
@@ -33,23 +34,32 @@ export default function SidebarNav({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   title={item.label}
-                  className={`sidebar-nav-item ui-press group relative flex min-h-10 items-center gap-3 rounded-[9px] px-2.5 text-[13px] font-medium transition-[color,background-color,border-color,padding,gap] ${
+                  className={`sidebar-nav-item ui-press group relative flex min-h-10 items-center gap-3 rounded-[9px] px-2.5 text-[13px] font-medium transition-[color,padding,gap] ${
                     active
-                      ? "bg-brand-50 text-brand-800 before:absolute before:-left-3 before:h-5 before:w-0.5 before:rounded-full before:bg-brand-600 dark:bg-brand-950/55 dark:text-brand-200 dark:before:bg-brand-400"
+                      ? "text-brand-800 dark:text-brand-200"
                       : "text-secondary hover:bg-surface-hover hover:text-foreground"
                   }`}
                 >
+                  {active && (
+                    <motion.span
+                      layoutId="sidebar-active-pill"
+                      transition={{ type: "spring", stiffness: 480, damping: 34, mass: 0.9 }}
+                      className="absolute inset-0 rounded-[9px] bg-brand-50 dark:bg-brand-950/55"
+                    >
+                      <span className="absolute -left-3 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-brand-600 dark:bg-brand-400" />
+                    </motion.span>
+                  )}
                   <Icon
                     name={item.icon}
-                    className={`size-[18px] transition-colors ${
+                    className={`relative z-10 size-[18px] transition-colors ${
                       active ? "text-brand-600 dark:text-brand-300" : "text-muted group-hover:text-secondary"
                     }`}
                   />
-                  <span className="sidebar-copy min-w-0 flex-1 whitespace-nowrap transition-[width,opacity] duration-150">
+                  <span className="sidebar-copy relative z-10 min-w-0 flex-1 whitespace-nowrap transition-[width,opacity] duration-150">
                     {item.label}
                   </span>
                   {item.href === "/requests" && pendingRequestCount > 0 && (
-                    <span className="sidebar-copy ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-brand-700 dark:bg-brand-950 dark:text-brand-200">
+                    <span className="sidebar-copy relative z-10 ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-brand-700 dark:bg-brand-950 dark:text-brand-200">
                       {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
                     </span>
                   )}

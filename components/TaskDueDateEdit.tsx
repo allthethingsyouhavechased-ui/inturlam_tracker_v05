@@ -29,7 +29,7 @@ export default function TaskDueDateEdit({
           startTransition(() => setTaskDueDateAction(taskId, next));
           setEditing(false);
         }}
-        className="min-h-11 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs outline-none transition-[border-color,box-shadow] focus:border-brand-500 disabled:opacity-50 dark:border-white/15 dark:bg-zinc-900"
+        className="min-h-11 w-full min-w-0 rounded-md border border-border-default bg-surface px-2.5 py-1 text-xs text-foreground outline-none transition-[border-color,box-shadow,opacity] hover:border-border-strong focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:w-auto"
       />
     );
   }
@@ -40,10 +40,10 @@ export default function TaskDueDateEdit({
       onClick={() => setEditing(true)}
       disabled={pending}
       title="Teslim tarihini değiştir"
-      className={`ui-press inline-flex min-h-11 items-center rounded-lg px-2.5 tabular-nums text-xs underline decoration-dotted underline-offset-2 hover:bg-black/5 hover:decoration-solid disabled:opacity-50 dark:hover:bg-white/10 ${
+      className={`ui-press inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border-default bg-surface px-2.5 tabular-nums text-xs hover:border-border-strong hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:w-auto md:justify-start ${
         dueDate && isOverdue(dueDate)
-          ? "font-medium text-rose-600 dark:text-rose-400"
-          : "text-zinc-500 dark:text-zinc-400"
+          ? "font-medium text-danger"
+          : "text-muted"
       }`}
     >
       {dueDate ? formatDateShort(dueDate) : "—"}

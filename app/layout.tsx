@@ -1,26 +1,41 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Archivo, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import UndoBar from "@/components/UndoBar";
 import Sidebar from "@/components/Sidebar";
 import { SidebarProvider } from "@/components/SidebarContext";
 import SidebarMobileFrame from "@/components/SidebarMobileFrame";
 import GuestShell from "@/components/GuestShell";
 import { getCurrentActor } from "@/lib/identity";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "İNTURLAM · Operations",
-  description: "İNTURLAM marka, içerik ve görev operasyon merkezi",
+  title: "INTracker",
+  description: "INTracker marka, içerik ve görev operasyon merkezi",
+  appleWebApp: { capable: true, title: "INTracker", statusBarStyle: "default" },
+};
+
+// Telefonda tarayıcı çubuğu uygulamanın zeminiyle aynı renge boyanır; koyu tema
+// tercihi için ikinci bir değer veriliyor, yoksa açık gri çubuk siyah sayfanın
+// üstünde bant gibi duruyor.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f1efea" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090a" },
+  ],
 };
 
 export default async function RootLayout({
@@ -33,7 +48,7 @@ export default async function RootLayout({
     <html
       lang="tr"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${archivo.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background font-sans text-foreground">
         <script
@@ -48,6 +63,11 @@ export default async function RootLayout({
           <GuestShell actor={actor}>{children}</GuestShell>
         ) : (
           <SidebarProvider>
+            {/* Yalnızca ekip kabuğunda: guest portalında gidilecek bölüm yok. */}
+            <KeyboardShortcuts />
+            {/* Bekleyen yıkıcı işlemin geri alma çubuğu — hangi ekranda silme
+                yapıldığından bağımsız, uygulamada tek örnek. */}
+            <UndoBar />
             <div className="flex min-h-screen bg-background">
               <SidebarMobileFrame><Sidebar /></SidebarMobileFrame>
               <div className="flex min-w-0 flex-1 flex-col">

@@ -62,7 +62,7 @@ export default async function SocialTakipPage() {
         <>
           {silent.length > 0 && (
             <section className="space-y-2 rounded-xl border border-border-default border-l-[3px] border-l-danger bg-surface p-4">
-              <h2 className="text-sm font-semibold text-rose-700 dark:text-rose-300">
+              <h2 className="text-sm font-semibold text-danger">
                 Sessiz hesaplar ({silent.length})
               </h2>
               <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -83,7 +83,7 @@ export default async function SocialTakipPage() {
                         son paylaşım {formatDateShort(row.last_post_at?.slice(0, 10) ?? null)}
                       </span>
                     </span>
-                    <span className="shrink-0 text-lg font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                    <span className="shrink-0 text-lg font-bold tabular-nums text-danger">
                       {row.days_silent}
                       <span className="ml-0.5 text-[10px] font-medium">gün</span>
                     </span>
@@ -95,7 +95,7 @@ export default async function SocialTakipPage() {
 
           {(broken.length > 0 || neverChecked.length > 0) && (
             <section className="space-y-2 rounded-xl border border-border-default border-l-[3px] border-l-amber-500 bg-surface p-4">
-              <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              <h2 className="text-sm font-semibold text-warning">
                 Veri gelmeyen hesaplar ({broken.length + neverChecked.length})
               </h2>
               <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
@@ -221,9 +221,9 @@ export default async function SocialTakipPage() {
                 <span
                   className={`font-semibold ${
                     run.status === "error"
-                      ? "text-rose-600 dark:text-rose-400"
+                      ? "text-danger"
                       : run.status === "ok"
-                        ? "text-emerald-700 dark:text-emerald-300"
+                        ? "text-success"
                         : "text-zinc-500 dark:text-zinc-400"
                   }`}
                 >
@@ -234,7 +234,7 @@ export default async function SocialTakipPage() {
                 </span>
                 <span className="text-zinc-400 dark:text-zinc-500">{run.provider}</span>
                 {run.error && (
-                  <span className="min-w-0 flex-1 truncate text-rose-600 dark:text-rose-400">
+                  <span className="min-w-0 flex-1 truncate text-danger">
                     {run.error}
                   </span>
                 )}

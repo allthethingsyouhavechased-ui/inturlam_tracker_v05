@@ -1,14 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { controlClass } from "@/components/ui/Input";
 import { createContentItemAction } from "@/lib/actions/content";
 import { CONTENT_TYPES, CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { ContentType, Person, TaskTemplate } from "@/lib/types";
 import SubmitButton from "./SubmitButton";
 
-const inputClass =
-  "w-full min-h-11 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+const inputClass = controlClass();
 
 export default function NewContentForm({
   brandId,
@@ -46,7 +46,7 @@ export default function NewContentForm({
       className="grid gap-3 sm:grid-cols-2 sm:items-end xl:grid-cols-[minmax(14rem,1.4fr)_repeat(4,minmax(8rem,1fr))_auto]"
     >
       <input type="hidden" name="brandId" value={brandId} />
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Başlık
         <input
           name="title"
@@ -55,7 +55,7 @@ export default function NewContentForm({
           className={inputClass}
         />
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Tür
         <select
           name="type"
@@ -75,7 +75,7 @@ export default function NewContentForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Görev şablonu
         <select
           name="templateId"
@@ -89,7 +89,7 @@ export default function NewContentForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Atanan
         <select
           name="assigneeId"
@@ -104,7 +104,7 @@ export default function NewContentForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Hedef tarih
         <input
           type="date"
@@ -113,10 +113,10 @@ export default function NewContentForm({
           aria-describedby={templateId ? "template-target-date-help" : undefined}
           className={inputClass}
         />
-        {templateId && <span id="template-target-date-help" className="text-[10px] text-amber-700 dark:text-amber-300">Şablon için zorunlu</span>}
+        {templateId && <span id="template-target-date-help" className="text-[10px] text-warning">Şablon için zorunlu</span>}
       </label>
       <SubmitButton>Ekle</SubmitButton>
-      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400 sm:col-span-2 xl:col-span-6">{error}</p>}
+      {error && <p role="alert" className="text-xs text-danger sm:col-span-2 xl:col-span-6">{error}</p>}
     </form>
   );
 }

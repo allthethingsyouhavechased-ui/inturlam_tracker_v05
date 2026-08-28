@@ -40,6 +40,7 @@ import type { TaskWithContext } from "@/lib/types";
 export interface PersonReportBrandRow {
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
   total_tasks: number;
   completed_tasks: number;
   open_tasks: number;
@@ -324,7 +325,7 @@ export default function PersonReportClient({
             task={task}
             trailing={
               <>
-                <span className="block font-medium text-rose-600 dark:text-rose-400">
+                <span className="block font-medium text-danger">
                   {task.due_date ? `${daysBetween(task.due_date, today)} gün` : "—"}
                 </span>
                 <span className="block text-zinc-500 dark:text-zinc-400">
@@ -377,7 +378,7 @@ export default function PersonReportClient({
             key={task.id}
             task={task}
             trailing={
-              <span className="block text-emerald-600 dark:text-emerald-400">
+              <span className="block text-success">
                 {formatDateShort(task.completed_at?.slice(0, 10) ?? null)}
               </span>
             }

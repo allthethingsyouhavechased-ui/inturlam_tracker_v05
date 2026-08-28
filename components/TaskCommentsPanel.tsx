@@ -77,7 +77,7 @@ export default function TaskCommentsPanel({
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Yükleniyor…</p>
         )}
         {error && (
-          <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
         )}

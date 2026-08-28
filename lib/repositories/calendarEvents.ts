@@ -18,7 +18,7 @@ export interface CalendarEventInput {
   accountId: string;
 }
 
-const SELECT_EVENT = `SELECT e.*, b.name AS brand_name
+const SELECT_EVENT = `SELECT e.*, b.name AS brand_name, b.accent_hue AS brand_accent_hue
   FROM calendar_events e LEFT JOIN brands b ON b.id = e.brand_id`;
 
 export function listCalendarEvents(input: {

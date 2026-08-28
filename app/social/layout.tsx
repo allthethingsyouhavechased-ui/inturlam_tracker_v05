@@ -23,7 +23,7 @@ export default function SocialLayout({ children }: { children: React.ReactNode }
             <p className="text-xs font-semibold text-foreground">Hesap sağlığı</p>
             <p
               className={`mt-1 text-[11px] leading-4 ${
-                latestRun?.status === "error" ? "text-rose-600 dark:text-rose-400" : "text-muted"
+                latestRun?.status === "error" ? "text-danger" : "text-muted"
               }`}
             >
               {latestRun?.status === "error"

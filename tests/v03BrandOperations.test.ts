@@ -66,7 +66,9 @@ describe("v03 marka operasyon özeti", () => {
     assert.match(overview, /Toplantılar/);
     assert.match(overview, /Çekimler/);
     assert.match(overview, /Etkinlik raporları/);
-    assert.match(panom, /getBrandMonthlyProgress/);
+    assert.match(panom, /href="\/panom\/markalar"/);
+    assert.match(panom, /href="\/panom\/katkim"/);
+    assert.doesNotMatch(panom, /PanomInsightStrip/);
     assert.match(card, /task\.weight_points/);
     assert.match(list, /t\.weight_points/);
     assert.match(responsibilityDialog, /Bir markaya birden fazla sorumlu atayabilirsin/);

@@ -10,6 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, beforeEach, describe, it } from "node:test";
+import { brandAccentHueForIndex } from "@/lib/brandAccent";
 
 // getDb() DB yolunu MODÜL YÜKLENİRKEN okuyor → import'tan ÖNCE ayarlanmalı.
 // Bu yüzden statik import değil, aşağıda dinamik import var.
@@ -174,7 +175,7 @@ describe("brands migration zinciri", () => {
     // bilinçli olarak doğrulanmış olur.
     assert.deepEqual(
       { ...(stored as Record<string, unknown>) },
-      { ...brand, stats_updated_at: null, monthly_shoot_allowance: null, annual_shoot_allowance: null },
+      { ...brand, accent_hue: brandAccentHueForIndex(1), stats_updated_at: null, monthly_shoot_allowance: null, annual_shoot_allowance: null },
     );
 
     assert.equal(

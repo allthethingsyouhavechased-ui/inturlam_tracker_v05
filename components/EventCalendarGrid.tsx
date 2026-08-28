@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import { calendarEventTone } from "@/lib/calendar/colors";
 import { calendarWeekEventSegments } from "@/lib/calendar/layout";
 import { todayISO, WEEKDAY_LABELS, type CalendarGridDay } from "@/lib/date";
@@ -6,11 +7,11 @@ import type { CalendarEvent } from "@/lib/types";
 
 function eventTime(event: CalendarEvent): string {
   if (event.all_day === 1) return "";
-  return `${new Date(event.start_at).toLocaleTimeString("tr-TR", {
+  return new Date(event.start_at).toLocaleTimeString("tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Europe/Istanbul",
-  })} · `;
+  });
 }
 
 function weeksOf(gridDays: CalendarGridDay[]): CalendarGridDay[][] {
@@ -37,120 +38,145 @@ export default function EventCalendarGrid({
   const today = todayISO();
 
   return (
-    <div className="min-w-0">
-      <p className="mb-2 text-[11px] text-muted sm:hidden">Takvimin devamını görmek için yatay kaydır.</p>
-      <div
-        role="region"
-        aria-label="Aylık etkinlik takvimi"
-        tabIndex={0}
-        className="-mx-1 overflow-x-auto px-1 pb-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:mx-0 sm:overflow-visible sm:px-0"
-      >
-        <div className="min-w-[44rem] sm:min-w-0">
-          <div className="mb-1 grid grid-cols-7 gap-x-1 sm:gap-x-2">
-            {WEEKDAY_LABELS.map((day) => (
-              <div key={day} className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-muted">
-                {day}
-              </div>
-            ))}
-          </div>
-          <div className="space-y-1 sm:space-y-2">
-            {weeksOf(gridDays).map((week) => {
-          const segments = calendarWeekEventSegments(events, week);
-          const laneCount = segments.reduce((count, segment) => Math.max(count, segment.lane + 1), 0);
-          const spacerRow = laneCount + 2;
-          const gridTemplateRows = laneCount > 0
-            ? `1.75rem repeat(${laneCount}, 1.5rem) minmax(4rem, auto)`
-            : "1.75rem minmax(4rem, auto)";
-
-          return (
+    <div
+      role="region"
+      aria-label="Aylık etkinlik takvimi; dar ekranlarda yatay kaydırılabilir"
+      tabIndex={0}
+      className="min-w-0 overflow-x-auto outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
+    >
+      <div className="min-w-[50rem]">
+        <div className="grid grid-cols-7 border-b border-border-default bg-surface-subtle">
+          {WEEKDAY_LABELS.map((day, index) => (
             <div
-              key={week[0].date}
-              className="relative grid grid-cols-7 gap-x-1 gap-y-1 sm:gap-x-2"
-              style={{ gridTemplateRows }}
+              key={day}
+              className={`border-r border-border-subtle px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] last:border-r-0 ${index > 4 ? "text-faint" : "text-muted"}`}
             >
-              {week.map((day, dayIndex) => {
-                const isToday = day.date === today;
-                const isSelected = day.date === selectedDate;
-                const dayQuery = new URLSearchParams(preservedQuery);
-                dayQuery.set("month", day.date.slice(0, 7));
-                dayQuery.set("day", day.date);
-
-                return (
-                  <div
-                    key={day.date}
-                    aria-current={isToday ? "date" : undefined}
-                    data-selected={isSelected || undefined}
-                    style={{ gridColumn: dayIndex + 1, gridRow: `1 / ${spacerRow + 1}` }}
-                    className={`relative overflow-hidden rounded-xl border transition-colors ${
-                      isSelected
-                        ? "border-brand-500 bg-brand-50/50 ring-1 ring-brand-500/20 dark:bg-brand-950/20"
-                        : isToday
-                          ? "border-brand-400 bg-surface ring-1 ring-brand-500/15"
-                          : day.inMonth
-                            ? "border-border-default bg-surface hover:border-border-strong hover:bg-surface-hover"
-                            : "border-border-default bg-surface-subtle opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    {editable && (
-                      <Link
-                        href={`${basePath}?${dayQuery}`}
-                        aria-label={`${day.date} günü için etkinlik oluştur`}
-                        className="absolute inset-0 z-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
-                      >
-                        <span className="sr-only">{day.date} gününü seç</span>
-                      </Link>
-                    )}
-                  </div>
-                );
-              })}
-
-              {week.map((day, dayIndex) => {
-                const isToday = day.date === today;
-                const isSelected = day.date === selectedDate;
-                return (
-                  <div
-                    key={`label-${day.date}`}
-                    style={{ gridColumn: dayIndex + 1, gridRow: 1 }}
-                    className={`pointer-events-none relative z-10 px-1.5 pt-1.5 text-xs font-semibold ${isToday || isSelected ? "text-brand-600 dark:text-brand-300" : "text-secondary"}`}
-                  >
-                    {Number(day.date.slice(-2))}
-                  </div>
-                );
-              })}
-
-              {segments.map((segment) => {
-                const segmentDate = week[segment.startColumn - 1].date;
-                const eventQuery = new URLSearchParams(preservedQuery);
-                eventQuery.set("month", segmentDate.slice(0, 7));
-                eventQuery.set("day", segmentDate);
-                eventQuery.set("event", segment.event.id);
-                const className = `pointer-events-auto relative z-20 block min-w-0 truncate px-1.5 py-1 text-[10px] font-semibold leading-4 ${calendarEventTone(segment.event)} ${segment.continuesBefore ? "rounded-l-none" : "rounded-l-md"} ${segment.continuesAfter ? "rounded-r-none" : "rounded-r-md"}`;
-                const content = <>{segment.showTime ? eventTime(segment.event) : ""}{segment.event.title}</>;
-                const style = {
-                  gridColumn: `${segment.startColumn} / span ${segment.span}`,
-                  gridRow: segment.lane + 2,
-                };
-
-                return editable ? (
-                  <Link key={`${segment.event.id}-${week[0].date}`} href={`${basePath}?${eventQuery}`} className={className} style={style} title={segment.event.title}>
-                    {content}
-                  </Link>
-                ) : (
-                  <div key={`${segment.event.id}-${week[0].date}`} className={className} style={style} title={segment.event.title}>
-                    {content}
-                  </div>
-                );
-              })}
-
-              <div
-                aria-hidden="true"
-                className="pointer-events-none col-span-7 min-h-12 sm:min-h-20"
-                style={{ gridRow: spacerRow }}
-              />
+              {day}
             </div>
-          );
-            })}
-          </div>
+          ))}
+        </div>
+
+        <div>
+          {weeksOf(gridDays).map((week) => {
+            const segments = calendarWeekEventSegments(events, week);
+            const laneCount = segments.reduce((count, segment) => Math.max(count, segment.lane + 1), 0);
+            const spacerRow = laneCount + 2;
+            const gridTemplateRows = laneCount > 0
+              ? `2.25rem repeat(${laneCount}, 1.65rem) minmax(3.5rem, auto)`
+              : "2.25rem minmax(3.5rem, auto)";
+
+            return (
+              <div
+                key={week[0].date}
+                className="relative grid grid-cols-7 border-b border-border-subtle last:border-b-0"
+                style={{ gridTemplateRows }}
+              >
+                {week.map((day, dayIndex) => {
+                  const isToday = day.date === today;
+                  const isSelected = day.date === selectedDate;
+                  const dayQuery = new URLSearchParams(preservedQuery);
+                  dayQuery.set("month", day.date.slice(0, 7));
+                  dayQuery.set("day", day.date);
+
+                  return (
+                    <div
+                      key={day.date}
+                      aria-current={isToday ? "date" : undefined}
+                      data-selected={isSelected || undefined}
+                      data-calendar-day
+                      style={{ gridColumn: dayIndex + 1, gridRow: `1 / ${spacerRow + 1}` }}
+                      className={`relative border-r border-border-subtle last:border-r-0 ${isSelected
+                        ? "bg-brand-50/70 dark:bg-brand-950/20"
+                        : day.inMonth
+                          ? "bg-surface hover:bg-surface-hover"
+                          : "bg-surface-subtle/70 text-faint"}`}
+                    >
+                      {editable && (
+                        <Link
+                          href={`${basePath}?${dayQuery}`}
+                          aria-label={`${day.date} günü için etkinlik oluştur`}
+                          className="absolute inset-0 z-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
+                        >
+                          <span className="sr-only">{day.date} gününü seç</span>
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {week.map((day, dayIndex) => {
+                  const isToday = day.date === today;
+                  const isSelected = day.date === selectedDate;
+                  return (
+                    <div
+                      key={`label-${day.date}`}
+                      style={{ gridColumn: dayIndex + 1, gridRow: 1 }}
+                      className="pointer-events-none relative z-10 flex items-center px-2"
+                    >
+                      <span className={`grid size-7 place-items-center rounded-full text-xs font-semibold tabular-nums ${isToday
+                        ? "bg-brand-600 text-white"
+                        : isSelected
+                          ? "bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-200"
+                          : day.inMonth
+                            ? "text-secondary"
+                            : "text-faint"}`}>
+                        {Number(day.date.slice(-2))}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {segments.map((segment) => {
+                  const segmentDate = week[segment.startColumn - 1].date;
+                  const eventQuery = new URLSearchParams(preservedQuery);
+                  eventQuery.set("month", segmentDate.slice(0, 7));
+                  eventQuery.set("day", segmentDate);
+                  eventQuery.set("event", segment.event.id);
+                  const time = segment.showTime ? eventTime(segment.event) : "";
+                  const className = `pointer-events-auto relative z-20 mx-1 flex min-w-0 items-center gap-1 overflow-hidden px-2 text-[10px] font-semibold leading-5 ring-1 ring-inset ring-black/5 dark:ring-white/5 ${segment.event.brand_id ? "brand-stripe" : ""} ${calendarEventTone(segment.event)} ${segment.continuesBefore ? "rounded-l-none" : "rounded-l-md"} ${segment.continuesAfter ? "rounded-r-none" : "rounded-r-md"}`;
+                  const content = (
+                    <>
+                      {time && <span className="shrink-0 tabular-nums opacity-75">{time}</span>}
+                      <span className="truncate">{segment.event.title}</span>
+                    </>
+                  );
+                  const style = {
+                    gridColumn: `${segment.startColumn} / span ${segment.span}`,
+                    gridRow: segment.lane + 2,
+                  };
+
+                  return editable ? (
+                    <Link
+                      key={`${segment.event.id}-${week[0].date}`}
+                      href={`${basePath}?${eventQuery}`}
+                      data-brand-accent={segment.event.brand_id ? "" : undefined}
+                      className={className}
+                      style={{ ...style, ...brandAccentStyle(segment.event.brand_accent_hue) }}
+                      title={segment.event.title}
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div
+                      key={`${segment.event.id}-${week[0].date}`}
+                      data-brand-accent={segment.event.brand_id ? "" : undefined}
+                      className={className}
+                      style={{ ...style, ...brandAccentStyle(segment.event.brand_accent_hue) }}
+                      title={segment.event.title}
+                    >
+                      {content}
+                    </div>
+                  );
+                })}
+
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none col-span-7 min-h-12"
+                  style={{ gridRow: spacerRow }}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

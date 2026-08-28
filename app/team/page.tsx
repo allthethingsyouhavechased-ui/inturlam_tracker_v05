@@ -2,12 +2,17 @@ import Link from "next/link";
 import ActiveWorkBoard from "@/components/ActiveWorkBoard";
 import AutoRefresh from "@/components/AutoRefresh";
 import Icon from "@/components/ui/Icon";
+import { buttonClass } from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
+import { todayISO } from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
-import { listActiveWorkSelections } from "@/lib/repositories/activeWork";
+import {
+  listActiveWorkSelections,
+  listPersonTaskPreviews,
+  listPersonTaskWorkSummaries,
+} from "@/lib/repositories/activeWork";
 import { listBrands } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
-import { listAllTasks } from "@/lib/repositories/tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +21,8 @@ export default async function TeamPage() {
   const people = listActivePeople();
   const brands = listBrands();
   const selections = listActiveWorkSelections();
-  const tasks = listAllTasks();
+  const taskSummaries = listPersonTaskWorkSummaries(todayISO());
+  const taskPreviews = listPersonTaskPreviews();
   const canManageAccounts = currentPerson.is_manager === 1;
 
   return (
@@ -30,7 +36,7 @@ export default async function TeamPage() {
           canManageAccounts ? (
             <Link
               href="/team/manage"
-              className="ui-press inline-flex min-h-10 items-center gap-2 rounded-[10px] border border-border-default bg-surface px-3 text-sm font-semibold text-secondary hover:bg-surface-hover hover:text-foreground"
+              className={buttonClass({ variant: "secondary" })}
             >
               <Icon name="settings" className="size-4" />
               Hesap yönetimi
@@ -43,7 +49,8 @@ export default async function TeamPage() {
         people={people}
         brands={brands}
         selections={selections}
-        tasks={tasks}
+        taskSummaries={taskSummaries}
+        taskPreviews={taskPreviews}
         currentPersonId={currentPerson.id}
       />
     </div>

@@ -6,7 +6,10 @@ export type TaskRevisionFilter = "" | "none" | "active" | "completed" | "overdue
 export interface TaskMetadataFilterInput {
   due: TaskDueFilter;
   difficulty: TaskDifficulty | "" | "unset";
-  revision: TaskRevisionFilter;
+  /** Revize filtresi 2026-08-27'de arayüzden kaldırıldı; alan isteğe bağlı kaldı
+      çünkü revize VERİSİ (sayaç, hedef süre, rozet) duruyor ve tekrar bir yerde
+      filtrelenmek istenirse kural burada hazır. */
+  revision?: TaskRevisionFilter;
   today: string;
   weekEnd: string;
   dateFrom: string;

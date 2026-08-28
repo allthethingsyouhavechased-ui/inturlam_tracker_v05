@@ -78,9 +78,9 @@ export default function ApplyTemplateForm({
       </button>
 
       {message && <span className="text-xs text-emerald-600">{message}</span>}
-      {error && <span role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</span>}
+      {error && <span role="alert" className="text-xs text-danger">{error}</span>}
       {!hasTargetDate && (
-        <span className="basis-full text-right text-[11px] text-amber-700 dark:text-amber-300">
+        <span className="basis-full text-right text-[11px] text-warning">
           Şablon uygulamak için önce içerik hedef tarihini belirle.
         </span>
       )}

@@ -1,37 +1,76 @@
-import Link from "next/link";
 import ArchiveBrandButton from "@/components/ArchiveBrandButton";
 import BrandLogo from "@/components/BrandLogo";
 import BrandResponsibilitiesDialog from "@/components/BrandResponsibilitiesDialog";
+import BrandsPortfolioTable from "@/components/BrandsPortfolioTable";
 import ClusterManager from "@/components/ClusterManager";
 import DeleteBrandButton from "@/components/DeleteBrandButton";
 import NewBrandForm from "@/components/NewBrandForm";
+import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
+import { todayISO } from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
 import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
-import { listArchivedBrands, listBrandsWithOpenCounts } from "@/lib/repositories/brands";
+import type { BrandPortfolioRow } from "@/lib/brandPortfolio";
+import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
+import { classifySocial } from "@/lib/socialSilence";
 import { listAllPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
-import { groupBrandsByCluster, listClusters } from "@/lib/repositories/clusters";
+import { listArchivedBrands, listBrandsWithOpenCounts } from "@/lib/repositories/brands";
+import { listClusters } from "@/lib/repositories/clusters";
 import { listActivePeople } from "@/lib/repositories/people";
+import { listBrandMonthlyProgress } from "@/lib/repositories/progress";
+import { listBrandSocialRows } from "@/lib/repositories/social";
 
 export const dynamic = "force-dynamic";
 
 export default async function BrandsPage() {
   const me = await requirePageSession();
   const canManageBrands = me.is_manager === 1;
-  const brands = listBrandsWithOpenCounts();
-  const archived = listArchivedBrands();
+  const brands = [...listBrandsWithOpenCounts()].sort((left, right) =>
+    left.name.localeCompare(right.name, "tr", { sensitivity: "base" }),
+  );
+  const archived = [...listArchivedBrands()].sort((left, right) =>
+    left.name.localeCompare(right.name, "tr", { sensitivity: "base" }),
+  );
   const clusters = listClusters();
-  const responsibilityPeople = canManageBrands ? listActivePeople() : [];
-  const assignments = canManageBrands ? listAllPersonBrandAssignments() : [];
-  const groups = groupBrandsByCluster(brands, clusters);
+  const people = listActivePeople();
+  const assignments = listAllPersonBrandAssignments();
+  const month = todayISO().slice(0, 7);
+  const progressByBrand = new Map(listBrandMonthlyProgress(month).map((row) => [row.brand_id, row.progress]));
+  const socialByBrand = new Map(listBrandSocialRows().map((row) => [row.brand_id, row]));
+  const clusterLabel = new Map(clusters.map((cluster) => [cluster.id, cluster.label]));
+  const personName = new Map(people.map((person) => [person.id, person.name]));
+  const today = todayISO();
+
+  const rows: BrandPortfolioRow[] = brands.map((brand) => {
+    const progress = progressByBrand.get(brand.id);
+    const social = socialByBrand.get(brand.id);
+    const handle = normalizeInstagramHandle(brand.instagram_handle);
+    return {
+      id: brand.id,
+      name: brand.name,
+      logoPath: brand.logo_path,
+      accentHue: brand.accent_hue,
+      sortOrder: brand.sort_order,
+      clusterLabel: clusterLabel.get(brand.cluster) ?? brand.cluster,
+      progressPercent: progress?.percent ?? null,
+      weightedEarned: progress?.weighted_earned ?? 0,
+      weightedTotal: progress?.weighted_total ?? 0,
+      openCount: brand.open_count,
+      socialHealth: social ? classifySocial(social, SOCIAL_SILENCE_DAYS, today) : null,
+      socialDetail: social?.days_silent === null || social?.days_silent === undefined ? null : `${social.days_silent} gün`,
+      instagramHandle: handle,
+      instagramUrl: instagramProfileUrl(brand.instagram_handle),
+      responsibleNames: assignments
+        .filter((assignment) => assignment.brand_id === brand.id)
+        .map((assignment) => personName.get(assignment.person_id))
+        .filter((name): name is string => Boolean(name)),
+    };
+  });
 
   const brandCountByCluster = new Map<string, number>();
   for (const brand of [...brands, ...archived]) {
-    brandCountByCluster.set(
-      brand.cluster,
-      (brandCountByCluster.get(brand.cluster) ?? 0) + 1,
-    );
+    brandCountByCluster.set(brand.cluster, (brandCountByCluster.get(brand.cluster) ?? 0) + 1);
   }
 
   return (
@@ -39,30 +78,18 @@ export default async function BrandsPage() {
       <PageHeader
         eyebrow="PORTFÖY"
         title="Markalar"
-        description={`${brands.length} aktif markanın çalışma alanları, açık iş yükleri ve içerik akışları.`}
+        description={`${brands.length} aktif markanın aylık ilerlemesi, açık iş yükü, sosyal sağlığı ve sorumluları.`}
         actions={canManageBrands && (
-          <div className="relative flex w-full max-w-[calc(100vw-2rem)] flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:max-w-none sm:flex-wrap sm:overflow-visible sm:pb-0">
-            <BrandResponsibilitiesDialog brands={brands} people={responsibilityPeople} assignments={assignments} />
-            <ClusterManager
-              clusters={clusters.map((cluster) => ({
-                id: cluster.id,
-                label: cluster.label,
-                brandCount: brandCountByCluster.get(cluster.id) ?? 0,
-              }))}
-            />
+          <div className="relative flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <ClusterManager clusters={clusters.map((cluster) => ({ id: cluster.id, label: cluster.label, brandCount: brandCountByCluster.get(cluster.id) ?? 0 }))} />
+            <BrandResponsibilitiesDialog brands={brands} people={people} assignments={assignments} />
             <details open={brands.length === 0} className="group relative">
-              <summary className="ui-press flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-[10px] bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-500 [&::-webkit-details-marker]:hidden">
-                <Icon name="plus" className="size-4" />
-                Yeni marka
+              <summary className={buttonClass({ className: "list-none [&::-webkit-details-marker]:hidden" })}>
+                <Icon name="plus" className="size-4" /> Yeni marka
                 <Icon name="chevron-down" className="size-3.5 transition-transform group-open:rotate-180" />
               </summary>
-              <div className="ui-enter absolute right-0 top-[calc(100%+0.5rem)] z-30 w-[min(60rem,calc(100vw-2rem))] rounded-xl border border-border-default bg-surface p-4 shadow-[0_18px_44px_rgba(0,0,0,0.14)]">
-                <div className="mb-3">
-                  <p className="text-sm font-semibold text-foreground">Yeni marka oluştur</p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    Temel bilgileri ve logoyu ekleyerek markayı çalışma alanına dahil et.
-                  </p>
-                </div>
+              <div className="ui-enter absolute left-0 top-[calc(100%+0.5rem)] z-30 w-[min(60rem,calc(100vw-2rem))] rounded-xl border border-border-default bg-surface p-4 shadow-lg sm:left-auto sm:right-0">
+                <div className="mb-3"><p className="text-sm font-semibold text-foreground">Yeni marka oluştur</p><p className="mt-0.5 text-xs text-muted">Temel bilgileri ve logoyu ekleyerek markayı çalışma alanına dahil et.</p></div>
                 <NewBrandForm clusters={clusters} />
               </div>
             </details>
@@ -71,135 +98,21 @@ export default async function BrandsPage() {
       />
 
       <div className="space-y-7">
-        {groups.map((group) => {
-          if (group.items.length === 0) return null;
-          return (
-            <section key={group.id} aria-labelledby={`brand-group-${group.id}`}>
-              <h2
-                id={`brand-group-${group.id}`}
-                className="mb-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted"
-              >
-                {group.label.toLocaleUpperCase("tr-TR")}
-              </h2>
+      <BrandsPortfolioTable rows={rows} canManageBrands={canManageBrands} />
 
-              <div className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface">
-                {group.items.map((brand) => {
-                  const instagramHandle = normalizeInstagramHandle(brand.instagram_handle);
-                  const instagramUrl = instagramProfileUrl(brand.instagram_handle);
-                  return (
-                  <div
-                    key={brand.id}
-                    className="group relative flex min-h-[72px] min-w-0 items-center gap-3 bg-surface px-3 py-2.5 transition-colors hover:bg-surface-hover sm:px-4"
-                  >
-                    <Link
-                      href={`/brands/${brand.id}`}
-                      aria-label={`${brand.name} çalışma alanına git`}
-                      className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-500"
-                    ><span className="sr-only">{brand.name} çalışma alanına git</span></Link>
-                    <div className="pointer-events-none relative z-[1] grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 lg:grid-cols-[minmax(15rem,1.15fr)_minmax(8rem,0.55fr)_minmax(10rem,0.75fr)_minmax(12rem,1fr)]">
-                      <span className="flex min-w-0 items-center gap-3">
-                      <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">
-                          {brand.name}
-                        </span>
-                        <span className="mt-0.5 block text-[11px] text-muted">
-                          {brand.tier ? `Tier ${brand.tier}` : "Marka çalışma alanı"}
-                        </span>
-                      </span>
-                      </span>
-
-                      <span className="text-right lg:text-left">
-                        <span className="block text-[9px] font-semibold tracking-[0.08em] text-faint">AKTİF İŞ</span>
-                        <span className={`mt-1 block text-xs font-semibold tabular-nums ${brand.open_count > 0 ? "text-foreground" : "text-muted"}`}>
-                          {brand.open_count > 0 ? `${brand.open_count} açık görev` : "İş yükü yok"}
-                        </span>
-                      </span>
-
-                      <span className="hidden min-w-0 lg:block">
-                        <span className="block text-[9px] font-semibold tracking-[0.08em] text-faint">SOSYAL HESAP</span>
-                        {instagramUrl && instagramHandle ? (
-                          <a
-                            href={instagramUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={`${brand.name} Instagram hesabını aç`}
-                            className="pointer-events-auto relative z-10 mt-0.5 inline-flex min-h-8 max-w-full items-center truncate rounded-md text-xs font-medium text-secondary underline decoration-border-strong underline-offset-4 hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-brand-500 dark:hover:text-brand-300"
-                          >
-                            @{instagramHandle}
-                          </a>
-                        ) : (
-                          <span className="mt-1 block truncate text-xs font-medium text-muted">Kullanıcı adı girilmemiş</span>
-                        )}
-                      </span>
-
-                      <span className="hidden min-w-0 lg:block">
-                        <span className="block text-[9px] font-semibold tracking-[0.08em] text-faint">KISA BİLGİ</span>
-                        <span className="mt-1 block truncate text-xs text-secondary" title={brand.key_finding ?? undefined}>
-                          {brand.key_finding
-                            ? brand.key_finding.split("\n")[0]
-                            : brand.follower_count != null
-                              ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi · ${(brand.post_count ?? 0).toLocaleString("tr-TR")} gönderi`
-                              : "Marka notu henüz eklenmemiş"}
-                        </span>
-                      </span>
-                    </div>
-                    <span className="relative z-10 flex shrink-0 items-center gap-1.5">
-                      {canManageBrands && (
-                        <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                          <ArchiveBrandButton brandId={brand.id} />
-                        </span>
-                      )}
-                      <Link
-                        href={`/brands/${brand.id}`}
-                        aria-label={`${brand.name} çalışma alanına git`}
-                        className="ui-press grid size-9 place-items-center rounded-[9px] text-faint hover:bg-surface-hover hover:text-secondary"
-                      >
-                        <Icon name="chevron-right" className="size-4" />
-                      </Link>
-                    </span>
-                  </div>
-                  );
-                })}
+      {archived.length > 0 && (
+        <section aria-labelledby="archived-brands-title">
+          <h2 id="archived-brands-title" className="mb-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted">ARŞİVLENENLER · {archived.length}</h2>
+          <div className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-dashed border-border-default bg-surface-subtle">
+            {archived.map((brand) => (
+              <div key={brand.id} className="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5">
+                <span className="flex min-w-0 items-center gap-3"><BrandLogo name={brand.name} logoPath={brand.logo_path} accentHue={brand.accent_hue} size="sm" /><span className="brand-name truncate text-sm text-secondary">{brand.name}</span></span>
+                {canManageBrands && <span className="flex items-center gap-2"><ArchiveBrandButton brandId={brand.id} archived /><DeleteBrandButton brandId={brand.id} /></span>}
               </div>
-            </section>
-          );
-        })}
-
-        {brands.length === 0 && (
-          <section className="rounded-xl border border-dashed border-border-default bg-surface-subtle px-5 py-10 text-center">
-            <h2 className="text-sm font-semibold text-foreground">Henüz aktif marka yok</h2>
-            <p className="mt-1 text-xs text-muted">
-              {canManageBrands
-                ? "İlk çalışma alanını oluşturmak için “Yeni marka”yı kullan."
-                : "Yeni bir çalışma alanı oluşturmak için yöneticinle iletişime geç."}
-            </p>
-          </section>
-        )}
-
-        {archived.length > 0 && (
-          <section aria-labelledby="archived-brands-title">
-            <h2 id="archived-brands-title" className="mb-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted">
-              ARŞİVLENENLER · {archived.length}
-            </h2>
-            <div className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-dashed border-border-default bg-surface-subtle">
-              {archived.map((brand) => (
-                <div key={brand.id} className="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5">
-                  <span className="flex min-w-0 items-center gap-3">
-                    <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
-                    <span className="truncate text-sm text-secondary">{brand.name}</span>
-                  </span>
-                  {canManageBrands && (
-                    <span className="flex items-center gap-2">
-                      <ArchiveBrandButton brandId={brand.id} archived />
-                      <DeleteBrandButton brandId={brand.id} />
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+            ))}
+          </div>
+        </section>
+      )}
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { after, beforeEach, describe, it } from "node:test";
 const TMP_DB = path.join(os.tmpdir(), `inturlam-test-v03-progress-repo-${process.pid}.db`);
 process.env.INTURLAM_DB_PATH = TMP_DB;
 const { getDb } = await import("@/lib/db/client");
-const { getBrandMonthlyProgress, getPersonMonthlyProgress, getPortfolioMonthlyProgress, listBrandMonthlyProgress, listMonthlyTaskStatusCounts } = await import("@/lib/repositories/progress");
+const { getBrandMonthlyProgress, getPersonMonthlyProgress, getPersonMonthlyProgressSummary, getPortfolioMonthlyProgress, listBrandMonthlyProgress, listMonthlyTaskStatusCounts } = await import("@/lib/repositories/progress");
 
 function resetDb() { globalThis.__inturlamDb?.close(); globalThis.__inturlamDb = undefined; for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(TMP_DB + suffix, { force: true }); }
 beforeEach(resetDb); after(resetDb);
@@ -28,6 +28,10 @@ describe("v03 ilerleme aylık kapsamı", () => {
     assert.equal(brand.weighted_total, 10);
     assert.equal(brand.percent, 70);
     assert.equal(getPersonMonthlyProgress("p1", "2026-08").percent, 70);
+    assert.deepEqual(
+      getPersonMonthlyProgressSummary("p1", "2026-08"),
+      getPersonMonthlyProgress("p1", "2026-08"),
+    );
     assert.equal(getPortfolioMonthlyProgress("2026-08").percent, 70);
     const portfolio = listBrandMonthlyProgress("2026-08");
     assert.deepEqual(portfolio.map((row) => [row.brand_id, row.progress.percent]), [["b1", 70], ["b2", null]]);

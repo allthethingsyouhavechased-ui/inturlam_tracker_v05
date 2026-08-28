@@ -1,4 +1,5 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
+import { chooseBrandAccentHue } from "@/lib/brandAccent";
 import type { Brand, BrandWithCount, Cluster } from "@/lib/types";
 import { plannedTaskCondition } from "@/lib/taskPlanning";
 
@@ -25,14 +26,19 @@ export function createBrand(input: {
   logoPath?: string | null;
 }): string {
   const id = crypto.randomUUID();
+  const db = getDb();
   const { maxOrder } = plainOne<{ maxOrder: number | null }>(
-    getDb().prepare("SELECT MAX(sort_order) AS maxOrder FROM brands").get(),
+    db.prepare("SELECT MAX(sort_order) AS maxOrder FROM brands").get(),
   )!;
-  getDb()
+  const usedHues = plainList<{ accent_hue: number }>(
+    db.prepare("SELECT accent_hue FROM brands").all(),
+  ).map((row) => row.accent_hue);
+  const accentHue = chooseBrandAccentHue(usedHues);
+  db
     .prepare(
-      "INSERT INTO brands (id, name, cluster, sort_order, instagram_handle, logo_path) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO brands (id, name, cluster, sort_order, accent_hue, instagram_handle, logo_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
-    .run(id, input.name, input.cluster, (maxOrder ?? 0) + 10, input.instagramHandle, input.logoPath ?? null);
+    .run(id, input.name, input.cluster, (maxOrder ?? 0) + 10, accentHue, input.instagramHandle, input.logoPath ?? null);
   return id;
 }
 
@@ -115,6 +121,7 @@ export function listBrandsWithOpenCounts(): BrandWithCount[] {
          FROM brands b
          LEFT JOIN content_items ci ON ci.brand_id = b.id
          LEFT JOIN tasks t ON t.content_item_id = ci.id AND t.status != 'Yayinlandi'
+          AND t.archived_at IS NULL
           AND ${plannedTaskCondition("t")}
          WHERE b.archived = 0
          GROUP BY b.id

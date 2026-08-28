@@ -38,3 +38,29 @@ export function rememberWorkspaceView(
     // Gizli sekme veya kapalı depolama kalıcılığı engelleyebilir; etkileşim sürer.
   }
 }
+
+export const TEAM_WORKSTREAM_PREFERENCE = "inturlam.ui.teamWorkstream";
+
+/**
+ * Ekip ekranındaki departman filtresi. Eskiden her açılışta kullanıcının KENDİ
+ * departmanına sıfırlanıyordu: "Tümü"ye geçen biri sayfadan çıkıp döndüğünde
+ * yine kendi departmanını görüyor ve neden değiştiğini anlamıyordu.
+ *
+ * Cookie DEĞİL localStorage: bu tercihin sunucu render'ına etkisi yok (filtre
+ * tamamen istemcide uygulanıyor), yani cookie her isteğe boşuna binerdi.
+ */
+export function readTeamWorkstream(): string | null {
+  try {
+    return window.localStorage.getItem(TEAM_WORKSTREAM_PREFERENCE);
+  } catch {
+    return null;
+  }
+}
+
+export function rememberTeamWorkstream(value: string): void {
+  try {
+    window.localStorage.setItem(TEAM_WORKSTREAM_PREFERENCE, value);
+  } catch {
+    // Gizli sekmede tercih o oturum boyunca React state'inde kalır.
+  }
+}

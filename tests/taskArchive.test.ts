@@ -18,6 +18,7 @@ const {
   listAllTasks,
   listArchivedTasksByContent,
   listBoardTasksByAssignee,
+  listOpenTasksByBrand,
   listTasksByContent,
   setTaskArchived,
   sweepArchivablePublishedTasks,
@@ -150,6 +151,38 @@ describe("arşiv kuralı (saf yardımcılar)", () => {
 });
 
 describe("yayınlanan görev panoda kalır", () => {
+  it("marka çalışma alanına yalnızca sınırlı sayıdaki açık işi getirir", () => {
+    const db = getDb();
+    seedBase(db);
+    db.prepare("INSERT INTO brands (id, name, cluster) VALUES ('b2', 'Diğer', 'tek')").run();
+    db.prepare(
+      "INSERT INTO content_items (id, brand_id, title, type) VALUES ('c2', 'b2', 'Diğer içerik', 'Post')",
+    ).run();
+
+    for (let index = 0; index < 7; index += 1) {
+      db.prepare(
+        `INSERT INTO tasks (id, content_item_id, title, status, due_date)
+         VALUES (?, 'c1', ?, 'Beklemede', ?)`,
+      ).run(`acik-${index}`, `Açık ${index}`, `2026-09-${String(index + 1).padStart(2, "0")}`);
+    }
+    db.prepare(
+      "INSERT INTO tasks (id, content_item_id, title, status) VALUES ('yayin', 'c1', 'Yayın', 'Yayinlandi')",
+    ).run();
+    db.prepare(
+      "INSERT INTO tasks (id, content_item_id, title, status, archived_at) VALUES ('arsiv', 'c1', 'Arşiv', 'Beklemede', datetime('now'))",
+    ).run();
+    db.prepare(
+      "INSERT INTO tasks (id, content_item_id, title, status, origin) VALUES ('plansiz', 'c1', 'Plansız', 'Beklemede', 'guest')",
+    ).run();
+    db.prepare(
+      "INSERT INTO tasks (id, content_item_id, title, status) VALUES ('diger', 'c2', 'Diğer marka', 'Beklemede')",
+    ).run();
+
+    const tasks = listOpenTasksByBrand("b1", 5);
+    assert.equal(tasks.length, 5);
+    assert.deepEqual(tasks.map((task) => task.id), ["acik-0", "acik-1", "acik-2", "acik-3", "acik-4"]);
+  });
+
   it("yeni yayınlanan iş listelerden DÜŞMEZ, süresi dolan düşer", () => {
     const db = getDb();
     seedBase(db);

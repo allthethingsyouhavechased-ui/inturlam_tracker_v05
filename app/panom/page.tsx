@@ -2,14 +2,16 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import AutoRefresh from "@/components/AutoRefresh";
 import PanomViews from "@/components/PanomViews";
-import PanomInsightPanels from "@/components/PanomInsightPanels";
-import PersonalDeadlineRadar from "@/components/PersonalDeadlineRadar";
+import {
+  PersonalDeadlineRadarPanel,
+  PersonalDeadlineRadarTrigger,
+} from "@/components/PersonalDeadlineRadar";
+import { buttonClass } from "@/components/ui/Button";
+import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import { currentWeekRange, todayISO } from "@/lib/date";
 import { canDeleteTasks } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
-import { listPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
-import { getBrandMonthlyProgress, getPersonMonthlyProgress, listPersonMonthlyContributions } from "@/lib/repositories/progress";
 import { listUnreadTaskIdsForPerson } from "@/lib/repositories/notifications";
 import { listPersonalTaskTargets } from "@/lib/repositories/personalTargets";
 import { listActivePeople } from "@/lib/repositories/people";
@@ -47,7 +49,6 @@ export default async function PanomPage() {
     cookieStore.get(PANOM_VIEW_PREFERENCE.cookie)?.value,
   );
   const today = todayISO();
-  const month = today.slice(0, 7);
   const weekEnd = currentWeekRange().end;
 
   sweepArchivablePublishedTasks();
@@ -64,15 +65,8 @@ export default async function PanomPage() {
     .map((task) => ({
       ...task,
       personal_target_date: targetByTask.get(task.id) ?? null,
-    }));
-  const people = listActivePeople();
-  const assignedBrands = listPersonBrandAssignments(me.id);
-  const assignedBrandProgress = assignedBrands.map((brand) => ({
-    ...brand,
-    progress: getBrandMonthlyProgress(brand.brand_id, month),
   }));
-  const monthlyProgress = getPersonMonthlyProgress(me.id, month);
-  const contributions = listPersonMonthlyContributions(me.id, month);
+  const people = listActivePeople();
 
   const overdueIds = new Set(overdue.map((task) => task.id));
   const thisWeekIds = new Set(thisWeek.map((task) => task.id));
@@ -95,7 +89,7 @@ export default async function PanomPage() {
   }));
 
   return (
-    <div className="relative">
+    <div>
       <AutoRefresh />
       <PageHeader
         eyebrow="KİŞİSEL ÇALIŞMA ALANI"
@@ -105,6 +99,31 @@ export default async function PanomPage() {
             ? `${me.name} için atanmış işler, kişisel hedefler ve yaklaşan riskler.`
             : "Kişisel görev akışını görmek için çalışma kimliğini seç."
         }
+        actions={me ? (
+          <span aria-label="Kişisel pano araçları" className="flex flex-wrap items-center gap-2">
+            <PersonalDeadlineRadarTrigger
+              personId={me.id}
+              tasks={myPlanningTasks}
+              today={today}
+              horizonDays={PERSONAL_DEADLINE_HORIZON_DAYS}
+            />
+            <Link href="/panom/markalar" className={buttonClass({ variant: "secondary" })}>
+              <Icon name="brands" className="size-4" />
+              Marka analizi
+            </Link>
+            <Link href="/panom/katkim" className={buttonClass({ variant: "secondary" })}>
+              <Icon name="reports" className="size-4" />
+              Katkı analizi
+            </Link>
+          </span>
+        ) : undefined}
+      />
+
+      <PersonalDeadlineRadarPanel
+        personId={me.id}
+        tasks={myPlanningTasks}
+        today={today}
+        horizonDays={PERSONAL_DEADLINE_HORIZON_DAYS}
       />
 
       {!me && (
@@ -119,24 +138,6 @@ export default async function PanomPage() {
           >
             Kimliğimi seç
           </Link>
-        </section>
-      )}
-
-      {me && (
-        <section aria-label="Kişisel pano araçları" className="mb-6 flex flex-wrap items-start gap-2">
-        <PersonalDeadlineRadar
-          personId={me.id}
-          tasks={myPlanningTasks}
-          today={today}
-          horizonDays={PERSONAL_DEADLINE_HORIZON_DAYS}
-          dock
-        />
-        <PanomInsightPanels
-          personId={me.id}
-          assignedBrands={assignedBrandProgress}
-          monthlyProgress={monthlyProgress}
-          contributions={contributions}
-        />
         </section>
       )}
 

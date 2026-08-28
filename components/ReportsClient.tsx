@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import CollapsiblePanel from "@/components/reports/CollapsiblePanel";
 import DeliveryQualityPanel from "@/components/reports/DeliveryQualityPanel";
 import {
   MetricCard,
+  ReportSectionHeader,
   comparePeriod,
   formatDays,
   formatRate,
 } from "@/components/reports/ReportPrimitives";
+import { formatPoints } from "@/lib/progress";
 import RangeFilterBar, {
   ExcelDownloadLink,
   PrintButton,
@@ -52,6 +55,7 @@ export type { RangeKey };
 interface BrandBreakdown {
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
   total_tasks: number;
   completed_tasks: number;
   open_tasks: number;
@@ -505,7 +509,7 @@ export default function ReportsClient({
             <div key={row.person_id} className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2.5">
               <div className="flex items-center justify-between gap-2 text-xs">
                 <span className="truncate font-semibold text-foreground">{row.person_name}</span>
-                <span className="shrink-0 tabular-nums text-muted">{row.progress.percent === null ? "Bu ay plan yok" : `%${row.progress.percent}`}</span>
+                <span className="shrink-0 tabular-nums text-muted">{row.progress.percent === null ? "Bu ay plan yok" : `%${row.progress.percent} · ${formatPoints(row.progress.weighted_earned)}/${formatPoints(row.progress.weighted_total)} puan`}</span>
               </div>
               {row.progress.percent !== null && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-brand-600" style={{ width: `${row.progress.percent}%` }} /></div>}
             </div>
@@ -514,32 +518,13 @@ export default function ReportsClient({
       </CollapsiblePanel>
 
       <section id="departman-raporu" className="scroll-mt-24 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Departman görünümü</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Departmanın toplam üretimi ve teslim sağlığı — departman kişinin
-              alanı olduğu için atanmamış görevler hiçbir satıra girmez
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setShowDepartmentTable((visible) => !visible)}
-              aria-expanded={showDepartmentTable}
-              className="ui-press inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-            >
-              {showDepartmentTable ? "Tabloyu gizle" : "Tabloyu göster"}
-            </button>
-            <button
-              type="button"
-              onClick={exportDepartmentsCSV}
-              className="ui-press inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium text-brand-600 hover:bg-brand-500/10 dark:text-brand-400"
-            >
-              CSV
-            </button>
-          </div>
-        </div>
+        <ReportSectionHeader
+          title="Departman görünümü"
+          description="Departmanın toplam üretimi ve teslim sağlığı — departman kişinin alanı olduğu için atanmamış görevler hiçbir satıra girmez"
+          tableVisible={showDepartmentTable}
+          onToggleTable={() => setShowDepartmentTable((visible) => !visible)}
+          onExportCSV={exportDepartmentsCSV}
+        />
         {showDepartmentTable && (
           <div className="report-surface ui-enter overflow-x-auto rounded-2xl border border-black/10 bg-white dark:border-white/10 dark:bg-zinc-900">
             <table className="w-full min-w-[960px] text-sm">
@@ -624,7 +609,7 @@ export default function ReportsClient({
                         <span
                           className={
                             row.overdue_tasks > 0
-                              ? "font-medium text-rose-600 dark:text-rose-400"
+                              ? "font-medium text-danger"
                               : undefined
                           }
                         >
@@ -653,32 +638,13 @@ export default function ReportsClient({
       </section>
 
       <section id="kisi-raporu" className="scroll-mt-24 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Ekip görünümü</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Performans puanı değil, iş yükü ve teslim görünümü — satır
-              sonundaki bağlantı o kişinin detaylı raporunu açar
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setShowPeopleTable((visible) => !visible)}
-              aria-expanded={showPeopleTable}
-              className="ui-press inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-            >
-              {showPeopleTable ? "Tabloyu gizle" : "Tabloyu göster"}
-            </button>
-            <button
-              type="button"
-              onClick={exportPeopleCSV}
-              className="ui-press inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium text-brand-600 hover:bg-brand-500/10 dark:text-brand-400"
-            >
-              CSV
-            </button>
-          </div>
-        </div>
+        <ReportSectionHeader
+          title="Ekip görünümü"
+          description="Performans puanı değil, iş yükü ve teslim görünümü — satır sonundaki bağlantı o kişinin detaylı raporunu açar"
+          tableVisible={showPeopleTable}
+          onToggleTable={() => setShowPeopleTable((visible) => !visible)}
+          onExportCSV={exportPeopleCSV}
+        />
         {showPeopleTable && (
           <div
             className="flex flex-wrap items-center gap-1.5 print:hidden"
@@ -716,7 +682,7 @@ export default function ReportsClient({
         )}
         {showPeopleTable &&
           (visiblePeople.length > 0 ? (
-        <div className="report-surface ui-enter overflow-x-auto rounded-2xl border border-black/10 bg-white dark:border-white/10 dark:bg-zinc-900">
+        <div className="report-surface ui-enter overflow-x-auto rounded-xl border border-border-default bg-surface">
           <table className="w-full min-w-[1020px] text-sm">
             <thead className="bg-zinc-50/90 dark:bg-zinc-950/70">
               <tr className="border-b border-black/10 text-left text-xs uppercase tracking-wider text-zinc-500 dark:border-white/10 dark:text-zinc-400">
@@ -793,7 +759,7 @@ export default function ReportsClient({
                     <span
                       className={
                         person.overdue_tasks > 0
-                          ? "font-medium text-rose-600 dark:text-rose-400"
+                          ? "font-medium text-danger"
                           : undefined
                       }
                     >
@@ -851,15 +817,14 @@ export default function ReportsClient({
       </section>
 
       <section id="marka-raporu" className="scroll-mt-24 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Marka görünümü</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Üretim hacmi, açık işler ve teslim sağlığı
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm text-zinc-600 dark:text-zinc-300">
+        <ReportSectionHeader
+          title="Marka görünümü"
+          description="Üretim hacmi, açık işler ve teslim sağlığı"
+          tableVisible={showBrandTable}
+          onToggleTable={() => setShowBrandTable((visible) => !visible)}
+          onExportCSV={exportBrandsCSV}
+          extra={(
+            <label className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm text-secondary">
               <input
                 type="checkbox"
                 checked={hideArchived}
@@ -867,23 +832,8 @@ export default function ReportsClient({
               />
               Arşivi gizle
             </label>
-            <button
-              type="button"
-              onClick={() => setShowBrandTable((visible) => !visible)}
-              aria-expanded={showBrandTable}
-              className="ui-press inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-            >
-              {showBrandTable ? "Tabloyu gizle" : "Tabloyu göster"}
-            </button>
-            <button
-              type="button"
-              onClick={exportBrandsCSV}
-              className="ui-press inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium text-brand-600 hover:bg-brand-500/10 dark:text-brand-400"
-            >
-              CSV
-            </button>
-          </div>
-        </div>
+          )}
+        />
         {showBrandTable &&
           (visibleBrands.length > 0 ? (
         <div className="report-surface ui-enter overflow-x-auto rounded-2xl border border-black/10 bg-white dark:border-white/10 dark:bg-zinc-900">
@@ -904,13 +854,15 @@ export default function ReportsClient({
               {visibleBrands.map((brand) => (
                 <tr
                   key={brand.brand_id}
-                  className={`border-b border-black/5 transition-colors last:border-0 hover:bg-black/[0.025] dark:border-white/5 dark:hover:bg-white/[0.025] ${
+                  data-brand-accent
+                  style={brandAccentStyle(brand.brand_accent_hue)}
+                  className={`border-b border-border-subtle transition-colors last:border-0 hover:bg-surface-hover ${
                     brand.brand_id === busiestBrand?.brand_id
                       ? "bg-brand-50/45 dark:bg-brand-950/15"
                       : ""
                   }`}
                 >
-                  <td className="px-4 py-3">
+                  <td className="border-l-[3px] border-l-[var(--brand-accent)] px-4 py-3">
                     <details>
                       <summary className="cursor-pointer font-medium">
                         {brand.brand_name}
@@ -958,7 +910,7 @@ export default function ReportsClient({
                     <span
                       className={
                         brand.overdue_tasks > 0
-                          ? "font-medium text-rose-600 dark:text-rose-400"
+                          ? "font-medium text-danger"
                           : undefined
                       }
                     >

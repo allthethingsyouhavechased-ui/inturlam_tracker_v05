@@ -49,7 +49,7 @@ export default function TaskRevisionPanel({
               </p>
               {active.note && <p className="mt-2 max-w-2xl whitespace-pre-wrap text-xs leading-5 text-secondary">{active.note}</p>}
               {isRevisionOverTarget(active.elapsed_minutes, active.target_minutes) && (
-                <p className="mt-2 text-xs font-semibold text-danger dark:text-rose-300">Hedef süre aşıldı.</p>
+                <p className="mt-2 text-xs font-semibold text-danger">Hedef süre aşıldı.</p>
               )}
             </div>
             <form action={completeTaskRevisionAction.bind(null, active.id)}>
@@ -98,7 +98,7 @@ export default function TaskRevisionPanel({
                 <span className="min-w-0 text-muted">
                   {round.note || (round.completed_at ? "Revize tamamlandı" : "Aktif revize")}
                 </span>
-                <span className={`font-medium tabular-nums ${isRevisionOverTarget(round.elapsed_minutes, round.target_minutes) ? "text-danger dark:text-rose-300" : "text-secondary"}`}>
+                <span className={`font-medium tabular-nums ${isRevisionOverTarget(round.elapsed_minutes, round.target_minutes) ? "text-danger" : "text-secondary"}`}>
                   {formatRevisionDuration(round.elapsed_minutes)} / {formatRevisionDuration(round.target_minutes)}
                 </span>
               </li>

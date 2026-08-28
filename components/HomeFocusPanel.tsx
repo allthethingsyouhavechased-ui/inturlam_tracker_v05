@@ -5,10 +5,11 @@ import { TASK_DIFFICULTY_LABEL } from "@/lib/constants";
 import { formatDateShort } from "@/lib/date";
 import { formatRevisionDuration, isRevisionOverTarget } from "@/lib/taskMetadata";
 import type { TaskWithContext } from "@/lib/types";
+import { brandAccentStyle } from "@/lib/brandAccent";
 
 function TaskRow({ task, detail }: { task: TaskWithContext; detail: string }) {
   return (
-    <Link href={`/tasks/${task.id}`} className="group flex min-w-0 items-center gap-3 px-4 py-3 hover:bg-surface-hover sm:px-5">
+    <Link href={`/tasks/${task.id}`} data-brand-accent style={brandAccentStyle(task.brand_accent_hue)} className="brand-stripe group flex min-w-0 items-center gap-3 px-4 py-3 hover:bg-surface-hover sm:px-5">
       <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-border-subtle bg-surface-subtle text-muted group-hover:border-brand-300 group-hover:text-brand-600">
         <Icon name="tasks" className="size-4" />
       </span>
@@ -27,19 +28,15 @@ function FocusColumn({
   count,
   empty,
   children,
-  compact = false,
 }: {
   eyebrow: string;
   title: string;
   count: number;
   empty: string;
   children: React.ReactNode;
-  compact?: boolean;
 }) {
   return (
-    <section className={compact
-      ? "min-w-0 overflow-hidden border-b border-border-subtle last:border-b-0"
-      : "min-w-0 overflow-hidden border-b border-border-subtle last:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0"}>
+    <section className="min-w-0 overflow-hidden border-b border-border-subtle last:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0">
       <div className="flex items-end justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
         <div>
           <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">{eyebrow}</p>
@@ -56,22 +53,20 @@ export default function HomeFocusPanel({
   personalDeadlines,
   revisionTasks,
   reviewTasks,
-  compact = false,
 }: {
   personalDeadlines: TaskWithContext[];
   revisionTasks: TaskWithContext[];
   reviewTasks: TaskWithContext[];
-  compact?: boolean;
 }) {
   return (
-    <section aria-label="Günün çalışma odağı" className={`grid overflow-hidden rounded-xl border border-border-default bg-surface ${compact ? "grid-cols-1" : "xl:grid-cols-3"}`}>
-      <FocusColumn compact={compact} eyebrow="KİŞİSEL ODAK" title="Yakın teslimlerim" count={personalDeadlines.length} empty="Yaklaşan kişisel teslimin yok.">
+    <section aria-label="Günün çalışma odağı" className="grid overflow-hidden rounded-xl border border-border-default bg-surface xl:grid-cols-3">
+      <FocusColumn eyebrow="KİŞİSEL ODAK" title="Yakın teslimlerim" count={personalDeadlines.length} empty="Yaklaşan kişisel teslimin yok.">
         {personalDeadlines.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={task.due_date ? `Teslim ${formatDateShort(task.due_date)}` : "Tarih bekliyor"} />)}
       </FocusColumn>
-      <FocusColumn compact={compact} eyebrow="REVİZE ODAĞIM" title="Aktif revizelerim" count={revisionTasks.length} empty="Sana ait aktif revize turu yok.">
+      <FocusColumn eyebrow="REVİZE ODAĞIM" title="Aktif revizelerim" count={revisionTasks.length} empty="Sana ait aktif revize turu yok.">
         {revisionTasks.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={`R${task.revision_count} · ${formatRevisionDuration(task.active_revision_elapsed_minutes)}${isRevisionOverTarget(task.active_revision_elapsed_minutes, task.active_revision_target_minutes) ? " · süre aşıldı" : ""}`} />)}
       </FocusColumn>
-      <FocusColumn compact={compact} eyebrow="KARAR BEKLİYOR" title="İncelemedeki işlerim" count={reviewTasks.length} empty="Sana ait incelemede bekleyen iş yok.">
+      <FocusColumn eyebrow="KARAR BEKLİYOR" title="İncelemedeki işlerim" count={reviewTasks.length} empty="Sana ait incelemede bekleyen iş yok.">
         {reviewTasks.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={`${task.difficulty ? TASK_DIFFICULTY_LABEL[task.difficulty] : "Zorluk belirsiz"} · ${task.weight_points} puan`} />)}
       </FocusColumn>
     </section>

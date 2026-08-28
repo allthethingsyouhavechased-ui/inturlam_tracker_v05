@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { clearLoginBlockForGuest, clearLoginBlockForPerson } from "@/lib/auth/loginGate";
 import { hashPassword, validatePassword } from "@/lib/auth/password";
 import {
   assertCanDeactivatePerson,
@@ -158,6 +159,10 @@ export async function resetPersonPasswordAction(formData: FormData) {
 
   updatePersonPassword(person.id, hashPassword(password));
   deleteAuthSessionsForPerson(person.id);
+  // Kilidi de kaldır: şifre değiştiği anda "bilinmeyen şifreyi deneme" koruması
+  // anlamını yitiriyor. Bu satır olmadan kişi elinde DOĞRU şifreyle 15 dakika
+  // daha giremiyor ve ekranda "çok fazla hatalı deneme" yazıyordu.
+  clearLoginBlockForPerson(person.id, person.username);
   revalidatePath("/", "layout");
   revalidatePath("/team/manage");
   revalidatePath("/whoami");
@@ -193,6 +198,9 @@ export async function saveGuestAccountAction(formData: FormData) {
   if (password !== confirmPassword) throw new Error("Şifreler eşleşmiyor.");
   const accountId = upsertGuestAccount({ brandId, username, passwordHash: hashPassword(password) });
   deleteAuthSessionsForAccount(accountId);
+  // Ekip tarafındaki ile aynı gerekçe: yeni şifre verildiği anda giriş kilidi
+  // anlamsızlaşıyor, marka 15 dakika kapıda beklemesin.
+  clearLoginBlockForGuest(username);
   revalidatePath("/team/manage");
   revalidatePath("/whoami/guest");
 }

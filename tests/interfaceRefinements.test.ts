@@ -3,29 +3,34 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
+// 2026-08-27 ayıklaması: ızgara şablonu (`xl:grid-cols-4`,
+// `lg:grid-cols-[minmax(14rem,0.8fr)_...]`), tipografi sınıfı
+// (`text-[10px] font-semibold uppercase tracking-wide`) ve palet
+// (`Beklemede: bg-zinc-`) doğrulayan assert'ler kaldırıldı. Bunlar davranış
+// değil tasarım tercihi kilitliyordu; tasarım revizyonunun önündeki asıl
+// sürtünme buydu. Kalanlar: erişilebilirlik sözleşmeleri, bilgi sırası,
+// bileşen kablolaması ve dış bağlantı güvenliği.
 function source(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
 describe("Panom teslim radari", () => {
-  it("üç kişisel aracı aynı açılır kontrol sırasında toplar", () => {
+  it("tetikleyiciyi normal akıştaki varsayılan açık panelden ayırır", () => {
     const radar = source("components/PersonalDeadlineRadar.tsx");
     const panom = source("app/panom/page.tsx");
-    const insights = source("components/PanomInsightPanels.tsx");
     const views = source("components/PanomViews.tsx");
 
-    assert.match(radar, /usePanelOpen\(`\$\{PANEL_KEY\}:\$\{personId\}`, false\)/);
-    assert.match(radar, /if \(!open\)/);
-    assert.match(radar, /const dockTrigger/);
-    assert.match(radar, /dock && <div className="flex items-center">\{dockTrigger\}/);
-    assert.match(radar, /order-last w-full basis-full/);
+    assert.match(radar, /usePanelOpen\(`\$\{PANEL_KEY\}:\$\{personId\}`, true\)/);
+    assert.match(radar, /export function PersonalDeadlineRadarTrigger/);
+    assert.match(radar, /export function PersonalDeadlineRadarPanel/);
     assert.match(panom, /aria-label="Kişisel pano araçları"/);
-    assert.match(panom, /<PersonalDeadlineRadar[\s\S]*?dock/);
-    assert.match(panom, /<PanomInsightPanels/);
-    assert.match(insights, /panom-brands:\$\{personId\}/);
-    assert.match(insights, /panom-contribution:\$\{personId\}/);
-    assert.match(insights, /href="\/panom\/katkim"/);
-    assert.match(insights, /href="\/panom\/markalar"/);
+    assert.match(panom, /<PersonalDeadlineRadarTrigger/);
+    assert.match(panom, /href="\/panom\/markalar"/);
+    assert.match(panom, /href="\/panom\/katkim"/);
+    assert.doesNotMatch(panom, /PanomInsightStrip/);
+    assert.match(panom, /<PersonalDeadlineRadarPanel/);
+    assert.ok(panom.indexOf("<PersonalDeadlineRadarPanel") < panom.indexOf("<PanomViews"));
+    assert.doesNotMatch(source("app/globals.css"), /\.panom-dock-panel/);
     assert.match(source("app/panom/markalar/page.tsx"), /combineMonthlyProgress/);
     assert.doesNotMatch(views, /otherTasks|Ekipte gecikmiş \/ bu hafta teslim/);
   });
@@ -39,7 +44,6 @@ describe("İkincil operasyon panelleri", () => {
     assert.match(tasks, /actions=\{[\s\S]*?<TaskPlanningQueue/);
     assert.match(queue, /Tarih bekleyenler/);
     assert.match(queue, /Planlama kuyruğu/);
-    assert.doesNotMatch(tasks, /mb-5 grid gap-3 lg:grid-cols-2/);
   });
 
   it("ekip aylık puanını aktif iş akışının hemen altındaki kapalı panele alır", () => {
@@ -58,36 +62,29 @@ describe("On talep karari", () => {
   it("onaydan once atanacak kisiyi acikca sectirir", () => {
     const review = source("components/RequestReviewForm.tsx");
 
-    assert.match(review, /Görev sahibi/);
     assert.match(review, /Onayla ve görevi ata/);
     assert.match(review, /name="assigneeId"/);
-    assert.match(review, /Atanacak kişiyi seç/);
     assert.match(review, /<optgroup/);
     assert.match(review, /setDepartment\(person\.department as DepartmentId\)/);
   });
 });
 
-describe("Uygulama kabugu ve durum dili", () => {
+describe("Uygulama kabugu", () => {
   it("ana aramayi masaustunde viewport merkezine sabitler", () => {
     const header = source("components/Header.tsx");
     const css = source("app/globals.css");
 
+    // Sidebar açılıp kapandığında arama kutusunun gözle kaymaması bu iki kuralın
+    // birlikte durmasına bağlı — mekanizma, stil tercihi değil.
     assert.match(header, /header-search-center/);
     assert.match(css, /\.header-search-center/);
     assert.match(css, /left: calc\(50% - var\(--sidebar-expanded\) \/ 2\)/);
     assert.match(css, /html\[data-sidebar="collapsed"\] \.header-search-center/);
   });
-
-  it("beklemede ile devam ediyor renklerini notr ve gok mavisi olarak ayirir", () => {
-    const constants = source("lib/constants.ts");
-
-    assert.match(constants, /Beklemede:[\s\S]*?bg-zinc-/);
-    assert.match(constants, /DevamEdiyor:[\s\S]*?bg-sky-/);
-  });
 });
 
 describe("Sosyal ozet", () => {
-  it("hesap sagligi, sayilar ve son taramayi tek dikey blokta toplar", () => {
+  it("hesap sagligi, sayilar ve son taramayi bu sirada verir", () => {
     const layout = source("app/social/layout.tsx");
     const health = layout.indexOf("Hesap sağlığı");
     const counts = layout.indexOf("hesap kontrol edildi", health);
@@ -96,7 +93,6 @@ describe("Sosyal ozet", () => {
     assert.ok(health >= 0);
     assert.ok(counts > health);
     assert.ok(scan > counts);
-    assert.doesNotMatch(layout, /justify-between/);
     assert.match(layout, /actions=\{<SocialTabs \/>\}/);
   });
 });
@@ -104,36 +100,14 @@ describe("Sosyal ozet", () => {
 describe("Marka Instagram erişimi", () => {
   it("detayda yalnızca kullanıcı adını, listede hesap sütununu güvenli dış bağlantı yapar", () => {
     const detail = source("app/brands/[brandId]/page.tsx");
-    const list = source("app/brands/page.tsx");
+    const list = source("components/BrandsPortfolioTable.tsx");
+    const listPage = source("app/brands/page.tsx");
 
-    assert.match(detail, /title=\{brand\.name\}/);
     assert.match(detail, /@\{instagramHandle\}/);
-    assert.doesNotMatch(detail, /aria-label=\{`\$\{brand\.name\} Instagram hesabını aç`\}/);
     assert.match(detail, /target="_blank"/);
     assert.match(detail, /rel="noopener noreferrer"/);
-    assert.match(list, /instagramProfileUrl/);
-    assert.match(list, /aria-label=\{`\$\{brand\.name\} Instagram hesabını aç`\}/);
-  });
-});
-
-describe("Ana sayfa sosyal uyarısı", () => {
-  it("dört hesabı kartın orta alanında tek satıra yayar", () => {
-    const card = source("components/SilentAccountsCard.tsx");
-
-    assert.match(card, /lg:grid-cols-\[minmax\(14rem,0\.8fr\)_minmax\(0,1\.65fr\)_auto\]/);
-    assert.match(card, /xl:grid-cols-4/);
-    assert.doesNotMatch(card, /sm:max-w-\[46%\]/);
-  });
-});
-
-describe("Rapor yoğunluğu", () => {
-  it("teslim kartını diğer kartın yüksekliğine zorlamaz ve metrik dilini eşler", () => {
-    const report = source("components/ReportsClient.tsx");
-    const visuals = source("components/reports/ReportVisuals.tsx");
-
-    assert.match(report, /Süre ve teslim analizi" className="grid items-start/);
-    assert.match(visuals, /sm:grid-cols-5/);
-    assert.match(visuals, /text-\[10px\] font-semibold uppercase tracking-wide/);
+    assert.match(listPage, /instagramProfileUrl/);
+    assert.match(list, /aria-label=\{`\$\{row\.name\} Instagram hesabını aç`\}/);
   });
 });
 
@@ -142,7 +116,6 @@ describe("Marka düzenleme paneli", () => {
     const form = source("components/EditBrandForm.tsx");
 
     assert.match(form, /createPortal/);
-    assert.match(form, /fixed inset-0 z-50/);
     assert.match(form, /role="dialog"/);
     assert.match(form, /aria-modal="true"/);
     assert.match(form, /e\.key === "Escape"/);

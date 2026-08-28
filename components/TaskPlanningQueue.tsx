@@ -42,8 +42,8 @@ export default function TaskPlanningQueue({
           {guestTasks.length > 0 && (
             <section aria-labelledby="guest-planning-title">
               <div className="flex items-center justify-between bg-amber-50/70 px-4 py-2 dark:bg-amber-950/20">
-                <h3 id="guest-planning-title" className="text-[10px] font-semibold tracking-[0.08em] text-amber-800 dark:text-amber-300">GUEST TALEPLERİ</h3>
-                <span className="text-[10px] font-semibold tabular-nums text-amber-700 dark:text-amber-400">{guestTasks.length}</span>
+                <h3 id="guest-planning-title" className="text-[10px] font-semibold tracking-[0.08em] text-warning">GUEST TALEPLERİ</h3>
+                <span className="text-[10px] font-semibold tabular-nums text-warning">{guestTasks.length}</span>
               </div>
               <div className="divide-y divide-border-subtle">{guestTasks.map((task) => <Link key={task.id} href={`/tasks/${task.id}`} className="group flex min-w-0 items-center justify-between gap-3 px-4 py-2.5 hover:bg-surface-hover"><span className="min-w-0"><span className="block truncate text-xs font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">{task.title}</span><span className="block truncate text-[10px] text-muted">{task.brand_name}</span></span><span className="shrink-0 text-[10px] tabular-nums text-muted">İstenen {formatDateShort(task.requested_date)}</span></Link>)}</div>
             </section>

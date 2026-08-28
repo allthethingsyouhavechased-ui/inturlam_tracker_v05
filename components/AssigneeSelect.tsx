@@ -5,7 +5,7 @@ import { setTaskAssigneeAction } from "@/lib/actions/tasks";
 import type { Person } from "@/lib/types";
 
 const base =
-  "cursor-pointer rounded-md border border-black/10 bg-white px-2 py-1 text-xs outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+  "min-h-11 w-full cursor-pointer rounded-md border border-border-default bg-surface px-2.5 py-1 text-xs text-foreground outline-none transition-[border-color,box-shadow,opacity] hover:border-border-strong focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:w-auto";
 
 export default function AssigneeSelect({
   taskId,
@@ -26,7 +26,7 @@ export default function AssigneeSelect({
         const next = e.target.value || null;
         startTransition(() => setTaskAssigneeAction(taskId, next));
       }}
-      className={`${base} ${pending ? "opacity-50" : ""}`}
+      className={base}
     >
       <option value="">— kimse —</option>
       {people.map((p) => (

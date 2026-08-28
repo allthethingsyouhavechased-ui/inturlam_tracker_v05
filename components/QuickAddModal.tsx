@@ -7,6 +7,7 @@ import { buttonClass } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Input";
 import { createContentItemAction } from "@/lib/actions/content";
 import { createTaskAction } from "@/lib/actions/tasks";
+import { loadQuickAddOptionsAction, type QuickAddOptions } from "@/lib/actions/quickAdd";
 import {
   CONTENT_TYPES,
   CONTENT_TYPE_LABEL,
@@ -16,22 +17,14 @@ import {
   TASK_PRIORITY_LABEL,
 } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
+import { DIFFICULTY_DEFAULT_WEIGHT } from "@/lib/progress";
 import { NEW_CONTENT_VALUE, resolveQuickAddContentId } from "@/lib/quickAdd";
-import type { ContentType, Person } from "@/lib/types";
+import { QUICK_ADD_OPEN_EVENT } from "@/lib/shortcuts";
+import type { ContentType } from "@/lib/types";
 
 const NEW_CONTENT = NEW_CONTENT_VALUE;
 
-interface BrandOption {
-  id: string;
-  name: string;
-}
-
-interface ContentOption {
-  id: string;
-  brand_id: string;
-  title: string;
-  type: ContentType;
-}
+const NO_OPTIONS: QuickAddOptions = { brands: [], contents: [], people: [] };
 
 const inputClass = controlClass();
 
@@ -52,9 +45,7 @@ function useIsClient(): boolean {
 }
 
 export default function QuickAddModal({
-  brands,
-  contents,
-  people,
+  options,
   defaultAssigneeId,
   defaultBrandId,
   canSetWeight = false,
@@ -63,55 +54,110 @@ export default function QuickAddModal({
   // `yeni` parametresinden türetildiği için her yeni istek yeni bir instance).
   defaultDueDate = "",
   initialOpen = false,
+  listenForShortcut = false,
   triggerLabel = "Yeni görev",
   triggerClassName = "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-500",
 }: {
-  brands: BrandOption[];
-  contents: ContentOption[];
-  people: Person[];
+  /**
+   * Açılır listeler. VERİLMEZSE pencere ilk açıldığında kendisi çeker — Header
+   * bu yüzden artık hiçbir liste okumuyor. Yalnızca kapsamı daraltmak gerektiğinde
+   * geç (marka sayfası tek markayı ve o markanın çalışmalarını veriyor).
+   */
+  options?: QuickAddOptions;
   defaultAssigneeId: string | null;
   defaultBrandId?: string;
   canSetWeight?: boolean;
   defaultDueDate?: string;
   initialOpen?: boolean;
+  /** `N` kısayolunu dinlesin mi? Sayfada tek bir pencere dinlemeli — üst çubuktaki. */
+  listenForShortcut?: boolean;
   triggerLabel?: string;
   triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(initialOpen);
+  // Klavyeyle açıldığında giriş animasyonu ATLANIR. Kısayol günde onlarca kez
+  // kullanılıyor; 220ms'lik bir giriş, kısayolun kazandırdığı süreyi geri alır
+  // ve pencereyi tuşa göre "geç" hissettirir (bkz. lib/shortcuts.ts).
+  const [instant, setInstant] = useState(false);
+  const [fetched, setFetched] = useState<QuickAddOptions | null>(null);
+  const requestedOptionsRef = useRef(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const isClient = useIsClient();
   const [pending, startTransition] = useTransition();
   const pendingRef = useRef(pending);
   const [error, setError] = useState<string | null>(null);
+  const loadingOptions = !options && !fetched && error === null;
 
   useEffect(() => {
     pendingRef.current = pending;
   }, [pending]);
 
-  const initialBrandId = brands.some((brand) => brand.id === defaultBrandId)
-    ? (defaultBrandId ?? "")
-    : (brands[0]?.id ?? "");
-  const [brandId, setBrandId] = useState(initialBrandId);
+  const { brands, contents, people } = options ?? fetched ?? NO_OPTIONS;
+  const [brandId, setBrandId] = useState(defaultBrandId ?? "");
+  // Listeler pencere açıldıktan SONRA gelebildiği için seçili marka state'ten
+  // değil, state + gelen listeden TÜRETİLİYOR (aynı desen `effectiveContentId`de
+  // de var). Prop'u state'e kopyalayıp bir efektle senkronlamak fazladan render
+  // turu ve `react-hooks/set-state-in-effect` demek olurdu.
+  const effectiveBrandId = brands.some((brand) => brand.id === brandId)
+    ? brandId
+    : (brands.find((brand) => brand.id === defaultBrandId)?.id ?? brands[0]?.id ?? "");
   const [contentId, setContentId] = useState<string>(NEW_CONTENT);
   const [newContentTitle, setNewContentTitle] = useState("");
   const [taskType, setTaskType] = useState(CONTENT_TYPES[0]);
   const [taskTitle, setTaskTitle] = useState("");
   const [priority, setPriority] = useState(TASK_PRIORITIES[1]);
   const [difficulty, setDifficulty] = useState(TASK_DIFFICULTIES[1]);
-  const [weightPoints, setWeightPoints] = useState("1");
+  const [weightPoints, setWeightPoints] = useState("");
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId ?? "");
   const [dueDate, setDueDate] = useState(defaultDueDate);
 
   const contentsForBrand = useMemo(
-    () => contents.filter((c) => c.brand_id === brandId),
-    [contents, brandId],
+    () => contents.filter((c) => c.brand_id === effectiveBrandId),
+    [contents, effectiveBrandId],
   );
 
   const effectiveContentId = resolveQuickAddContentId(
     contentId,
     contentsForBrand.map((content) => content.id),
   );
+
+  // `N` kısayolu (yalnızca kısayol katmanının bağlı olduğu ekip kabuğunda).
+  useEffect(() => {
+    if (!listenForShortcut) return;
+    function openFromShortcut() {
+      setInstant(true);
+      setOpen(true);
+    }
+    window.addEventListener(QUICK_ADD_OPEN_EVENT, openFromShortcut);
+    return () => window.removeEventListener(QUICK_ADD_OPEN_EVENT, openFromShortcut);
+  }, [listenForShortcut]);
+
+  // Açılır listeleri ilk açılışta bir kez çek. Trigger'ın onClick'i yerine burada
+  // olmasının sebebi `initialOpen`: takvimden gelen "+" kısayolunda hiç tıklama
+  // olmadan açık başlıyor.
+  //
+  // "İstek gönderildi mi" bilgisi STATE DEĞİL REF: efekt gövdesinde senkron
+  // `setState` çağırmak `react-hooks/set-state-in-effect`e takılıyor ve fazladan
+  // render turu üretiyor. Yükleniyor durumu da state değil, `options`/`fetched`ten
+  // TÜRETİLİYOR — yani senkronlanacak ikinci bir doğruluk kaynağı hiç yok.
+  useEffect(() => {
+    if (!open || options || requestedOptionsRef.current) return;
+    requestedOptionsRef.current = true;
+    let cancelled = false;
+    loadQuickAddOptionsAction()
+      .then((next) => {
+        if (!cancelled) setFetched(next);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        requestedOptionsRef.current = false;
+        setError(getActionErrorMessage(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, options]);
 
   // Modal açıkken Escape ile kapat + arka planın scroll'unu kilitle.
   useEffect(() => {
@@ -172,7 +218,7 @@ export default function QuickAddModal({
         let targetContentId = effectiveContentId;
         if (targetContentId === NEW_CONTENT) {
           const fd = new FormData();
-          fd.set("brandId", brandId);
+          fd.set("brandId", effectiveBrandId);
           fd.set("title", newContentTitle.trim() || taskTitle.trim());
           fd.set("type", taskType);
           targetContentId = await createContentItemAction(fd);
@@ -191,6 +237,7 @@ export default function QuickAddModal({
 
         reset();
         setOpen(false);
+        setInstant(false);
       } catch (e) {
         setError(getActionErrorMessage(e));
       }
@@ -220,7 +267,7 @@ export default function QuickAddModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="quickadd-title"
-            className="ui-enter relative w-full max-w-lg rounded-xl border border-border-default bg-surface-elevated p-5 shadow-lg"
+            className={`relative w-full max-w-lg rounded-2xl border border-border-default bg-surface-elevated p-5 shadow-lg ${instant ? "" : "ui-enter"}`}
           >
             <div className="mb-5 flex items-start justify-between gap-4 border-b border-border-subtle pb-4">
               <div>
@@ -242,7 +289,8 @@ export default function QuickAddModal({
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Marka
                 <select
-                  value={brandId}
+                  value={effectiveBrandId}
+                  disabled={loadingOptions}
                   onChange={(e) => {
                     setBrandId(e.target.value);
                     setContentId(NEW_CONTENT);
@@ -250,6 +298,7 @@ export default function QuickAddModal({
                   }}
                   className={inputClass}
                 >
+                  {loadingOptions && <option value="">Yükleniyor…</option>}
                   {brands.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
@@ -356,14 +405,14 @@ export default function QuickAddModal({
                       min={1}
                       max={100}
                       step={1}
-                      required
                       value={weightPoints}
+                      placeholder={String(DIFFICULTY_DEFAULT_WEIGHT[difficulty])}
                       onChange={(event) => setWeightPoints(event.target.value)}
                       className={inputClass}
                       aria-describedby="quickadd-weight-help"
                     />
                     <span id="quickadd-weight-help" className="text-[10px] font-normal leading-4 text-muted">
-                      Aylık ilerleme ağırlığı
+                      Boşsa zorluğa göre {DIFFICULTY_DEFAULT_WEIGHT[difficulty]} puan
                     </span>
                   </label>
                 )}
@@ -394,7 +443,7 @@ export default function QuickAddModal({
                 </label>
               </div>
 
-              {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+              {error && <p role="alert" className="text-xs text-danger">{error}</p>}
 
               <div className="flex justify-end gap-2 border-t border-border-subtle pt-4">
                 <button
@@ -406,7 +455,7 @@ export default function QuickAddModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={pending || brands.length === 0}
+                  disabled={pending || loadingOptions || brands.length === 0}
                   className={buttonClass({ variant: "primary" })}
                 >
                   {pending ? "Oluşturuluyor…" : "Oluştur"}

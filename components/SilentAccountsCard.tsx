@@ -20,7 +20,7 @@ export default function SilentAccountsCard({
     <section aria-labelledby="silent-accounts-title" className="overflow-hidden rounded-xl border border-border-default bg-surface">
       <div className="grid gap-4 border-l-[3px] border-l-danger px-4 py-4 lg:grid-cols-[minmax(14rem,0.8fr)_minmax(0,1.65fr)_auto] lg:items-center">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-rose-50 text-danger dark:bg-rose-950/40 dark:text-rose-300">
+          <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-rose-50 text-danger dark:bg-rose-950/40">
             <Icon name="alert" className="size-[18px]" />
           </span>
           <div className="min-w-0">
@@ -41,7 +41,7 @@ export default function SilentAccountsCard({
                 <Link href={`/brands/${row.brand_id}`} className="flex min-h-10 min-w-0 items-center gap-2 rounded-[10px] border border-border-subtle bg-surface-subtle px-2.5 hover:border-border-strong hover:bg-surface-hover">
                   <BrandLogo name={row.brand_name} logoPath={row.logo_path} size="sm" />
                   <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-secondary">{row.brand_name}</span>
-                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-danger dark:text-rose-300">{row.days_silent}g</span>
+                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-danger">{row.days_silent}g</span>
                 </Link>
               </li>
             ))}

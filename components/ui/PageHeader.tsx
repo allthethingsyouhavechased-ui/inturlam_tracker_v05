@@ -33,7 +33,7 @@ export default function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-7 flex flex-col gap-4 border-b border-border-subtle pb-5 sm:flex-row sm:items-end sm:justify-between", className)}>
+    <div className={cn("mb-5 flex flex-col gap-4 border-b border-border-subtle pb-5 lg:flex-row lg:items-end lg:justify-between", className)}>
       <div className="flex min-w-0 items-start gap-3.5">
         {media && <div className="shrink-0 pt-0.5">{media}</div>}
         <div className="min-w-0">
@@ -53,17 +53,20 @@ export default function PageHeader({
             ))}
           </nav>
         )}
+        {/* Boy/leading/tracking artık elle değil ölçek token'ından geliyor
+            (`--text-eyebrow` / `--text-h1`, globals.css). Tracking boy-özel
+            olduğu için tek bir sabit değer her boyda birden doğru olamıyor. */}
         {eyebrow && (
-          <p className="mb-1.5 text-[11px] font-semibold tracking-[0.08em] text-brand-600 dark:text-brand-300">
+          <p className="mb-1.5 text-eyebrow text-brand-600 dark:text-brand-300">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-[26px] font-semibold leading-8 tracking-[-0.025em] text-foreground">{title}</h1>
+        <h1 className="text-h1 text-balance text-foreground">{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-[13px] leading-5 text-muted">{description}</p>}
         </div>
       </div>
-      {summary && <div className={cn("min-w-0 flex-1 sm:ml-auto", summaryClassName ?? "sm:max-w-3xl")}>{summary}</div>}
-      {actions && <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">{actions}</div>}
+      {summary && <div className={cn("min-w-0 flex-1 lg:ml-auto", summaryClassName ?? "lg:max-w-3xl")}>{summary}</div>}
+      {actions && <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 lg:w-auto lg:shrink-0">{actions}</div>}
     </div>
   );
 }

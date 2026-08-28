@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TaskArchiveExplorer from "@/components/TaskArchiveExplorer";
 import Icon from "@/components/ui/Icon";
+import { buttonClass } from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
 import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
@@ -17,14 +18,14 @@ export default async function TaskArchivePage() {
   const people = listActivePeople();
 
   return (
-    <div className="space-y-5">
+    <div>
       <PageHeader
         eyebrow="GÖREV GEÇMİŞİ"
         title="Görev arşivi"
         description="Panodan çekilen işleri marka, kişi, zorluk, revize geçmişi ve arşiv ayına göre bul. Kayıtlar silinmez; tek tıkla aktif görevlere dönebilir."
         breadcrumb={[{ label: "Görevler", href: "/tasks" }, { label: "Arşiv" }]}
         actions={
-          <Link href="/tasks" className="ui-press inline-flex min-h-10 items-center gap-2 rounded-[10px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover">
+          <Link href="/tasks" className={buttonClass({ variant: "secondary" })}>
             <Icon name="arrow-right" className="size-4 rotate-180" />
             Aktif görevlere dön
           </Link>

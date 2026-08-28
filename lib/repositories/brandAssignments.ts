@@ -4,7 +4,7 @@ import type { BrandPersonAssignment, PersonBrandAssignment } from "@/lib/types";
 export function listPersonBrandAssignments(personId: string): PersonBrandAssignment[] {
   return plainList<PersonBrandAssignment>(
     getDb().prepare(
-      `SELECT a.person_id, a.brand_id, b.name AS brand_name, b.logo_path AS brand_logo_path,
+      `SELECT a.person_id, a.brand_id, b.name AS brand_name, b.logo_path AS brand_logo_path, b.accent_hue AS brand_accent_hue,
               a.created_at
          FROM person_brand_assignments a
          JOIN brands b ON b.id = a.brand_id
@@ -17,7 +17,7 @@ export function listPersonBrandAssignments(personId: string): PersonBrandAssignm
 export function listAllPersonBrandAssignments(): PersonBrandAssignment[] {
   return plainList<PersonBrandAssignment>(
     getDb().prepare(
-      `SELECT a.person_id, a.brand_id, b.name AS brand_name, b.logo_path AS brand_logo_path,
+      `SELECT a.person_id, a.brand_id, b.name AS brand_name, b.logo_path AS brand_logo_path, b.accent_hue AS brand_accent_hue,
               a.created_at
          FROM person_brand_assignments a
          JOIN brands b ON b.id = a.brand_id

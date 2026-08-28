@@ -32,14 +32,17 @@ after(resetDb);
 
 describe("görev oluşturma puanı", () => {
   it("yöneticinin 1-100 arası puanını kabul eder, yetkisiz değişikliği reddeder", () => {
-    assert.equal(resolveTaskCreationWeight("8", true), 8);
-    assert.equal(resolveTaskCreationWeight(null, false), 1);
-    assert.throws(() => resolveTaskCreationWeight("8", false), /yalnızca yöneticiler/i);
-    assert.throws(() => resolveTaskCreationWeight("0", true), /1 ile 100/i);
-    assert.throws(() => resolveTaskCreationWeight("1.5", true), /tam sayı/i);
+    assert.equal(resolveTaskCreationWeight("8", true, "Orta"), 8);
+    assert.equal(resolveTaskCreationWeight(null, false, "Kolay"), 1);
+    assert.equal(resolveTaskCreationWeight(null, false, "Orta"), 2);
+    assert.equal(resolveTaskCreationWeight(null, false, "Zor"), 3);
+    assert.equal(resolveTaskCreationWeight(null, false, "Ozel"), 5);
+    assert.throws(() => resolveTaskCreationWeight("8", false, "Orta"), /yalnızca yöneticiler/i);
+    assert.throws(() => resolveTaskCreationWeight("0", true, "Orta"), /1 ile 100/i);
+    assert.throws(() => resolveTaskCreationWeight("1.5", true, "Orta"), /tam sayı/i);
   });
 
-  it("seçilen ağırlığı yeni görev kaydına yazar ve varsayılanı 1 tutar", () => {
+  it("seçilen ağırlığı yazar, boşsa zorluk varsayılanını kullanır", () => {
     seedBase();
     const weightedId = createTask({
       contentItemId: "c1",
@@ -58,7 +61,7 @@ describe("görev oluşturma puanı", () => {
     });
 
     assert.equal(getTask(weightedId)?.weight_points, 8);
-    assert.equal(getTask(defaultId)?.weight_points, 1);
+    assert.equal(getTask(defaultId)?.weight_points, 2);
     assert.throws(() => createTask({
       contentItemId: "c1",
       title: "Geçersiz",
@@ -80,7 +83,6 @@ describe("görev oluşturma paneli sözleşmesi", () => {
     assert.match(quick, /canSetWeight/);
     assert.match(quick, /name="weightPoints"/);
     assert.match(quick, /fd2\.set\("weightPoints", weightPoints\)/);
-    assert.doesNotMatch(quick, /lg:grid-cols-4/);
     assert.match(header, /canSetWeight=\{person\.is_manager === 1\}/);
     assert.match(contentForm, /name="weightPoints"/);
     assert.match(action, /resolveTaskCreationWeight/);

@@ -54,7 +54,7 @@ export default async function BrandEventReportsPage({
   const monthLabel = formatMonthLabel(monthParamToDate(month));
 
   return (
-    <div className="space-y-5">
+    <div>
       <PageHeader
         eyebrow="MARKA OPERASYONU"
         title="Toplantı ve çekim raporları"
@@ -72,6 +72,7 @@ export default async function BrandEventReportsPage({
         )}
       />
 
+      <div className="space-y-5">
       <section aria-label="Etkinlik raporu özeti" className="grid grid-cols-3 divide-x divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface">
         <div className="px-4 py-3.5 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">TOPLANTI</p><p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{meetingCount}</p></div>
         <div className="px-4 py-3.5 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">ÇEKİM</p><p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{shootCount}</p></div>
@@ -119,7 +120,7 @@ export default async function BrandEventReportsPage({
                     </span>
                     <span className="mt-1 block truncate text-xs text-muted">{startLabel}{event.location ? ` · ${event.location}` : ""}</span>
                   </span>
-                  <span className={hasReport ? "shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300" : "shrink-0 rounded-full border border-border-default px-2 py-1 text-[10px] font-semibold text-muted"}>
+                  <span className={hasReport ? "shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-success" : "shrink-0 rounded-full border border-border-default px-2 py-1 text-[10px] font-semibold text-muted"}>
                     {hasReport ? "Raporlandı" : "Rapor bekliyor"}
                   </span>
                   <Icon name="chevron-down" className="size-4 text-muted transition-transform group-open:rotate-180" />
@@ -162,6 +163,7 @@ export default async function BrandEventReportsPage({
           })}
         </section>
       )}
+      </div>
     </div>
   );
 }

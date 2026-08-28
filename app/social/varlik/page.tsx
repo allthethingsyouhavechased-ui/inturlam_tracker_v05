@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 // üretilmemiş" ile "biraz üretilmiş ama yetmiyor" görsel olarak ayrılsın.
 function progressTone(ready: number, target: number): string {
   if (target <= 0) return "text-zinc-400 dark:text-zinc-500";
-  if (ready >= target) return "text-emerald-600 dark:text-emerald-400";
+  if (ready >= target) return "text-success";
   if (ready === 0) return "text-zinc-500 dark:text-zinc-400";
   return "text-amber-600 dark:text-amber-400";
 }
@@ -26,7 +26,9 @@ export default async function SocialVarlikPage() {
   const month = todayISO().slice(0, 7);
   const monthLabel = new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric", timeZone: "Europe/Istanbul" })
     .format(new Date(`${month}-01T12:00:00+03:00`));
-  const rows = listBrandVarlikRows(month);
+  const rows = [...listBrandVarlikRows(month)].sort((left, right) =>
+    left.brand_name.localeCompare(right.brand_name, "tr", { sensitivity: "base" }),
+  );
 
   const totals: Record<ContentKind, { ready: number; target: number }> = {
     Post: { ready: 0, target: 0 },

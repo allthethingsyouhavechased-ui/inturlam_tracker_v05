@@ -7,8 +7,12 @@ import {
   todayISO,
 } from "@/lib/date";
 
-function hrefForMonth(basePath: string, month: string): string {
-  const query = new URLSearchParams({ month });
+export function hrefForMonth(basePath: string, month: string, preservedQuery = ""): string {
+  const query = new URLSearchParams(preservedQuery);
+  query.set("month", month);
+  query.delete("day");
+  query.delete("event");
+  query.delete("yeni");
   return `${basePath}?${query}`;
 }
 
@@ -16,10 +20,12 @@ export default function MonthNavigator({
   month,
   basePath,
   ariaLabel = "Analiz ayı",
+  preservedQuery = "",
 }: {
   month: string;
   basePath: string;
   ariaLabel?: string;
+  preservedQuery?: string;
 }) {
   const currentMonth = todayISO().slice(0, 7);
 
@@ -27,17 +33,17 @@ export default function MonthNavigator({
     <nav aria-label={ariaLabel} className="flex min-w-0 items-center gap-2">
       {month !== currentMonth && (
         <Link
-          href={hrefForMonth(basePath, currentMonth)}
-          className="ui-press inline-flex min-h-9 items-center rounded-lg border border-border-default bg-surface px-2.5 text-[11px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground"
+          href={hrefForMonth(basePath, currentMonth, preservedQuery)}
+          className="ui-press inline-flex min-h-11 items-center rounded-md border border-border-default bg-surface px-2.5 text-[11px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground md:min-h-10"
         >
           Bu ay
         </Link>
       )}
-      <div className="flex min-w-0 items-center rounded-[10px] border border-border-default bg-surface p-0.5">
+      <div className="flex min-w-0 items-center rounded-md border border-border-default bg-surface p-0.5">
         <Link
-          href={hrefForMonth(basePath, shiftMonthParam(month, -1))}
+          href={hrefForMonth(basePath, shiftMonthParam(month, -1), preservedQuery)}
           aria-label="Önceki ay"
-          className="ui-press grid size-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-hover hover:text-foreground"
+          className="ui-press grid size-11 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground md:size-9"
         >
           <Icon name="chevron-left" className="size-4" />
         </Link>
@@ -45,9 +51,9 @@ export default function MonthNavigator({
           {formatMonthLabel(monthParamToDate(month))}
         </span>
         <Link
-          href={hrefForMonth(basePath, shiftMonthParam(month, 1))}
+          href={hrefForMonth(basePath, shiftMonthParam(month, 1), preservedQuery)}
           aria-label="Sonraki ay"
-          className="ui-press grid size-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-hover hover:text-foreground"
+          className="ui-press grid size-11 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground md:size-9"
         >
           <Icon name="chevron-right" className="size-4" />
         </Link>

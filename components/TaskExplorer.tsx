@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
+import SavedTaskViews from "@/components/SavedTaskViews";
 import TaskBoard, { type SortKey } from "@/components/TaskBoard";
-import TaskListView from "@/components/TaskListView";
+import TaskListView, {
+  DEFAULT_TASK_LIST_COLUMNS,
+  TaskListColumnsControl,
+  type ListColumn,
+} from "@/components/TaskListView";
+import WorkspaceViewToggle from "@/components/WorkspaceViewToggle";
 import Button from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
 import { controlClass } from "@/components/ui/Input";
@@ -12,7 +18,6 @@ import {
   TASK_PRIORITIES,
   TASK_DIFFICULTIES,
   TASK_DIFFICULTY_LABEL,
-  TASK_PRIORITY_DOT,
   TASK_PRIORITY_LABEL,
   TASK_STATUS_LABEL,
   TASK_STATUSES,
@@ -28,13 +33,16 @@ import type { Person, TaskDifficulty, TaskPriority, TaskStatus, TaskWithContext 
 import {
   matchesTaskMetadataFilters,
   type TaskDueFilter,
-  type TaskRevisionFilter,
 } from "@/lib/taskMetadata";
 import {
   matchesTaskFocus,
   TASK_FOCUS_LABEL,
   type TaskFocus,
 } from "@/lib/taskFocus";
+import {
+  taskFilterSearch,
+  type TaskFilterState,
+} from "@/lib/taskFilterParams";
 import {
   TASKS_VIEW_PREFERENCE,
   rememberWorkspaceView,
@@ -79,9 +87,7 @@ export default function TaskExplorer({
   tasks,
   brands,
   people,
-  initialAssigneeId = "",
-  initialDepartment = "",
-  initialFocus = "",
+  initialFilters,
   focusToday,
   focusWeekEnd,
   initialView = "pano",
@@ -91,29 +97,80 @@ export default function TaskExplorer({
   tasks: TaskWithContext[];
   brands: { id: string; name: string }[];
   people: Person[];
-  initialAssigneeId?: string;
-  initialDepartment?: string;
-  initialFocus?: TaskFocus | "";
+  /** Sunucuda doğrulanmış URL filtreleri (bkz. `lib/taskFilterParams.ts`). */
+  initialFilters: TaskFilterState;
   focusToday: string;
   focusWeekEnd: string;
   initialView?: WorkspaceView;
   canDeleteTasks: boolean;
   archivedCount?: number;
 }) {
-  const [brandId, setBrandId] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priority, setPriority] = useState("");
-  const [difficulty, setDifficulty] = useState<TaskDifficulty | "" | "unset">("");
-  const [due, setDue] = useState<TaskDueFilter>("");
-  const [revision, setRevision] = useState<TaskRevisionFilter>("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [department, setDepartment] = useState(initialDepartment);
-  const [assigneeId, setAssigneeId] = useState(initialAssigneeId);
-  const [focus, setFocus] = useState<TaskFocus | "">(initialFocus);
-  const [q, setQ] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("varsayilan");
+  const [brandId, setBrandId] = useState(initialFilters.brand);
+  const [statusFilter, setStatusFilter] = useState<string>(initialFilters.status);
+  const [priority, setPriority] = useState<string>(initialFilters.priority);
+  const [difficulty, setDifficulty] = useState<TaskDifficulty | "" | "unset">(initialFilters.difficulty);
+  const [due, setDue] = useState<TaskDueFilter>(initialFilters.due);
+  const [dateFrom, setDateFrom] = useState(initialFilters.from);
+  const [dateTo, setDateTo] = useState(initialFilters.to);
+  const [department, setDepartment] = useState(initialFilters.department);
+  const [assigneeId, setAssigneeId] = useState(initialFilters.assignee);
+  const [focus, setFocus] = useState<TaskFocus | "">(initialFilters.focus);
+  const [q, setQ] = useState(initialFilters.q);
+  const [sortKey, setSortKey] = useState<SortKey>(initialFilters.sort);
   const [view, setView] = useState<WorkspaceView>(initialView);
+  const [taskListColumns, setTaskListColumns] = useState<ReadonlySet<ListColumn>>(
+    () => new Set(DEFAULT_TASK_LIST_COLUMNS),
+  );
+
+  // Filtreler istemci state'inde kalmaya devam ediyor (her tıklamada sunucu
+  // render'ı tetiklemek listeyi yavaşlatırdı) ama artık adres çubuğuna da
+  // YAZILIYOR: bir filtre kombinasyonu paylaşılabiliyor ve sayfa yenilenince
+  // kayboluyor değil geri geliyor.
+  //
+  // `router.replace` DEĞİL ham `history.replaceState`: Next router'ı sunucu
+  // render'ı tetikler, bu da tam olarak kaçınmak istediğimiz şey. `pushState` de
+  // değil — her tuş vuruşu geçmişe kayıt eklerdi, geri tuşu kullanılamaz olurdu.
+  const currentFilters: TaskFilterState = useMemo(
+    () => ({
+      brand: brandId,
+      status: statusFilter as TaskFilterState["status"],
+      priority: priority as TaskFilterState["priority"],
+      difficulty,
+      due,
+      from: dateFrom,
+      to: dateTo,
+      department,
+      assignee: assigneeId,
+      focus,
+      q,
+      sort: sortKey,
+    }),
+    [brandId, statusFilter, priority, difficulty, due, dateFrom, dateTo, department, assigneeId, focus, q, sortKey],
+  );
+
+  // Kayıtlı bir görünüm uygulanınca TÜM filtreler tek seferde değişir.
+  function applyFilters(next: TaskFilterState) {
+    setBrandId(next.brand);
+    setStatusFilter(next.status);
+    setPriority(next.priority);
+    setDifficulty(next.difficulty);
+    setDue(next.due);
+    setDateFrom(next.from);
+    setDateTo(next.to);
+    setDepartment(next.department);
+    setAssigneeId(next.assignee);
+    setFocus(next.focus);
+    setQ(next.q);
+    setSortKey(next.sort);
+  }
+
+  useEffect(() => {
+    const search = taskFilterSearch(currentFilters);
+    const next = `${window.location.pathname}${search}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  }, [currentFilters]);
 
   function changeView(next: WorkspaceView) {
     setView(next);
@@ -148,7 +205,6 @@ export default function TaskExplorer({
       if (!matchesTaskMetadataFilters(task, {
         due,
         difficulty,
-        revision,
         today: focusToday,
         weekEnd: focusWeekEnd,
         dateFrom,
@@ -171,7 +227,7 @@ export default function TaskExplorer({
       }
       return true;
     });
-  }, [tasks, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, difficulty, due, revision, dateFrom, dateTo, assigneeId, q]);
+  }, [tasks, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, difficulty, due, dateFrom, dateTo, assigneeId, q]);
 
   const departmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -194,11 +250,9 @@ export default function TaskExplorer({
   }, [withoutDepartment, department, departmentByPerson]);
 
   const hasFilter = Boolean(
-    brandId || statusFilter || priority || difficulty || due || revision || dateFrom || dateTo || department || assigneeId || focus || q,
+    brandId || statusFilter || priority || difficulty || due || dateFrom || dateTo || department || assigneeId || focus || q,
   );
-  // Rozet, "Filtreler" panelinin içindekileri sayar; departman panelde değil,
-  // her zaman görünen sekme satırında seçiliyor.
-  const filterCount = [brandId, statusFilter, priority, difficulty, due, revision, dateFrom || dateTo, assigneeId].filter(Boolean).length;
+  const filterCount = [brandId, statusFilter, priority, difficulty, due, dateFrom || dateTo, department, assigneeId].filter(Boolean).length;
   const selectedBrand = brands.find((brand) => brand.id === brandId);
   const selectedPerson = people.find((person) => person.id === assigneeId);
 
@@ -223,7 +277,6 @@ export default function TaskExplorer({
     setPriority("");
     setDifficulty("");
     setDue("");
-    setRevision("");
     setDateFrom("");
     setDateTo("");
     setDepartment("");
@@ -237,10 +290,10 @@ export default function TaskExplorer({
     <div className="min-w-0 space-y-4">
       <section
         aria-label="Görev araçları"
-        className="min-w-0 overflow-hidden rounded-xl border border-border-default bg-surface p-3"
+        className="min-w-0 rounded-xl border border-border-default bg-surface p-3"
       >
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full min-w-0 basis-full sm:min-w-64 sm:basis-auto sm:flex-1">
+          <div className="relative w-full min-w-0 basis-full sm:min-w-56 sm:basis-auto sm:flex-1">
             <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
             <input
               value={q}
@@ -260,74 +313,34 @@ export default function TaskExplorer({
               </button>
             )}
           </div>
+          <label className="w-full min-w-0 flex-none sm:min-w-40 sm:flex-1 sm:max-w-52">
+            <span className="sr-only">Departmana göre filtrele</span>
+            <select
+              value={department}
+              onChange={(event) => changeDepartment(event.target.value)}
+              className={selectClass}
+              aria-label="Departmana göre filtrele"
+            >
+              <option value="">Tüm ekipler · {withoutDepartment.length}</option>
+              {DEPARTMENTS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label} · {departmentCounts.get(option.id) ?? 0}
+                </option>
+              ))}
+              {(departmentCounts.get(NO_DEPARTMENT) ?? 0) > 0 || department === NO_DEPARTMENT ? (
+                <option value={NO_DEPARTMENT}>
+                  {NO_DEPARTMENT_LABEL} · {departmentCounts.get(NO_DEPARTMENT) ?? 0}
+                </option>
+              ) : null}
+            </select>
+          </label>
 
-        </div>
-
-        <div
-          className="mt-3 flex flex-col gap-3 border-t border-border-subtle pt-3 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <div
-            className="flex min-w-0 flex-wrap items-center gap-1.5"
-            role="group"
-            aria-label="Departmana göre filtrele"
-          >
-            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-muted">
-              Ekip
-            </span>
-            {[
-            { id: "", label: "Tümü", count: withoutDepartment.length },
-            ...DEPARTMENTS.map((option) => ({
-              id: option.id as string,
-              label: option.label,
-              count: departmentCounts.get(option.id) ?? 0,
-            })),
-            {
-              id: NO_DEPARTMENT,
-              label: NO_DEPARTMENT_LABEL,
-              count: departmentCounts.get(NO_DEPARTMENT) ?? 0,
-            },
-          ]
-            // Sabit dört departman (Video/Tasarım/Sosyal Medya/Yönetim) HER ZAMAN
-            // görünür — o an açık görevi olmayan bir ekip "filtrede hiç yok" gibi
-            // görünmesin diye (ekibin sıfır açık işi olduğunu görmek de bir
-            // bilgi). Yalnızca "Diğer" kovası (departmanı olmayan biri) gerçek
-            // bir ekip değil; ancak dolu olduğunda ya da seçiliyken gösterilir.
-            .filter(
-              (option) =>
-                option.id !== NO_DEPARTMENT || option.count > 0 || option.id === department,
-            )
-            .map((option) => (
-              <button
-                key={option.id || "all"}
-                type="button"
-                onClick={() => changeDepartment(option.id)}
-                aria-pressed={department === option.id}
-                className={`ui-press inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium ${
-                  department === option.id
-                    ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-border-default bg-surface text-muted hover:bg-surface-hover"
-                }`}
-              >
-                {option.label}
-                <span
-                  className={`tabular-nums ${
-                    department === option.id
-                      ? "text-white/75"
-                      : "text-muted"
-                  }`}
-                >
-                  {option.count}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+          <div className="flex w-full min-w-0 flex-none flex-wrap items-center gap-2 sm:flex-1 sm:flex-nowrap">
             <button
               type="button"
               onClick={() => setFiltersOpen((open) => !open)}
               aria-expanded={filtersOpen}
-              className={`ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium ${
+              className={`ui-press inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md border px-2 text-[13px] font-semibold sm:flex-none sm:px-3 md:min-h-10 ${
                 filtersOpen || filterCount > 0
                   ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
                   : "border-border-default bg-surface text-muted hover:bg-surface-hover"
@@ -347,7 +360,7 @@ export default function TaskExplorer({
             {archivedCount > 0 && (
               <Link
                 href="/tasks/archive"
-                className="ui-press inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-default bg-surface px-3 text-sm font-medium text-muted hover:bg-surface-hover"
+                className="ui-press inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md border border-border-default bg-surface px-2 text-[13px] font-semibold text-muted hover:bg-surface-hover sm:flex-none sm:px-3 md:min-h-10"
               >
                 <Icon name="archive" className="size-4" />
                 Arşiv
@@ -355,28 +368,24 @@ export default function TaskExplorer({
               </Link>
             )}
 
-            <div className="inline-flex overflow-hidden rounded-[10px] border border-border-default bg-surface-subtle p-0.5 text-xs">
-              {(["pano", "liste"] as const).map((nextView) => (
-                <button
-                  key={nextView}
-                  type="button"
-                  onClick={() => changeView(nextView)}
-                  aria-pressed={view === nextView}
-                  className={`ui-press min-h-10 rounded-lg px-3 font-medium ${
-                    view === nextView
-                      ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                      : "text-muted hover:bg-surface-hover hover:text-secondary"
-                  }`}
-                >
-                  {nextView === "pano" ? "Pano" : "Liste"}
-                </button>
-              ))}
+            <div className="ml-auto flex items-center gap-2">
+              <WorkspaceViewToggle view={view} onChange={changeView} />
+              {view === "liste" && (
+                <span className="hidden md:block">
+                  <TaskListColumnsControl
+                    visibleColumns={taskListColumns}
+                    onChange={setTaskListColumns}
+                  />
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {filtersOpen && (
-          <div className="ui-enter mt-3 grid gap-2 border-t border-border-subtle pt-3 md:grid-cols-2 xl:grid-cols-4">
+        {(filtersOpen || hasFilter) && (
+        <div className="mt-3 space-y-3 border-t border-border-subtle pt-3">
+          {filtersOpen && (
+          <div className="ui-enter grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
               Marka
               <select
@@ -411,17 +420,6 @@ export default function TaskExplorer({
                 <option value="today">Bugün</option>
                 <option value="week">Bu hafta</option>
                 <option value="undated">Tarih bekleyen</option>
-              </select>
-            </label>
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
-              Revize
-              <select value={revision} onChange={(event) => setRevision(event.target.value as TaskRevisionFilter)} className={selectClass}>
-                <option value="">Tüm revizeler</option>
-                <option value="none">Revizesiz</option>
-                <option value="active">Aktif revizede</option>
-                <option value="completed">Revizesi tamamlanmış</option>
-                <option value="overdue">Hedef süreyi aşmış</option>
-                <option value="three-plus">3+ tur</option>
               </select>
             </label>
             <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
@@ -488,10 +486,10 @@ export default function TaskExplorer({
               </select>
             </label>
           </div>
-        )}
+          )}
 
-        {hasFilter && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3">
+          {hasFilter && (
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-muted">
               Aktif:
             </span>
@@ -532,7 +530,6 @@ export default function TaskExplorer({
             )}
             {difficulty && <FilterChip label={difficulty === "unset" ? "Zorluk: Belirlenmemiş" : `Zorluk: ${TASK_DIFFICULTY_LABEL[difficulty]}`} onRemove={() => setDifficulty("")} />}
             {due && <FilterChip label={{ overdue: "Gecikmiş", today: "Bugün", week: "Bu hafta", undated: "Tarih bekleyen" }[due]} onRemove={() => setDue("")} />}
-            {revision && <FilterChip label={{ none: "Revizesiz", active: "Aktif revize", completed: "Tamamlanmış revize", overdue: "Revize süresi aşılmış", "three-plus": "3+ revize" }[revision]} onRemove={() => setRevision("")} />}
             {(dateFrom || dateTo) && <FilterChip label={`Teslim: ${dateFrom || "…"} – ${dateTo || "…"}`} onRemove={() => { setDateFrom(""); setDateTo(""); }} />}
             {focus && (
               <FilterChip
@@ -544,16 +541,21 @@ export default function TaskExplorer({
             <button
               type="button"
               onClick={clearFilters}
-              className="ui-press ml-auto min-h-8 rounded-lg px-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+              className="ui-press ml-auto min-h-8 rounded-lg px-2.5 text-xs font-semibold text-danger hover:bg-rose-50 dark:hover:bg-rose-500/10"
             >
               Tümünü temizle
             </button>
           </div>
+          )}
+
+          {filtersOpen && (
+            <SavedTaskViews current={currentFilters} onApply={applyFilters} />
+          )}
+        </div>
         )}
       </section>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted">
+      <p className="text-xs text-muted">
           <span className="font-semibold text-zinc-700 dark:text-zinc-200">
             {filtered.length}
           </span>{" "}
@@ -562,24 +564,7 @@ export default function TaskExplorer({
             <span> · {SORT_LABEL[sortKey]} sıralaması</span>
           )}
           {view === "liste" && <span> · sütun başlıklarından sıralanabilir</span>}
-        </p>
-
-        <div
-            className="hidden flex-wrap items-center gap-2 text-[11px] text-muted sm:flex"
-          aria-label="Kart öncelik göstergeleri"
-        >
-          <span className="font-medium">Sol çizgi = öncelik:</span>
-          {TASK_PRIORITIES.map((taskPriority) => (
-            <span key={taskPriority} className="inline-flex items-center gap-1">
-              <span
-                className={`h-3 w-0.5 rounded-full ${TASK_PRIORITY_DOT[taskPriority]}`}
-                aria-hidden="true"
-              />
-              {TASK_PRIORITY_LABEL[taskPriority]}
-            </span>
-          ))}
-        </div>
-      </div>
+      </p>
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -600,9 +585,22 @@ export default function TaskExplorer({
           }
         />
       ) : view === "pano" ? (
-        <TaskBoard tasks={filtered} sortKey={sortKey} boardId="gorevler" />
+        <TaskBoard
+          tasks={filtered}
+          people={people}
+          canDeleteTasks={canDeleteTasks}
+          sortKey={sortKey}
+          boardId="gorevler"
+        />
       ) : (
-        <TaskListView tasks={filtered} people={people} canDeleteTasks={canDeleteTasks} />
+        <TaskListView
+          tasks={filtered}
+          people={people}
+          canDeleteTasks={canDeleteTasks}
+          visibleColumns={taskListColumns}
+          onVisibleColumnsChange={setTaskListColumns}
+          showColumnsControl={false}
+        />
       )}
     </div>
   );

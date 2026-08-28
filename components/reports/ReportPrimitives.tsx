@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import EmptyState from "@/components/EmptyState";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import CollapsiblePanel from "@/components/reports/CollapsiblePanel";
 import {
   REPORT_SURFACE_CLASS,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/constants";
 import type { PriorityReportRow, WorkflowReportRow } from "@/lib/repositories/reports";
 import type { TaskWithContext } from "@/lib/types";
+export { comparePeriod } from "@/lib/periodComparison";
 
 export function formatRate(value: number | null): string {
   return value == null ? "—" : `%${Math.round(value)}`;
@@ -24,13 +26,6 @@ export function formatRate(value: number | null): string {
 
 export function formatDays(value: number | null): string {
   return value == null ? "—" : `${value.toLocaleString("tr-TR")} gün`;
-}
-
-export function comparePeriod(current: number, previous: number | null | undefined): string {
-  if (previous == null) return "Tüm kayıtlar";
-  const difference = current - previous;
-  if (difference === 0) return "Önceki dönemle aynı";
-  return `Önceki döneme göre ${difference > 0 ? "+" : ""}${difference}`;
 }
 
 // Sayının yanında her zaman bir cümle: rapor "anlaşılır" olsun diye rakamın
@@ -258,7 +253,7 @@ export function PriorityBreakdownPanel({ priorities }: { priorities: PriorityRep
                 <span className="tabular-nums text-zinc-500 dark:text-zinc-400">
                   {row.open_tasks}
                   {row.overdue_tasks > 0 && (
-                    <span className="ml-1 text-rose-600 dark:text-rose-400">
+                    <span className="ml-1 text-danger">
                       · {row.overdue_tasks} geciken
                     </span>
                   )}
@@ -281,6 +276,7 @@ export function PriorityBreakdownPanel({ priorities }: { priorities: PriorityRep
 export interface ScopeBrandRow {
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
   completed_tasks: number;
   open_tasks: number;
 }
@@ -307,7 +303,12 @@ export function BrandBreakdownPanel({
           {brands.map((brand) => {
             const total = brand.open_tasks + brand.completed_tasks;
             return (
-              <div key={brand.brand_id}>
+              <div
+                key={brand.brand_id}
+                data-brand-accent
+                style={brandAccentStyle(brand.brand_accent_hue)}
+                className="brand-stripe rounded-r-lg px-2 py-1"
+              >
                 <div className="mb-1 flex items-center justify-between gap-3 text-xs">
                   <Link
                     href={`/brands/${brand.brand_id}`}
@@ -351,4 +352,54 @@ export function daysBetween(fromISO: string, toISO: string): number {
   const from = new Date(`${fromISO}T12:00:00`).getTime();
   const to = new Date(`${toISO}T12:00:00`).getTime();
   return Math.round((to - from) / 86_400_000);
+}
+
+/**
+ * Üç rapor bölümünün (departman / kişi / marka) ortak başlığı: başlık + açıklama
+ * solda, tabloyu aç-kapa ve CSV sağda. Üçü bir dönem bu ~30 satırı birebir
+ * kopyalıyordu; buton yüksekliği ya da hover tonu birinde değişince diğer ikisi
+ * sessizce ayrışıyordu.
+ */
+export function ReportSectionHeader({
+  title,
+  description,
+  tableVisible,
+  onToggleTable,
+  onExportCSV,
+  extra,
+}: {
+  title: string;
+  description: string;
+  tableVisible: boolean;
+  onToggleTable: () => void;
+  onExportCSV: () => void;
+  /** Bölüme özel ek kontrol (ör. marka görünümündeki "Arşivi gizle"). */
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 className="text-h2">{title}</h2>
+        <p className="text-sm text-muted">{description}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        {extra}
+        <button
+          type="button"
+          onClick={onToggleTable}
+          aria-expanded={tableVisible}
+          className="ui-press inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-secondary hover:bg-surface-hover hover:text-foreground"
+        >
+          {tableVisible ? "Tabloyu gizle" : "Tabloyu göster"}
+        </button>
+        <button
+          type="button"
+          onClick={onExportCSV}
+          className="ui-press inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium text-brand-600 hover:bg-brand-500/10 dark:text-brand-400"
+        >
+          CSV
+        </button>
+      </div>
+    </div>
+  );
 }

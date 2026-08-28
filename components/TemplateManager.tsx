@@ -239,7 +239,7 @@ export default function TemplateManager({
 
   return (
     <div className="space-y-3">
-      {error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
       {templates.map((t) => (
         <TemplateCard

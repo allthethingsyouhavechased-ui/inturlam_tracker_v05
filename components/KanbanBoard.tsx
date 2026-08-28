@@ -13,16 +13,16 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import AssigneeSelect from "@/components/AssigneeSelect";
 import PersonAvatar from "@/components/PersonAvatar";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import Icon from "@/components/ui/Icon";
 import { setTaskStatusAction } from "@/lib/actions/tasks";
+import { TASK_DRAG_INSTRUCTIONS, taskDragAnnouncements } from "@/lib/dndAnnouncements";
 import {
   CONTENT_TYPE_LABEL,
-  TASK_PRIORITY_BORDER,
   TASK_PRIORITY_FLAG_THRESHOLD,
   TASK_STATUS_BADGE,
   TASK_STATUS_BORDER_TOP,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/constants";
 import { formatDateShort, isOverdue } from "@/lib/date";
 import type { Person, TaskStatus, TaskWithContext } from "@/lib/types";
+import { brandAccentStyle } from "@/lib/brandAccent";
 
 function TaskCard({
   task,
@@ -53,10 +54,12 @@ function TaskCard({
       {...(overlay ? {} : attributes)}
       data-dnd-card={overlay ? undefined : ""}
       data-dragging={isDragging || undefined}
-      className={`ui-surface touch-none space-y-2 rounded-xl border-2 bg-white p-3 shadow-sm dark:bg-zinc-900 ${TASK_PRIORITY_BORDER[task.priority]} ${
+      data-brand-accent
+      style={brandAccentStyle(task.brand_accent_hue)}
+      className={`brand-stripe ui-surface touch-none space-y-2 rounded-xl border border-border-default bg-surface p-3 ${
         overlay
-          ? "rotate-[1deg] scale-[1.02] cursor-grabbing shadow-2xl"
-          : "cursor-grab active:cursor-grabbing hover:shadow-md"
+          ? "cursor-grabbing"
+          : "cursor-grab active:cursor-grabbing hover:border-border-strong"
       } ${isDragging && !overlay ? "scale-[0.98] opacity-25" : ""}`}
     >
       <div className="flex items-start gap-2">
@@ -116,7 +119,7 @@ function TaskCard({
       )}
       {task.due_date && (
         <div
-          className={`text-xs ${isOverdue(task.due_date) ? "font-medium text-rose-600 dark:text-rose-400" : "text-zinc-500 dark:text-zinc-400"}`}
+          className={`text-xs ${isOverdue(task.due_date) ? "font-medium text-danger" : "text-zinc-500 dark:text-zinc-400"}`}
         >
           <span className="inline-flex items-center gap-1"><Icon name="calendar" className="size-3.5" />{formatDateShort(task.due_date)}</span>
         </div>
@@ -158,7 +161,7 @@ function Column({
       data-drop-active={isOver || undefined}
       className={`min-h-40 space-y-2 rounded-2xl border border-black/5 border-t-2 bg-slate-50/60 p-3 transition-[background-color,border-color,box-shadow,transform] duration-200 dark:border-white/5 dark:bg-white/[0.02] ${TASK_STATUS_BORDER_TOP[status]} ${
         isOver
-          ? "scale-[1.01] border-brand-400 bg-brand-50/80 shadow-md ring-2 ring-brand-500/20 dark:border-brand-700 dark:bg-brand-950/30"
+          ? "scale-[1.01] border-brand-400 bg-brand-50/80 shadow-[0_12px_30px_rgb(35_30_24/0.10)] ring-2 ring-brand-500/20 dark:border-brand-700 dark:bg-brand-950/30"
           : ""
       }`}
     >
@@ -226,6 +229,15 @@ export default function KanbanBoard({
     useSensor(KeyboardSensor),
   );
 
+  const announcements = useMemo(
+    () =>
+      taskDragAnnouncements({
+        taskName: (id) => tasks.find((task) => task.id === id)?.title ?? "",
+        columnLabel: (id) => TASK_STATUS_LABEL[id as TaskStatus] ?? id,
+      }),
+    [tasks],
+  );
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
   }
@@ -251,6 +263,7 @@ export default function KanbanBoard({
     <DndContext
       id="content-kanban"
       sensors={sensors}
+      accessibility={{ announcements, screenReaderInstructions: TASK_DRAG_INSTRUCTIONS }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}

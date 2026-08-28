@@ -53,12 +53,10 @@ describe("aylık analiz navigasyonu", () => {
     assert.match(source("app/panom/markalar/page.tsx"), /month=\$\{month\}/);
   });
 
-  it("katkı dökümünü durum analizinin altındaki geniş sütunda tutar", () => {
-    const contribution = source("app/panom/katkim/page.tsx");
-    const analysis = contribution.indexOf("Durum analizi");
-    const breakdown = contribution.indexOf("Katkı dökümü");
-    const rightColumn = contribution.indexOf('className="min-w-0 space-y-5"');
-    assert.ok(rightColumn >= 0 && analysis > rightColumn && breakdown > analysis);
+  it("iki kişisel analiz yüzeyinde de Panoma dön eylemini gösterir", () => {
+    for (const page of ["app/panom/katkim/page.tsx", "app/panom/markalar/page.tsx"]) {
+      assert.match(source(page), /<Link href="\/panom"[^>]*>Panoma dön<\/Link>/);
+    }
   });
 });
 
@@ -71,7 +69,7 @@ describe("kapsam açıklamaları", () => {
     assert.match(home, /href="\/tasks\?focus=open"/);
     assert.match(home, /href="\/tasks\?focus=overdue"/);
     assert.match(home, /href="\/tasks\?focus=week"/);
-    assert.match(tasks, /parseTaskFocus\(sp\.focus\)/);
+    assert.match(tasks, /parseTaskFilterParams\(sp\)/);
     assert.match(explorer, /matchesTaskFocus/);
   });
 

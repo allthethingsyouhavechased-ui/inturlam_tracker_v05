@@ -20,7 +20,7 @@ const SCHEDULER_LABEL: Record<CalendarSyncHealth["schedulerStatus"], string> = {
 export default function CalendarSyncHealthCard({ health }: { health: CalendarSyncHealth }) {
   const status = STATUS[health.overallStatus];
   return (
-    <aside className="mb-4 rounded-xl border border-border-default bg-surface px-3 py-3" aria-label="Google Calendar senkron sağlığı">
+    <aside className="rounded-xl border border-border-default bg-surface px-3 py-3" aria-label="Google Calendar senkron sağlığı">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -31,12 +31,12 @@ export default function CalendarSyncHealthCard({ health }: { health: CalendarSyn
             {SCHEDULER_LABEL[health.schedulerStatus]} · Son başarılı: {formatIsoDateTime(health.lastSuccessAt)} · Bekleyen: {health.pendingCount} · Hatalı: {health.errorCount}
           </p>
           {health.lastError && (
-            <p className="mt-1 max-w-4xl truncate text-[11px] text-rose-700 dark:text-rose-300" title={health.lastError}>
+            <p className="mt-1 max-w-4xl truncate text-[11px] text-danger" title={health.lastError}>
               Son hata: {health.lastError}
             </p>
           )}
           {!health.configured && (
-            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+            <p className="mt-1 text-[11px] text-warning">
               Test takvimi kimlik bilgileri .env.local dosyasına eklenmeden dış senkron çalışmaz.
             </p>
           )}

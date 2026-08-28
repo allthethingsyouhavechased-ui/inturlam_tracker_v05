@@ -38,6 +38,7 @@ function task(over: Partial<TaskWithContext> = {}): TaskWithContext {
     content_type: "Reel",
     brand_id: "b1",
     brand_name: "Sihirli Olta",
+    brand_accent_hue: 210,
     comment_count: 0,
     last_comment_body: null,
     last_comment_author: null,

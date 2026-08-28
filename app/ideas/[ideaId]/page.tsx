@@ -33,7 +33,9 @@ export default async function IdeaPage({ params }: { params: Promise<{ ideaId: s
   const { ideaId } = await params;
   const idea = getIdea(ideaId);
   if (!idea) notFound();
-  const brands = listBrands();
+  const brands = [...listBrands()].sort((left, right) =>
+    left.name.localeCompare(right.name, "tr", { sensitivity: "base" }),
+  );
   const activity = listActivityForEntity("idea", idea.id);
   const brandStillAvailable = idea.brand_id && brands.some((brand) => brand.id === idea.brand_id);
   const defaultScope = idea.scope_type === "office"
@@ -43,7 +45,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ ideaId: s
       : "";
 
   return (
-    <div className="space-y-5">
+    <div>
       <PageHeader
         eyebrow="FİKİR DETAYI"
         title={idea.title}

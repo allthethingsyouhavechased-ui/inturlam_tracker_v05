@@ -14,7 +14,6 @@ import {
   todayISO,
 } from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
-import { combineMonthlyProgress } from "@/lib/progress";
 import { listPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
 import { listBrandsWithOpenCounts } from "@/lib/repositories/brands";
 import {
@@ -22,7 +21,6 @@ import {
   getPersonMonthlyProgress,
   listBrandMonthlyProgress,
   listMonthlyTaskStatusCounts,
-  listPersonMonthlyContributions,
 } from "@/lib/repositories/progress";
 import { getLatestSyncRun, listBrandSocialRows } from "@/lib/repositories/social";
 import {
@@ -51,9 +49,9 @@ function Metric({
   tone?: "default" | "danger" | "warning";
 }) {
   const valueClass = tone === "danger"
-    ? "text-danger dark:text-rose-400"
+    ? "text-danger"
     : tone === "warning"
-      ? "text-warning dark:text-amber-300"
+      ? "text-warning"
       : "text-foreground";
 
   return (
@@ -93,23 +91,8 @@ export default async function HomePage({
   const portfolioBrands = listBrandMonthlyProgress(month);
   const portfolioProgress = getPortfolioMonthlyProgress(month);
   const portfolioStatusCounts = listMonthlyTaskStatusCounts(month);
-  const portfolioById = new Map(portfolioBrands.map((brand) => [brand.brand_id, brand]));
-  const personalContributions = listPersonMonthlyContributions(me.id, month);
   const personalProgress = getPersonMonthlyProgress(me.id, month);
-  const personalBrands = listPersonBrandAssignments(me.id).flatMap((assignment) => {
-    const brand = portfolioById.get(assignment.brand_id);
-    if (!brand) return [];
-    const tasks = personalContributions.filter((task) => task.brand_id === assignment.brand_id);
-    return [{
-      ...brand,
-      personal_task_count: tasks.length,
-      personal_points: Number(tasks.reduce((sum, task) => sum + task.contribution_points, 0).toFixed(2)),
-    }];
-  });
-  const assignedBrandsProgress = combineMonthlyProgress(
-    month,
-    personalBrands.map((brand) => brand.progress),
-  );
+  const assignedBrandIds = listPersonBrandAssignments(me.id).map((assignment) => assignment.brand_id);
   const personalDeadlines = openTasks
     .filter((task) => (
       task.assignee_id === me.id
@@ -138,12 +121,19 @@ export default async function HomePage({
   const lastSocialRun = getLatestSyncRun();
 
   return (
-    <div className="space-y-6">
+    <div>
       <PageHeader
         eyebrow="OPERASYON ÖZETİ"
         title="Bugün"
         description={`${formatDateLong(today)} · Güncel operasyon metrikleri ve ${monthLabel} marka ilerlemesi.`}
         actions={<MonthNavigator month={month} basePath="/" ariaLabel="Ana sayfa analiz ayı" />}
+      />
+
+      <div className="space-y-6">
+      <HomeFocusPanel
+        personalDeadlines={personalDeadlines}
+        revisionTasks={revisionTasks}
+        reviewTasks={reviewTasks}
       />
 
       <section aria-label="Operasyon göstergeleri" className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
@@ -162,21 +152,13 @@ export default async function HomePage({
 
       <HomeBrandProgress
         month={month}
-        personalBrands={personalBrands}
-        assignedBrandsProgress={assignedBrandsProgress}
         portfolioBrands={portfolioBrands}
         portfolioProgress={portfolioProgress}
         portfolioStatusCounts={portfolioStatusCounts}
         personalProgress={personalProgress}
-        personalFocus={(
-          <HomeFocusPanel
-            personalDeadlines={personalDeadlines}
-            revisionTasks={revisionTasks}
-            reviewTasks={reviewTasks}
-            compact
-          />
-        )}
+        assignedBrandIds={assignedBrandIds}
       />
+      </div>
     </div>
   );
 }

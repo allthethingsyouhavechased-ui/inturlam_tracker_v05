@@ -49,7 +49,7 @@ export default function ActionForm({
     >
       {children}
       {error && <p role="alert" className={`${feedbackClassName ?? ""} text-xs text-danger`}>{error}</p>}
-      {success && <p role="status" aria-live="polite" className={`${feedbackClassName ?? ""} text-xs text-emerald-700 dark:text-emerald-300`}>{success}</p>}
+      {success && <p role="status" aria-live="polite" className={`${feedbackClassName ?? ""} text-xs text-success`}>{success}</p>}
     </form>
   );
 }

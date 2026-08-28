@@ -3,10 +3,14 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import TaskExplorer from "@/components/TaskExplorer";
 import TaskPlanningQueue from "@/components/TaskPlanningQueue";
+import { buttonClass } from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
 import Icon from "@/components/ui/Icon";
 import { currentWeekRange, todayISO } from "@/lib/date";
-import { isDepartmentId, NO_DEPARTMENT } from "@/lib/departments";
+import {
+  parseTaskFilterParams,
+  type TaskFilterSearchParams,
+} from "@/lib/taskFilterParams";
 import { canDeleteTasks } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
@@ -15,19 +19,21 @@ import { listActivePeople } from "@/lib/repositories/people";
 import { countArchivedTasks, listAllTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
 import { listLegacyUndatedTasks, listUnplannedGuestTasks } from "@/lib/repositories/guestTasks";
 import { archiveCountdownBadge } from "@/lib/taskArchive";
-import { parseTaskFocus } from "@/lib/taskFocus";
 import { TASKS_VIEW_PREFERENCE, parseWorkspaceView } from "@/lib/uiPreferences";
 
 export const dynamic = "force-dynamic";
 
-// Filtreler istemci state'inde tutuluyor; URL yalnızca BAŞLANGIÇ değerini
-// veriyor (rapor sayfasından "Görevlerini aç" / "Ekibin görevleri" linkleri).
-// Kullanıcı sonrasında filtreyi değiştirdiğinde URL güncellenmiyor — bilinçli:
-// her tıklamada sunucu render'ı tetiklemek listeyi yavaşlatırdı.
+// Filtreler istemci state'inde tutuluyor — her tıklamada sunucu render'ı
+// tetiklemek listeyi yavaşlatırdı. URL bu yüzden yalnızca BAŞLANGIÇ değerini
+// veriyor; istemci sonrasında `history.replaceState` ile adres çubuğunu
+// güncelliyor (bkz. `components/TaskExplorer.tsx`), yani sunucuya dönmeden
+// bağlantı paylaşılabilir ve yenilemede filtre korunur kalıyor.
+// Değer doğrulaması `lib/taskFilterParams.ts`'te tek yerde; marka ve kişi
+// id'leri veritabanı bilgisi gerektirdiği için burada ayrıca süzülüyor.
 export default async function AllTasksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ assignee?: string; department?: string; focus?: string }>;
+  searchParams: Promise<TaskFilterSearchParams>;
 }) {
   const me = await requirePageSession();
   const sp = await searchParams;
@@ -65,12 +71,14 @@ export default async function AllTasksPage({
   const unplannedGuestTasks = listUnplannedGuestTasks();
   const legacyUndatedTasks = me.is_manager === 1 ? listLegacyUndatedTasks() : [];
 
-  const initialAssigneeId =
-    sp.assignee && people.some((person) => person.id === sp.assignee) ? sp.assignee : "";
-  const initialDepartment =
-    sp.department && (isDepartmentId(sp.department) || sp.department === NO_DEPARTMENT)
-      ? sp.department
-      : "";
+  const parsedFilters = parseTaskFilterParams(sp);
+  const initialFilters = {
+    ...parsedFilters,
+    assignee: people.some((person) => person.id === parsedFilters.assignee)
+      ? parsedFilters.assignee
+      : "",
+    brand: brands.some((brand) => brand.id === parsedFilters.brand) ? parsedFilters.brand : "",
+  };
   const today = todayISO();
   const weekEnd = currentWeekRange().end;
 
@@ -88,7 +96,7 @@ export default async function AllTasksPage({
           <>
             <Link
               href="/templates"
-              className="ui-press inline-flex min-h-10 items-center gap-2 rounded-[10px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary shadow-sm hover:bg-surface-hover hover:text-foreground"
+              className={buttonClass({ variant: "secondary" })}
             >
               <Icon name="templates" className="size-4 text-brand-500" />
               Şablonlar
@@ -101,9 +109,7 @@ export default async function AllTasksPage({
         tasks={tasks}
         brands={brands}
         people={people}
-        initialAssigneeId={initialAssigneeId}
-        initialDepartment={initialDepartment}
-        initialFocus={parseTaskFocus(sp.focus)}
+        initialFilters={initialFilters}
         focusToday={today}
         focusWeekEnd={weekEnd}
         initialView={initialView}

@@ -86,6 +86,12 @@ describe("isNavActive", () => {
 });
 
 describe("routeContextForPathname", () => {
+  it("Panom analiz rotalarını global menüyü çoğaltmadan adlandırır", () => {
+    assert.deepEqual(routeContextForPathname("/panom/katkim"), { section: "Panom", label: "Katkı analizi" });
+    assert.deepEqual(routeContextForPathname("/panom/markalar"), { section: "Panom", label: "Marka analizi" });
+    assert.equal(isNavActive("/panom/katkim", "/panom"), true);
+  });
+
   it("profil, ayar ve güvenliği farklı sorumluluklar olarak adlandırır", () => {
     assert.deepEqual(routeContextForPathname("/team/p1"), { section: "Ekip", label: "Kişi profili" });
     assert.deepEqual(routeContextForPathname("/team/manage"), { section: "Ekip", label: "Hesap yönetimi" });

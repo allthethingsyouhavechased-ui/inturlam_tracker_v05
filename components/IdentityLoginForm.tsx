@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { loginPerson } from "@/lib/actions/identity";
 import SubmitButton from "@/components/SubmitButton";
+import { controlClass } from "@/components/ui/Input";
 
-const inputClass =
-  "min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-950";
+const inputClass = controlClass();
 
 export default function IdentityLoginForm() {
   const [state, action] = useActionState(loginPerson, {});
@@ -28,7 +29,18 @@ export default function IdentityLoginForm() {
         />
       </label>
       <label className="grid gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-200">
-        Şifre
+        <span className="flex items-baseline justify-between gap-3">
+          Şifre
+          {/* Sıfırlama e-postayla değil bir yönetici üzerinden yapılıyor; bu
+              bağlantı o yolu ANLATIYOR. Eskiden hiçbir yerde yazmıyordu ve
+              kilitlenen kişi ekranda sadece "hatalı deneme" görüyordu. */}
+          <Link
+            href="/whoami/sifre-yardim"
+            className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Şifremi unuttum
+          </Link>
+        </span>
         <input
           name="password"
           type="password"
@@ -39,7 +51,7 @@ export default function IdentityLoginForm() {
         />
       </label>
       {state.error && (
-        <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+        <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-danger dark:bg-rose-950/30">
           {state.error}
         </p>
       )}

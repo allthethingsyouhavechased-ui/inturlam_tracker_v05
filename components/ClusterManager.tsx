@@ -8,9 +8,8 @@ import {
 } from "@/lib/actions/clusters";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import SubmitButton from "./SubmitButton";
-
-const inputClass =
-  "min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+import { buttonClass } from "./ui/Button";
+import Input from "./ui/Input";
 
 interface ClusterItem {
   id: string;
@@ -43,18 +42,17 @@ function ClusterRow({
         className="flex items-center gap-2"
       >
         <input type="hidden" name="clusterId" value={cluster.id} />
-        <input
+        <Input
           name="label"
           required
           autoFocus
           defaultValue={cluster.label}
-          className={inputClass}
         />
         <SubmitButton>Kaydet</SubmitButton>
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+          className={buttonClass({ variant: "ghost", size: "sm" })}
         >
           Vazgeç
         </button>
@@ -63,13 +61,13 @@ function ClusterRow({
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
+    <div className="flex flex-wrap items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-hover">
       <span className="flex-1 truncate text-sm">{cluster.label}</span>
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">{cluster.brandCount} marka</span>
+      <span className="text-xs text-muted">{cluster.brandCount} marka</span>
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 dark:hover:text-brand-400"
+        className={buttonClass({ variant: "ghost", size: "sm", className: "text-muted hover:text-brand-600 dark:hover:text-brand-300" })}
       >
         Yeniden adlandır
       </button>
@@ -87,7 +85,7 @@ function ClusterRow({
             }
           });
         }}
-        className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-50"
+        className={buttonClass({ variant: "ghost", size: "sm", className: "text-muted hover:text-danger" })}
       >
         {pending ? "…" : "Sil"}
       </button>
@@ -106,30 +104,31 @@ export default function ClusterManager({ clusters }: { clusters: ClusterItem[] }
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className={`ui-press flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors ${
-          open
+        className={buttonClass({
+          variant: "secondary",
+          className: open
             ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-950/35 dark:text-brand-300"
-            : "border-black/10 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-white/[0.06]"
-        }`}
+            : undefined,
+        })}
       >
         <svg
           viewBox="0 0 16 16"
-          className={`h-3 w-3 fill-current text-zinc-500 dark:text-zinc-400 transition-transform ${open ? "rotate-90" : ""}`}
+          className={`size-3 fill-current text-muted transition-transform ${open ? "rotate-90" : ""}`}
           aria-hidden="true"
         >
           <path d="M4 2l8 6-8 6V2z" />
         </svg>
         Kategoriler
-        <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-500 dark:bg-white/10 dark:text-zinc-400">
+        <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted">
           {clusters.length}
         </span>
       </button>
 
       {open && (
-        <div className="ui-enter absolute right-0 top-[calc(100%+0.5rem)] z-30 w-[min(36rem,calc(100vw-2rem))] space-y-2 rounded-2xl border border-black/10 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-zinc-900">
+        <div className="ui-enter absolute left-0 top-[calc(100%+0.5rem)] z-30 w-[min(36rem,calc(100vw-2rem))] space-y-2 rounded-xl border border-border-default bg-surface p-4 shadow-xl sm:left-auto sm:right-0">
           <div className="mb-2">
-            <p className="text-sm font-semibold">Kategori yönetimi</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm font-semibold text-foreground">Kategori yönetimi</p>
+            <p className="text-xs text-muted">
               Marka gruplarını yeniden adlandır, sil veya yenisini ekle.
             </p>
           </div>
@@ -150,19 +149,18 @@ export default function ClusterManager({ clusters }: { clusters: ClusterItem[] }
                 setError(getActionErrorMessage(e));
               }
             }}
-            className="flex items-center gap-2 border-t border-black/10 pt-3 dark:border-white/10"
+            className="flex items-center gap-2 border-t border-border-subtle pt-3"
           >
-            <input
+            <Input
               name="label"
               required
               placeholder="Yeni kategori adı"
               aria-label="Yeni kategori adı"
-              className={inputClass}
             />
             <SubmitButton>Ekle</SubmitButton>
           </form>
 
-          {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+          {error && <p role="alert" className="text-xs text-danger">{error}</p>}
         </div>
       )}
     </div>

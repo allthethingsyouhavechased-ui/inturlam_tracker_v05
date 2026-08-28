@@ -1,14 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { controlClass } from "@/components/ui/Input";
 import { createBrandAction } from "@/lib/actions/brands";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import BrandLogoPicker from "./BrandLogoPicker";
 import ClusterSelect from "./ClusterSelect";
 import SubmitButton from "./SubmitButton";
 
-const inputClass =
-  "min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+const inputClass = controlClass();
 
 export default function NewBrandForm({
   clusters,
@@ -37,7 +37,7 @@ export default function NewBrandForm({
       className="grid gap-3"
     >
       <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
-        <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <label className="grid gap-1 text-xs font-medium text-secondary">
           Marka adı
           <input
             name="name"
@@ -46,11 +46,11 @@ export default function NewBrandForm({
             className={inputClass}
           />
         </label>
-        <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <label className="grid gap-1 text-xs font-medium text-secondary">
           Kategori
           <ClusterSelect key={resetKey} clusters={clusters} className={inputClass} />
         </label>
-        <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <label className="grid gap-1 text-xs font-medium text-secondary">
           Instagram (opsiyonel)
           <input
             name="instagramHandle"
@@ -61,7 +61,7 @@ export default function NewBrandForm({
         <SubmitButton>Marka ekle</SubmitButton>
       </div>
       <BrandLogoPicker key={resetKey} />
-      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
     </form>
   );
 }

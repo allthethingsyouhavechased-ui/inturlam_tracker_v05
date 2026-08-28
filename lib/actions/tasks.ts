@@ -83,15 +83,16 @@ export async function createTaskAction(formData: FormData): Promise<string> {
   const priority = TASK_PRIORITIES.includes(priorityRaw) ? priorityRaw : "Normal";
   const difficulty = String(formData.get("difficulty") ?? "") as TaskDifficulty;
   const contentType = String(formData.get("contentType") ?? "") as ContentType;
+  if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Zorluk derecesi seçilmeli.");
   const weightPoints = resolveTaskCreationWeight(
     formData.get("weightPoints"),
     actor.is_manager === 1,
+    difficulty,
   );
 
   if (!contentItemId) throw new Error("İçerik bulunamadı.");
   if (!title) throw new Error("Görev başlığı zorunlu.");
   if (title.length > 200) throw new Error("Görev başlığı en fazla 200 karakter olabilir.");
-  if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Zorluk derecesi seçilmeli.");
   if (!CONTENT_TYPES.includes(contentType)) throw new Error("Görev türü seçilmeli.");
 
   const id = createTask({

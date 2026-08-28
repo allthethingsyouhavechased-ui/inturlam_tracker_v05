@@ -1,3 +1,5 @@
+import { brandAccentStyle } from "@/lib/brandAccent";
+
 const SIZE_CLASS = {
   sm: "h-7 w-7 text-xs",
   lg: "h-16 w-16 text-xl",
@@ -6,10 +8,12 @@ const SIZE_CLASS = {
 export default function BrandLogo({
   name,
   logoPath,
+  accentHue,
   size = "sm",
 }: {
   name: string;
   logoPath: string | null;
+  accentHue?: number | null;
   size?: "sm" | "lg";
 }) {
   const sizeClass = SIZE_CLASS[size];
@@ -19,13 +23,15 @@ export default function BrandLogo({
       <img
         src={logoPath}
         alt={name}
-        className={`${sizeClass} shrink-0 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/10`}
+        className={`${sizeClass} shrink-0 rounded-full object-cover ring-1 ring-border-default`}
       />
     );
   }
   return (
     <div
-      className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300`}
+      data-brand-accent
+      style={brandAccentStyle(accentHue)}
+      className={`${sizeClass} brand-logo-fallback flex shrink-0 items-center justify-center rounded-full font-display font-semibold`}
       aria-hidden
     >
       {name.charAt(0).toUpperCase()}

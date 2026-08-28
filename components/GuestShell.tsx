@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import ProductWordmark from "@/components/ProductWordmark";
 import GuestNavigation from "@/components/GuestNavigation";
 import GuestNotificationBell from "@/components/GuestNotificationBell";
 import { clearIdentity } from "@/lib/actions/identity";
@@ -16,7 +17,7 @@ export default function GuestShell({ actor, children }: { actor: GuestActor; chi
       </a>
       <header className="border-b border-border-subtle bg-surface">
         <div className="mx-auto flex h-[var(--header-h)] max-w-[var(--page-max)] items-center gap-3 px-4 sm:px-6">
-          <Link href="/guest" className="flex items-center gap-2 text-sm font-semibold text-foreground"><span className="grid size-8 place-items-center rounded-lg border border-border-default bg-white text-zinc-900"><Logo className="size-5" /></span><span className="hidden sm:inline">İNTURLAM</span></Link>
+          <Link href="/guest" aria-label="INTracker ana sayfa" className="flex items-center gap-2 text-foreground"><span className="grid size-8 place-items-center rounded-lg border border-border-default bg-white text-zinc-900"><Logo className="size-5" /></span><ProductWordmark className="hidden text-sm sm:inline-flex" /></Link>
           <GuestNavigation />
           <span className="ml-auto hidden text-xs text-muted sm:block">{actor.brand.name}</span>
           <GuestNotificationBell notifications={notifications} unreadCount={unreadCount} />

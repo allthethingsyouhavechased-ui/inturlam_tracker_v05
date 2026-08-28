@@ -6,7 +6,9 @@ import AutoRefresh from "@/components/AutoRefresh";
 import BrandContentTargetsSection from "@/components/BrandContentTargetsSection";
 import BrandLogo from "@/components/BrandLogo";
 import BrandOperationsOverview from "@/components/BrandOperationsOverview";
+import BrandWorkspaceSummary from "@/components/BrandWorkspaceSummary";
 import EditBrandForm from "@/components/EditBrandForm";
+import EmptyState from "@/components/EmptyState";
 import NewContentForm from "@/components/NewContentForm";
 import QuickAddModal from "@/components/QuickAddModal";
 import SocialHealthBadge from "@/components/SocialHealthBadge";
@@ -17,8 +19,13 @@ import {
   CONTENT_STATUS_BADGE,
   CONTENT_STATUS_LABEL,
   CONTENT_TYPE_LABEL,
+  TASK_PRIORITY_BADGE,
+  TASK_PRIORITY_LABEL,
+  TASK_STATUS_BADGE,
+  TASK_STATUS_LABEL,
   UNKNOWN_CLUSTER_LABEL,
 } from "@/lib/constants";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import { daysAgoISO, formatDateShort, formatIsoDateTime, monthParamISO, monthParamToDate, shiftMonthParam, todayISO } from "@/lib/date";
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
@@ -36,6 +43,7 @@ import { listCalendarEvents } from "@/lib/repositories/calendarEvents";
 import { getBrandMonthlyProgress, listBrandMonthlyContributions } from "@/lib/repositories/progress";
 import { getBrandMonthlyContentCompletion, listContentTargetsForBrand } from "@/lib/repositories/socialPlan";
 import { listTemplates } from "@/lib/repositories/templates";
+import { listOpenTasksByBrand } from "@/lib/repositories/tasks";
 import { emptyKindRecord } from "@/lib/socialPlan";
 import type { ContentKind } from "@/lib/types";
 
@@ -56,6 +64,7 @@ export default async function BrandPage({
   const brandIdeaCount = countIdeasForBrand(brandId);
 
   const items = listContentByBrand(brandId);
+  const openTasks = listOpenTasksByBrand(brandId, 5);
   const archivedItems = listArchivedContentByBrand(brandId);
   const people = listActivePeople();
   const templates = listTemplates();
@@ -98,11 +107,101 @@ export default async function BrandPage({
   const instagramHandle = normalizeInstagramHandle(brand.instagram_handle);
   const instagramUrl = instagramProfileUrl(brand.instagram_handle);
 
+  const workspaceSummary = (
+    <BrandWorkspaceSummary
+      embedded
+      overview={
+        <>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-xs font-semibold tabular-nums text-foreground">
+              {brand.follower_count != null
+                ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi`
+                : "Takipçi verisi yok"}
+            </span>
+            {brand.post_count != null && (
+              <span className="text-xs font-semibold tabular-nums text-foreground">
+                {brand.post_count.toLocaleString("tr-TR")} gönderi
+              </span>
+            )}
+            {staleStats && (
+              <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                Tazelenmeli
+              </span>
+            )}
+          </div>
+          <p
+            className="mt-2 line-clamp-2 text-xs leading-5 text-secondary"
+            title={brand.key_finding ?? undefined}
+          >
+            {brand.key_finding?.split("\n")[0] ?? "Kısa marka notu eklenmemiş"}
+          </p>
+        </>
+      }
+      targets={
+        <BrandContentTargetsSection
+          brandId={brand.id}
+          brandName={brand.name}
+          targets={contentTargets}
+          month={month}
+          monthlyContentCompleted={Boolean(monthlyContentCompletion)}
+          compact
+        />
+      }
+      activity={
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+          {socialHealth ? (
+            <>
+              <SocialHealthBadge
+                health={socialHealth}
+                detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
+              />
+              <span className="min-w-0 truncate text-xs text-muted">
+                {socialRow?.last_post_at
+                  ? `Son paylaşım ${formatIsoDateTime(socialRow.last_post_at)}`
+                  : "Paylaşım kaydı yok"}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-muted">Takip hesabı bağlanmamış</span>
+          )}
+        </div>
+      }
+      actions={
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <QuickAddModal
+            options={{
+              brands: [{ id: brand.id, name: brand.name }],
+              contents: items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title, type: item.type })),
+              people,
+            }}
+            defaultAssigneeId={me.id}
+            canSetWeight={me.is_manager === 1}
+            defaultBrandId={brand.id}
+            triggerLabel="Görev oluştur"
+            triggerClassName={buttonClass({ size: "sm", className: "col-span-2 w-full" })}
+          />
+          <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary", size: "sm", className: canManageBrand ? "w-full" : "col-span-2 w-full" })}>
+            <Icon name="ideas" className="size-3.5" /> Fikirler · {brandIdeaCount}
+          </Link>
+          {canManageBrand ? (
+            <EditBrandForm
+              brand={brand}
+              clusters={clusters}
+              people={people}
+              assignments={assignments}
+              triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: "w-full" })}
+            />
+          ) : null}
+        </div>
+      }
+    />
+  );
+
   return (
-    <div className="space-y-6">
+    <div>
       <AutoRefresh />
       <PageHeader
-        className="!mb-0 sm:!items-stretch xl:flex-nowrap"
+        className="lg:items-stretch xl:flex-nowrap"
         eyebrow="MARKA ÇALIŞMA ALANI"
         title={brand.name}
         description={
@@ -125,114 +224,12 @@ export default async function BrandPage({
           </span>
         }
         breadcrumb={[{ label: "Markalar", href: "/brands" }, { label: brand.name }]}
-        media={<BrandLogo name={brand.name} logoPath={brand.logo_path} size="lg" />}
-        summaryClassName="sm:max-w-none xl:basis-[68rem]"
-        summary={
-          <section
-            aria-label="Marka bilgi özeti"
-            className="min-w-0 border-t border-border-subtle pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0 lg:pl-5"
-          >
-            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-[1.15fr_1fr_0.9fr_1.05fr] xl:gap-0">
-              <div data-brand-info="summary" className="min-w-0 xl:pr-5">
-                <p className="text-[10px] font-semibold tracking-[0.09em] text-faint">MARKA ÖZETİ</p>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="text-xs font-semibold tabular-nums text-foreground">
-                    {brand.follower_count != null
-                      ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi`
-                      : "Takipçi verisi yok"}
-                  </span>
-                  {brand.post_count != null && (
-                    <span className="text-xs font-semibold tabular-nums text-foreground">
-                      {brand.post_count.toLocaleString("tr-TR")} gönderi
-                    </span>
-                  )}
-                  {staleStats && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                      Tazelenmeli
-                    </span>
-                  )}
-                </div>
-                <p
-                  className="mt-2 line-clamp-2 text-xs leading-5 text-secondary"
-                  title={brand.key_finding ?? undefined}
-                >
-                  {brand.key_finding?.split("\n")[0] ?? "Kısa marka notu eklenmemiş"}
-                </p>
-              </div>
-
-              <div
-                data-brand-info="targets"
-                className="min-w-0 border-t border-border-subtle pt-4 md:border-l md:border-t-0 md:pl-4 md:pt-0 xl:px-5"
-              >
-                <BrandContentTargetsSection
-                  brandId={brand.id}
-                  brandName={brand.name}
-                  targets={contentTargets}
-                  month={month}
-                  monthlyContentCompleted={Boolean(monthlyContentCompletion)}
-                  compact
-                />
-              </div>
-
-              <div
-                data-brand-info="activity"
-                className="min-w-0 border-t border-border-subtle pt-4 md:pr-4 xl:border-l xl:border-t-0 xl:px-5 xl:pt-0"
-              >
-                <p className="text-[9px] font-semibold tracking-[0.08em] text-faint">AKTİFLİK</p>
-                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
-                  {socialHealth ? (
-                    <>
-                      <SocialHealthBadge
-                        health={socialHealth}
-                        detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
-                      />
-                      <span className="min-w-0 truncate text-xs text-muted">
-                        {socialRow?.last_post_at
-                          ? `Son paylaşım ${formatIsoDateTime(socialRow.last_post_at)}`
-                          : "Paylaşım kaydı yok"}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-muted">Takip hesabı bağlanmamış</span>
-                  )}
-                </div>
-              </div>
-
-              <div
-                data-brand-info="actions"
-                className="min-w-0 border-t border-border-subtle pt-4 md:border-l md:pl-4 xl:border-t-0 xl:pl-5 xl:pt-0"
-              >
-                <p className="text-[9px] font-semibold tracking-[0.08em] text-faint">HIZLI İŞLEMLER</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <QuickAddModal
-                    brands={[{ id: brand.id, name: brand.name }]}
-                    contents={items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title, type: item.type }))}
-                    people={people}
-                    defaultAssigneeId={me?.id ?? null}
-                    canSetWeight={me.is_manager === 1}
-                    defaultBrandId={brand.id}
-                    triggerLabel="Görev oluştur"
-                    triggerClassName={buttonClass({ size: "sm", className: "col-span-2 w-full" })}
-                  />
-                  <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary", size: "sm", className: canManageBrand ? "w-full" : "col-span-2 w-full" })}>
-                    <Icon name="ideas" className="size-3.5" /> Fikirler · {brandIdeaCount}
-                  </Link>
-                  {canManageBrand ? (
-                    <EditBrandForm
-                      brand={brand}
-                      clusters={clusters}
-                      people={people}
-                      assignments={assignments}
-                      triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: "w-full" })}
-                    />
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </section>
-        }
+        media={<BrandLogo name={brand.name} logoPath={brand.logo_path} accentHue={brand.accent_hue} size="lg" />}
+        summary={workspaceSummary}
+        summaryClassName="lg:max-w-none xl:basis-[64rem]"
       />
 
+      <div className="space-y-6">
       <BrandOperationsOverview
         brand={brand}
         month={month}
@@ -244,6 +241,71 @@ export default async function BrandPage({
         monthlyShootCount={monthlyEvents.filter((event) => event.type === "Cekim").length}
         annualShootCount={annualEvents.filter((event) => event.type === "Cekim").length}
       />
+
+      <section className="space-y-3" aria-labelledby="open-brand-tasks">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="open-brand-tasks" className="text-h2 text-foreground">Açık görevler</h2>
+            <p className="mt-0.5 text-xs text-muted">Önceliği ve teslim tarihi en yakın işler.</p>
+          </div>
+          <Link
+            href={`/tasks?brand=${encodeURIComponent(brand.id)}&focus=open`}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            Tüm görevleri aç
+            <Icon name="arrow-right" className="size-3.5" />
+          </Link>
+        </div>
+
+        {openTasks.length === 0 ? (
+          <EmptyState
+            compact
+            title="Bu markada açık görev yok"
+            description="Yeni görev oluşturulduğunda en yakın işler burada görünecek."
+          />
+        ) : (
+          <ul className="grid gap-2 lg:grid-cols-2">
+            {openTasks.map((task) => (
+              <li
+                key={task.id}
+                data-brand-accent
+                style={brandAccentStyle(task.brand_accent_hue)}
+                className="brand-stripe rounded-r-xl border border-border-default bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
+              >
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <span className="min-w-0 flex-1">
+                    <Link
+                      href={`/tasks/${task.id}`}
+                      className="line-clamp-2 font-display text-sm font-semibold text-foreground hover:text-brand-600 dark:hover:text-brand-300"
+                    >
+                      {task.title}
+                    </Link>
+                    <span className="mt-0.5 block truncate text-xs text-muted">
+                      {brand.name} · {task.content_title}
+                    </span>
+                  </span>
+                  <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold ${TASK_STATUS_BADGE[task.status]}`}>
+                    {TASK_STATUS_LABEL[task.status]}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-2 text-xs text-secondary">
+                  <span className={`rounded-md px-2 py-1 font-semibold ${TASK_PRIORITY_BADGE[task.priority]}`}>
+                    {TASK_PRIORITY_LABEL[task.priority]}
+                  </span>
+                  <span className="rounded-md bg-surface-muted px-2 py-1 font-semibold tabular-nums">
+                    {task.weight_points} puan
+                  </span>
+                  <span className="ml-auto inline-flex items-center gap-1.5">
+                    {task.assignee_name ?? "Atanmamış"}
+                    <span aria-hidden="true">·</span>
+                    {task.due_date ? formatDateShort(task.due_date) : "Tarih yok"}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -278,14 +340,17 @@ export default async function BrandPage({
             {items.map((item) => (
               <li
                 key={item.id}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-black/10 bg-white px-4 py-3 transition-colors hover:border-brand-300 hover:bg-brand-50/50 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-brand-800 dark:hover:bg-brand-950/30"
+                data-brand-accent
+                style={brandAccentStyle(brand.accent_hue)}
+                className="brand-stripe flex flex-wrap items-center gap-x-3 gap-y-1 rounded-r-xl border border-border-default bg-surface px-4 py-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
               >
                 <Link
                   href={`/brands/${brand.id}/content/${item.id}`}
                   className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1"
                 >
-                  <span className="font-medium">{item.title}</span>
-                  <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
+                  <span className="font-medium text-foreground">{item.title}</span>
+                  <span className="font-display text-xs font-medium text-muted">{brand.name}</span>
+                  <span className="rounded-md bg-surface-muted px-2 py-0.5 text-xs text-secondary">
                     {CONTENT_TYPE_LABEL[item.type]}
                   </span>
                   <span
@@ -293,7 +358,7 @@ export default async function BrandPage({
                   >
                     {CONTENT_STATUS_LABEL[item.status]}
                   </span>
-                  <span className="ml-auto flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="ml-auto flex items-center gap-3 text-xs text-muted">
                     {item.assignee_name && <span>{item.assignee_name}</span>}
                     {item.task_total > 0 && (
                       <span>
@@ -316,14 +381,16 @@ export default async function BrandPage({
 
       {archivedItems.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-eyebrow text-muted">
             Arşivlenenler ({archivedItems.length})
           </h2>
           <ul className="grid gap-2">
             {archivedItems.map((item) => (
               <li
                 key={item.id}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-dashed border-black/10 bg-white/60 px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400 dark:border-white/10 dark:bg-zinc-900/60"
+                data-brand-accent
+                style={brandAccentStyle(brand.accent_hue)}
+                className="brand-stripe flex flex-wrap items-center gap-x-3 gap-y-1 rounded-r-xl border border-dashed border-border-default bg-surface-subtle px-4 py-3 text-sm text-muted"
               >
                 <Link
                   href={`/brands/${brand.id}/content/${item.id}`}
@@ -339,16 +406,17 @@ export default async function BrandPage({
       )}
 
       <section className="space-y-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+        <h2 className="text-eyebrow text-muted">
           Marka hareketleri
         </h2>
-        <div className="rounded-xl border border-black/10 bg-white p-2 dark:border-white/10 dark:bg-zinc-900">
+        <div className="rounded-xl border border-border-default bg-surface p-2">
           <ActivityFeed
             entries={activity}
             emptyText="Bu markada henüz kayıtlı hareket yok."
           />
         </div>
       </section>
+      </div>
     </div>
   );
 }

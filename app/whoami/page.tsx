@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import ProductWordmark from "@/components/ProductWordmark";
 import Icon from "@/components/ui/Icon";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default function WhoAmIPage() {
         <span className="mx-auto grid size-14 place-items-center rounded-xl border border-border-default bg-white text-zinc-900 shadow-sm">
           <Logo className="size-9" />
         </span>
-        <p className="mt-5 text-xs font-semibold tracking-[0.16em] text-brand-600">İNTURLAM TRACKER</p>
+        <ProductWordmark className="mt-5 text-sm text-brand-600 dark:text-brand-300" />
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">Giriş türünü seç</h1>
         <p className="mx-auto mt-2 max-w-xl text-sm text-secondary">
           Ekip çalışma alanı ile marka guest portalı birbirinden ayrı ve güvenli oturumlar kullanır.

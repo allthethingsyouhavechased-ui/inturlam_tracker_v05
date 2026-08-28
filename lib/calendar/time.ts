@@ -77,6 +77,16 @@ export function eventOccursOnDate(event: CalendarRangeEvent, date: string): bool
   return date >= calendarEventStartDate(event) && date <= calendarEventEndDate(event);
 }
 
+/** Returns whether an event intersects an inclusive-start, exclusive-end date range. */
+export function eventOverlapsDateRange(
+  event: CalendarRangeEvent,
+  rangeStart: string,
+  rangeEnd: string,
+): boolean {
+  return calendarEventEndDate(event) >= rangeStart
+    && calendarEventStartDate(event) < rangeEnd;
+}
+
 export function normalizeCalendarRangeBoundary(value: string): string {
   return validISODate(value) ? new Date(`${value}T00:00:00+03:00`).toISOString() : value;
 }

@@ -71,7 +71,7 @@ export default async function TeamManagementPage() {
                     {person.username ? (
                       <span className="font-medium text-secondary">@{person.username}</span>
                     ) : (
-                      <span className="font-medium text-amber-700 dark:text-amber-300">
+                      <span className="font-medium text-warning">
                         kullanıcı adı belirlenmedi
                       </span>
                     )}

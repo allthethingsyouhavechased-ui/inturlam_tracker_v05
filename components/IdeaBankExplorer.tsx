@@ -25,7 +25,7 @@ import {
   IDEA_STATUS_TONE,
   ideaTags,
 } from "@/lib/ideas";
-import type { Brand, ClusterRow, IdeaCategory, IdeaStatus, IdeaWithContext } from "@/lib/types";
+import type { Brand, IdeaCategory, IdeaStatus, IdeaWithContext } from "@/lib/types";
 
 const ALL = "__all__";
 const OFFICE = "__office__";
@@ -184,14 +184,12 @@ function IdeaCreateDialog({
 export default function IdeaBankExplorer({
   ideas,
   brands,
-  clusters,
   archived,
   initialBrandId = "",
   newOpen = false,
 }: {
   ideas: IdeaWithContext[];
   brands: Brand[];
-  clusters: ClusterRow[];
   archived: boolean;
   initialBrandId?: string;
   newOpen?: boolean;
@@ -202,6 +200,9 @@ export default function IdeaBankExplorer({
   const [category, setCategory] = useState<typeof ALL | IdeaCategory>(ALL);
   const [status, setStatus] = useState<typeof ALL | IdeaStatus>(ALL);
   const [ideaDialogOpen, setIdeaDialogOpen] = useState(newOpen);
+  const sortedBrands = [...brands].sort((left, right) =>
+    left.name.localeCompare(right.name, "tr", { sensitivity: "base" }),
+  );
 
   useEffect(() => {
     function openIdeaDialog() {
@@ -235,27 +236,14 @@ export default function IdeaBankExplorer({
   ]));
   const filterCount = [query.trim(), scope !== ALL, category !== ALL, status !== ALL].filter(Boolean).length;
   const ideaCountByBrand = new Map(
-    brands.map((brand) => [brand.id, ideas.filter((idea) => idea.brand_id === brand.id).length]),
+    sortedBrands.map((brand) => [brand.id, ideas.filter((idea) => idea.brand_id === brand.id).length]),
   );
   const officeIdeaCount = ideas.filter((idea) => idea.scope_type === "office").length;
-  const knownClusters = new Set(clusters.map((cluster) => cluster.id));
-  const brandGroups = [
-    ...clusters.map((cluster) => ({
-      id: cluster.id,
-      label: cluster.label,
-      brands: brands.filter((brand) => brand.cluster === cluster.id),
-    })),
-    {
-      id: "__unknown__",
-      label: "Kategorisiz",
-      brands: brands.filter((brand) => !knownClusters.has(brand.cluster)),
-    },
-  ].filter((group) => group.brands.length > 0);
   const selectedScopeLabel = scope === ALL
     ? "Tüm fikirler"
     : scope === OFFICE
       ? "Ofis & Genel"
-      : brands.find((brand) => brand.id === scope)?.name ?? "Fikirler";
+      : sortedBrands.find((brand) => brand.id === scope)?.name ?? "Fikirler";
 
   function chooseScope(nextScope: string): void {
     setQuery("");
@@ -286,7 +274,7 @@ export default function IdeaBankExplorer({
     <>
       <IdeaCreateDialog
         open={ideaDialogOpen}
-        brands={brands}
+        brands={sortedBrands}
         defaultBrandId={scope !== ALL && scope !== OFFICE ? scope : OFFICE}
         onClose={closeIdeaDialog}
       />
@@ -318,27 +306,25 @@ export default function IdeaBankExplorer({
             <span className="text-[10px] tabular-nums text-muted">{officeIdeaCount}</span>
           </button>
 
-          {brandGroups.map((group) => (
-            <div key={group.id} className="mt-3 border-t border-border-subtle pt-2">
-              <h3 className="px-2 pb-1 text-[9px] font-semibold tracking-[0.08em] text-faint">{group.label.toLocaleUpperCase("tr-TR")}</h3>
-              {group.brands.map((brand) => {
-                const ideaCount = ideaCountByBrand.get(brand.id) ?? 0;
-                return (
-                  <button
-                    key={brand.id}
-                    type="button"
-                    onClick={() => chooseScope(brand.id)}
-                    aria-pressed={scope === brand.id}
-                    className={`group mt-0.5 flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors ${scope === brand.id ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-200" : "text-secondary hover:bg-surface-hover"}`}
-                  >
-                    <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold">{brand.name}</span>
-                    <span className="text-[10px] tabular-nums text-muted">{ideaCount}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+          <div className="mt-3 border-t border-border-subtle pt-2">
+            <h3 className="px-2 pb-1 text-[9px] font-semibold tracking-[0.08em] text-faint">MARKALAR</h3>
+            {sortedBrands.map((brand) => {
+              const ideaCount = ideaCountByBrand.get(brand.id) ?? 0;
+              return (
+                <button
+                  key={brand.id}
+                  type="button"
+                  onClick={() => chooseScope(brand.id)}
+                  aria-pressed={scope === brand.id}
+                  className={`group mt-0.5 flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors ${scope === brand.id ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-200" : "text-secondary hover:bg-surface-hover"}`}
+                >
+                  <BrandLogo name={brand.name} logoPath={brand.logo_path} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-xs font-semibold">{brand.name}</span>
+                  <span className="text-[10px] tabular-nums text-muted">{ideaCount}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </aside>
 
@@ -386,7 +372,7 @@ export default function IdeaBankExplorer({
             <Select value={scope} onChange={(event) => setScope(event.target.value)}>
               <option value={ALL}>Tüm kapsamlar</option>
               <option value={OFFICE}>Ofis geneli</option>
-              {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+              {sortedBrands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
             </Select>
           </label>
           <label className="grid gap-1.5 text-xs font-medium text-secondary">

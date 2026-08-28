@@ -1,105 +1,79 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import EmptyState from "@/components/EmptyState";
 import Icon from "@/components/ui/Icon";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import { TASK_STATUS_LABEL } from "@/lib/constants";
+import { formatPoints } from "@/lib/progress";
 import type { BrandMonthlyProgressRow } from "@/lib/repositories/progress";
 import type { MonthlyProgress, TaskStatus } from "@/lib/types";
 
-export interface PersonalBrandProgressRow extends BrandMonthlyProgressRow {
-  personal_task_count: number;
-  personal_points: number;
-}
-
-function ProgressTrack({ progress }: { progress: MonthlyProgress }) {
+function ProgressTrack({ progress, brand = false }: { progress: MonthlyProgress; brand?: boolean }) {
   const width = progress.percent === null ? 0 : Math.min(100, Math.max(0, progress.percent));
-  return progress.percent === null ? (
-    <div className="mt-2 h-1.5 rounded-full bg-surface-subtle" />
-  ) : (
+  return (
     <div
-      className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-subtle"
-      role="progressbar"
-      aria-label={`Aylık ilerleme yüzde ${progress.percent}`}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={progress.percent}
+      className="mt-2 h-1.5 overflow-hidden rounded-md bg-surface-muted"
+      role={progress.percent === null ? undefined : "progressbar"}
+      aria-label={progress.percent === null ? "Bu ay plan yok" : `Aylık ilerleme yüzde ${progress.percent}`}
+      aria-valuemin={progress.percent === null ? undefined : 0}
+      aria-valuemax={progress.percent === null ? undefined : 100}
+      aria-valuenow={progress.percent ?? undefined}
     >
-      <div className="h-full rounded-full bg-brand-600" style={{ width: `${width}%` }} />
+      {progress.percent !== null && <div className={`h-full ${brand ? "brand-accent-fill" : "bg-brand-600"}`} style={{ width: `${width}%` }} />}
     </div>
   );
 }
 
-function RatioTrack({ value, max, label }: { value: number; max: number; label: string }) {
-  const percent = max > 0 ? Math.round((value / max) * 100) : 0;
+function ProgressValue({ progress, showPoints = true }: { progress: MonthlyProgress; showPoints?: boolean }) {
   return (
-    <div
-      className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-subtle"
-      role="progressbar"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={max}
-      aria-valuenow={value}
-    >
-      <div className="h-full rounded-full bg-brand-600" style={{ width: `${percent}%` }} />
+    <div>
+      <p className="font-display text-2xl font-semibold text-foreground">{progress.percent === null ? "Plan yok" : `%${progress.percent}`}</p>
+      {showPoints && <p className="mt-0.5 text-[11px] tabular-nums text-muted">{formatPoints(progress.weighted_earned)} / {formatPoints(progress.weighted_total)} puan</p>}
     </div>
-  );
-}
-
-function Percent({ progress }: { progress: MonthlyProgress }) {
-  return (
-    <span className="shrink-0 text-xs font-semibold tabular-nums text-secondary">
-      {progress.percent === null ? "Plan yok" : `%${progress.percent}`}
-    </span>
   );
 }
 
 export default function HomeBrandProgress({
   month,
-  personalBrands,
-  assignedBrandsProgress,
   portfolioBrands,
   portfolioProgress,
   portfolioStatusCounts,
   personalProgress,
-  personalFocus,
+  assignedBrandIds,
 }: {
   month: string;
-  personalBrands: PersonalBrandProgressRow[];
-  assignedBrandsProgress: MonthlyProgress;
   portfolioBrands: BrandMonthlyProgressRow[];
   portfolioProgress: MonthlyProgress;
   portfolioStatusCounts: Record<TaskStatus, number>;
   personalProgress: MonthlyProgress;
-  personalFocus?: React.ReactNode;
+  assignedBrandIds: string[];
 }) {
+  const assigned = new Set(assignedBrandIds);
   const plannedBrandCount = portfolioBrands.filter((brand) => brand.progress.percent !== null).length;
   const statuses: TaskStatus[] = ["Beklemede", "DevamEdiyor", "Incelemede", "Onaylandi", "Yayinlandi"];
 
   return (
     <div className="space-y-5">
-      <section aria-label="Aylık analiz özeti" className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
-        <div className="px-4 py-4 sm:px-5">
+      <section aria-label="Aylık analiz özeti" className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-subtle sm:grid-cols-3">
+        <div className="bg-surface px-4 py-4 sm:px-5">
           <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">BENİM AYLIK İLERLEMEM</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{personalProgress.percent === null ? "Plan yok" : `%${personalProgress.percent}`}</p>
+          <div className="mt-1"><ProgressValue progress={personalProgress} showPoints={false} /></div>
           <ProgressTrack progress={personalProgress} />
-          <Link href={`/panom/katkim?month=${month}`} className="mt-2 inline-flex text-[10px] font-semibold text-brand-600 hover:underline">Katkı dökümünü aç</Link>
         </div>
-        <div className="px-4 py-4 sm:px-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">ÜZERİMDEKİ MARKALAR</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{assignedBrandsProgress.percent === null ? "Plan yok" : `%${assignedBrandsProgress.percent}`}</p>
-          <ProgressTrack progress={assignedBrandsProgress} />
-          <Link href={`/panom/markalar?month=${month}`} className="mt-2 inline-flex text-[10px] font-semibold text-brand-600 hover:underline">Marka analizini aç</Link>
+        <div className="bg-surface px-4 py-4 sm:px-5">
+          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">BU AYKİ PUANIM</p>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <div>
+              <p className="font-display text-2xl font-semibold tabular-nums text-foreground">{formatPoints(personalProgress.weighted_earned)}</p>
+              <p className="mt-0.5 text-[11px] tabular-nums text-muted">{formatPoints(personalProgress.weighted_total)} puanlık plandan</p>
+            </div>
+            <Link href={`/panom/katkim?month=${month}`} className="text-[11px] font-semibold text-brand-600 hover:underline dark:text-brand-300">Katkı dökümü</Link>
+          </div>
         </div>
-        <div className="px-4 py-4 sm:px-5">
+        <div className="bg-surface px-4 py-4 sm:px-5">
           <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">PORTFÖY İLERLEMESİ</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{portfolioProgress.percent === null ? "Plan yok" : `%${portfolioProgress.percent}`}</p>
+          <div className="mt-1 flex items-end justify-between gap-3"><ProgressValue progress={portfolioProgress} /><span className="text-[11px] text-muted">{plannedBrandCount}/{portfolioBrands.length} marka planlı</span></div>
           <ProgressTrack progress={portfolioProgress} />
-          <p className="mt-2 text-[10px] text-muted">{portfolioProgress.task_count} planlı görev</p>
-        </div>
-        <div className="px-4 py-4 sm:px-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">PLANLI MARKA</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">{plannedBrandCount}<span className="text-sm font-medium text-muted"> / {portfolioBrands.length}</span></p>
-          <RatioTrack value={plannedBrandCount} max={portfolioBrands.length} label={`${portfolioBrands.length} markanın ${plannedBrandCount} tanesinde bu ay plan var`} />
-          <p className="mt-2 text-[10px] text-muted">Bu ay işi tanımlı marka</p>
         </div>
       </section>
 
@@ -112,95 +86,41 @@ export default function HomeBrandProgress({
         {statuses.map((status) => (
           <div key={status} className="border-b border-border-subtle px-4 py-3 last:border-b-0 odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 xl:border-b-0 xl:border-r xl:odd:border-r xl:last:border-r-0">
             <p className="text-[10px] font-semibold text-muted">{TASK_STATUS_LABEL[status]}</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{portfolioStatusCounts[status]}</p>
+            <p className="mt-1 font-display text-xl font-semibold tabular-nums text-foreground">{portfolioStatusCounts[status]}</p>
           </div>
         ))}
       </section>
 
-      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.2fr)]">
-      <div className="min-w-0 space-y-5">
-      <section className="min-w-0 overflow-hidden rounded-xl border border-border-default bg-surface">
-        <div className="flex items-end justify-between gap-3 border-b border-border-subtle px-4 py-4 sm:px-5">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">KİŞİSEL MARKA GÖRÜNÜMÜ</p>
-            <h2 className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Bana atanan markalar</h2>
-            <p className="mt-1 text-[11px] text-muted">Markanın genel aylık ilerlemesi ve bu ay üstlendiğin ağırlıklı katkı.</p>
-          </div>
-          <div className="w-36 shrink-0 text-right">
-            <p className="text-2xl font-semibold tracking-tight text-foreground">{assignedBrandsProgress.percent === null ? "—" : `%${assignedBrandsProgress.percent}`}</p>
-            <p className="text-[10px] font-medium text-muted">Atanmış markalar toplamı</p>
-            <ProgressTrack progress={assignedBrandsProgress} />
-          </div>
+      <section className="overflow-hidden rounded-xl border border-border-default bg-surface">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border-subtle px-4 py-4 sm:px-5">
+          <div><p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">PORTFÖY AYLIK İLERLEME</p><h2 className="mt-1 text-[15px] font-semibold text-foreground">Tüm markalar</h2><p className="mt-1 text-[11px] text-muted">Kişisel sorumlulukların aynı listede “Sen” etiketiyle görünür.</p></div>
+          <Link href="/brands" className="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">Portföy tablosu</Link>
         </div>
-        {personalBrands.length > 0 ? (
-          <div className="divide-y divide-border-subtle">
-            {personalBrands.map((brand) => (
-              <Link key={brand.brand_id} href={`/brands/${brand.brand_id}?month=${month}`} className="group block px-4 py-3.5 hover:bg-surface-hover sm:px-5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <BrandLogo name={brand.brand_name} logoPath={brand.brand_logo_path} />
+        {portfolioBrands.length === 0 ? (
+          <div className="p-4"><EmptyState compact title="Aktif marka yok" description="Marka eklendiğinde aylık ilerleme burada görünür." /></div>
+        ) : (
+          <div className="grid max-h-[36rem] overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
+            {portfolioBrands.map((brand) => (
+              <Link
+                key={brand.brand_id}
+                href={`/brands/${brand.brand_id}?month=${month}`}
+                data-brand-accent
+                style={brandAccentStyle(brand.brand_accent_hue)}
+                className="brand-stripe group min-w-0 border-b border-border-subtle px-4 py-3.5 hover:bg-surface-hover sm:border-r sm:px-5"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <BrandLogo name={brand.brand_name} logoPath={brand.brand_logo_path} accentHue={brand.brand_accent_hue} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="truncate text-[13px] font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">{brand.brand_name}</span>
-                      <Percent progress={brand.progress} />
-                    </div>
-                    <p className="mt-0.5 truncate text-[11px] text-muted">
-                      {brand.progress.task_count} aylık görev · senin katkın {brand.personal_task_count} görev / {brand.personal_points} puan
-                    </p>
-                    <ProgressTrack progress={brand.progress} />
+                    <div className="flex items-center gap-2"><span className="brand-name truncate text-xs font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">{brand.brand_name}</span>{assigned.has(brand.brand_id) && <span className="rounded-md bg-brand-100 px-1.5 py-0.5 text-[9px] font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200">SEN</span>}<span className="ml-auto shrink-0 text-xs font-semibold tabular-nums text-secondary">{brand.progress.percent === null ? "Plan yok" : `%${brand.progress.percent}`}</span></div>
+                    <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted"><span>{brand.progress.task_count} görev · {formatPoints(brand.progress.weighted_earned)}/{formatPoints(brand.progress.weighted_total)} puan</span><Icon name="arrow-right" className="size-3 opacity-0 transition-opacity group-hover:opacity-100" /></div>
+                    <ProgressTrack progress={brand.progress} brand />
                   </div>
                 </div>
               </Link>
             ))}
           </div>
-        ) : (
-          <div className="px-4 py-10 text-center sm:px-5">
-            <p className="text-sm font-medium text-secondary">Henüz marka ataman yok.</p>
-            <p className="mt-1 text-xs text-muted">Yönetici marka atadığında kişisel analiz burada oluşacak.</p>
-          </div>
         )}
       </section>
-      {personalFocus}
-      </div>
-
-      <section className="min-w-0 overflow-hidden rounded-xl border border-border-default bg-surface">
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border-subtle px-4 py-4 sm:px-5">
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">PORTFÖY AYLIK İLERLEME</p>
-            <h2 className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Tüm markalar</h2>
-            <p className="mt-1 text-[11px] text-muted">{plannedBrandCount} markada bu ay plan var · {portfolioBrands.length - plannedBrandCount} markada plan yok.</p>
-          </div>
-          <div className="w-36 shrink-0 text-right">
-            <p className="text-2xl font-semibold tracking-tight text-foreground">{portfolioProgress.percent === null ? "—" : `%${portfolioProgress.percent}`}</p>
-            <p className="text-[10px] font-medium text-muted">Ağırlıklı portföy toplamı</p>
-            <ProgressTrack progress={portfolioProgress} />
-          </div>
-        </div>
-        <div className="grid max-h-[34rem] overflow-y-auto sm:grid-cols-2">
-          {portfolioBrands.map((brand, index) => (
-            <Link
-              key={brand.brand_id}
-              href={`/brands/${brand.brand_id}?month=${month}`}
-              className={`group min-w-0 px-4 py-3 hover:bg-surface-hover sm:px-5 ${index > 0 ? "border-t border-border-subtle" : ""} sm:[&:nth-child(2)]:border-t-0 sm:[&:nth-child(even)]:border-l`}
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <BrandLogo name={brand.brand_name} logoPath={brand.brand_logo_path} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">{brand.brand_name}</span>
-                    <Percent progress={brand.progress} />
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-muted">{brand.progress.task_count} görev</span>
-                    <Icon name="arrow-right" className="size-3 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
-                  </div>
-                  <ProgressTrack progress={brand.progress} />
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-      </div>
     </div>
   );
 }

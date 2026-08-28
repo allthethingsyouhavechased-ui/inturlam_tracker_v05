@@ -5,16 +5,16 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
-  primary: "bg-brand-600 text-white shadow-sm hover:bg-brand-700",
+  primary: "bg-brand-600 text-white hover:bg-brand-700",
   secondary:
     "border border-border-default bg-surface text-secondary hover:border-border-strong hover:bg-surface-hover hover:text-foreground",
   ghost: "text-secondary hover:bg-surface-hover hover:text-foreground",
-  danger: "bg-danger text-white shadow-sm hover:bg-rose-700",
+  danger: "bg-danger-solid text-white hover:bg-danger-solid-hover",
 };
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: "min-h-9 gap-1.5 rounded-[9px] px-3 text-xs",
-  md: "min-h-11 gap-2 rounded-[10px] px-4 text-[13px] md:min-h-10",
+  sm: "min-h-11 gap-1.5 rounded-md px-3 text-xs md:min-h-9",
+  md: "min-h-11 gap-2 rounded-md px-4 text-[13px] md:min-h-10",
 };
 
 // Herhangi bir öğeye (button, Link, a) aynı görünümü vermek için saf class

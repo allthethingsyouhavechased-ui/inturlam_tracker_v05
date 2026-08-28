@@ -101,9 +101,10 @@ export default async function ReportsPage({
     ...p,
     brands: personBrandRows
       .filter((b) => b.person_id === p.person_id)
-      .map(({ brand_id, brand_name, total_tasks, completed_tasks, open_tasks }) => ({
+      .map(({ brand_id, brand_name, brand_accent_hue, total_tasks, completed_tasks, open_tasks }) => ({
         brand_id,
         brand_name,
+        brand_accent_hue,
         total_tasks,
         completed_tasks,
         open_tasks,

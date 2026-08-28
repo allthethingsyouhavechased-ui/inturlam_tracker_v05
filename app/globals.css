@@ -4,20 +4,28 @@
 
 :root {
   color-scheme: light;
-  --background: #f5f5f2;
-  --foreground: #1a1a1e;
+  --background: #f1efea;
+  --foreground: #171614;
   --surface: #ffffff;
-  --surface-subtle: #fafaf8;
-  --surface-muted: #efefeb;
+  --surface-subtle: #f8f7f3;
+  --surface-muted: #e6e3dc;
   --surface-elevated: #ffffff;
-  --surface-inverse: #1a1a1e;
-  --surface-hover: rgb(26 26 30 / 0.045);
-  --text-secondary: #55545d;
-  --text-muted: #74737d;
-  --text-faint: #9a98a1;
-  --border-subtle: #e9e8e3;
-  --border-default: #dcdad4;
-  --border-strong: #c8c5bd;
+  --surface-inverse: #171614;
+  --surface-hover: rgb(23 22 20 / 0.045);
+  --text-secondary: #4a4741;
+  --text-muted: #63605a;
+  --text-faint: #817d75;
+  --border-subtle: #e4e1d9;
+  --border-default: #d4d0c6;
+  --border-strong: #b6b1a5;
+  /* Semantik renkler de yüzey/metin token'ları gibi TEMAYA GÖRE kendi değerini
+     değiştirir — bu yüzden `text-danger` yazarken ayrıca `dark:` gerekmez.
+     Açık temadaki koyu tonlar beyaz zeminde, koyu temadaki açık tonlar #141417
+     zeminde 4.5:1'i geçiyor; ikisini tek sabit renkle karşılamak mümkün değil. */
+  --danger: #b33a21;
+  --success: #17724f;
+  --warning: #8a5d0a;
+  --info: #1e5fb8;
   --scrollbar-thumb: rgb(85 84 93 / 0.36);
   --scrollbar-thumb-hover: rgb(85 84 93 / 0.6);
   --header-h: 4rem;
@@ -26,29 +34,47 @@
   --page-max: 85rem;
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-quick: 100ms;
   --motion-standard: 160ms;
   --motion-deliberate: 220ms;
+  --motion-spring: 360ms;
+  /* YALNIZCA sürükleme geri bildiriminde kullanılır (`.ui-surface[data-dragging]`).
+     Hover/kart yüzeyleri MASTER.md gereği 1px kenarlıkla ayrışır, gölgeyle değil —
+     bu yüzden burada kademeli bir gölge skalası değil, tek bir yükseklik değeri var.
+     `@theme inline`a KOYMA: orada `--shadow-lift: var(--shadow-lift)` kendine
+     referans olur ve `.dark` override'ını da öldürür (bunu utility değil, aşağıdaki
+     ham CSS kuralı okuyor). */
+  --shadow-lift: 0 2px 4px rgb(35 30 24 / 0.06), 0 14px 28px -14px rgb(35 30 24 / 0.10);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0c0c0e;
-  --foreground: #f3f2f7;
-  --surface: #141417;
-  --surface-subtle: #18181c;
-  --surface-muted: #202026;
-  --surface-elevated: #25252b;
-  --surface-inverse: #f3f2f7;
+  --background: #09090a;
+  --foreground: #f4f3f1;
+  --surface: #111113;
+  --surface-subtle: #151517;
+  --surface-muted: #1c1c1f;
+  --surface-elevated: #202024;
+  --surface-inverse: #f4f3f1;
   --surface-hover: rgb(255 255 255 / 0.055);
-  --text-secondary: #c2c0ca;
-  --text-muted: #96949f;
-  --text-faint: #74727d;
-  --border-subtle: #232329;
-  --border-default: #303038;
-  --border-strong: #464650;
+  --text-secondary: #cbc9c5;
+  --text-muted: #999791;
+  --text-faint: #74716c;
+  --border-subtle: #202024;
+  --border-default: #2c2c31;
+  --border-strong: #46464d;
+  --danger: #ff9074;
+  --success: #41c08f;
+  --warning: #e3a73c;
+  --info: #79a9f0;
   --scrollbar-thumb: rgb(150 148 159 / 0.34);
   --scrollbar-thumb-hover: rgb(194 192 202 / 0.54);
+  /* Koyu temada siyah gölge görünmez (#09090a zemin). Yükseklik burada gölgeyle
+     değil ışıkla anlatılır: dış kenarda ince bir highlight + çok yumuşak bir
+     ayrışma gölgesi. Açık temanın değerini olduğu gibi bırakmak sürükleme geri
+     bildirimini koyu temada tamamen görünmez yapıyordu. */
+  --shadow-lift: 0 0 0 1px rgb(255 255 255 / 0.09), 0 18px 36px -16px rgb(0 0 0 / 0.72);
 }
 
 @theme inline {
@@ -66,33 +92,75 @@
   --color-border-subtle: var(--border-subtle);
   --color-border-default: var(--border-default);
   --color-border-strong: var(--border-strong);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-archivo);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-archivo);
 
-  --color-brand-50: #f2f1ff;
-  --color-brand-100: #e5e3ff;
-  --color-brand-200: #cac5ff;
-  --color-brand-300: #aaa2ff;
-  --color-brand-400: #8e86f7;
-  --color-brand-500: #675ce7;
-  --color-brand-600: #5649d8;
-  --color-brand-700: #463ab7;
-  --color-brand-800: #382f91;
-  --color-brand-900: #2f2874;
-  --color-brand-950: #1c1845;
+  /* Tipografi ölçeği — MASTER.md'deki tablo artık BELGEDE DEĞİL KODDA.
+     Tracking boy-özeldir: metin büyüdükçe negatife, küçüldükçe pozitife gider;
+     tek bir sabit `letter-spacing` her boyda birden yanlış olur. Yeni ekranda
+     `text-[11px] tracking-[-0.025em]` gibi elle değer YAZMA, bunları kullan.
+     Tailwind `--text-x--line-height`/`--letter-spacing`/`--font-weight`
+     eklerini otomatik `text-x` utility'sine bağlar. */
+  --text-display: 2rem;
+  --text-display--line-height: 2.125rem;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 600;
 
-  --color-success: #177a55;
-  --color-warning: #a15c00;
-  --color-danger: #c43652;
-  --color-info: #2965c7;
+  --text-h1: 1.5rem;
+  --text-h1--line-height: 1.75rem;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 600;
+
+  --text-h2: 1.0625rem;
+  --text-h2--line-height: 1.375rem;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 600;
+
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.3125rem;
+  --text-body--letter-spacing: 0em;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-caption--letter-spacing: 0.005em;
+
+  --text-eyebrow: 0.6875rem;
+  --text-eyebrow--line-height: 1rem;
+  --text-eyebrow--letter-spacing: 0.1em;
+  --text-eyebrow--font-weight: 650;
+
+  --color-brand-50: #eef7f4;
+  --color-brand-100: #d8ece6;
+  --color-brand-200: #b4d9cf;
+  --color-brand-300: #84bdaf;
+  --color-brand-400: #5a9f90;
+  --color-brand-500: #438478;
+  --color-brand-600: #326b61;
+  --color-brand-700: #28564f;
+  --color-brand-800: #224640;
+  --color-brand-900: #1d3a35;
+  --color-brand-950: #0d211e;
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  /* DOLU (zemin) tehlike butonu ayrı bir token: `--danger` koyu temada beyaz
+     metnin okunamayacağı kadar açılıyor (#f4788d). Bu ikisi bilerek her iki
+     temada da AYNI kalır — beyaz metinle 4.9:1. Metin/ikon rengi için
+     `text-danger`, dolu zemin için `bg-danger-solid` kullan. */
+  --color-danger-solid: #b33a21;
+  --color-danger-solid-hover: #922d18;
 
   --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --shadow-sm: 0 1px 2px rgb(16 16 20 / 0.04);
-  --shadow-md: 0 16px 40px -24px rgb(16 16 20 / 0.32);
-  --shadow-lg: 0 28px 70px -30px rgb(8 8 12 / 0.55);
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.625rem;
+  --shadow-sm: 0 1px 2px rgb(35 30 24 / 0.10);
+  --shadow-md: 0 16px 40px -24px rgb(35 30 24 / 0.10);
+  --shadow-lg: 0 28px 70px -30px rgb(35 30 24 / 0.10);
 }
 
 html {
@@ -107,6 +175,44 @@ body {
   background: var(--background);
   color: var(--foreground);
   text-rendering: optimizeLegibility;
+  font-size: 0.875rem;
+  line-height: 1.3125rem;
+}
+
+:where(h1, h2, h3, .font-display, .brand-name) {
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+[data-brand-accent] {
+  --brand-accent-hue: 210;
+  --brand-accent: oklch(0.62 0.13 var(--brand-accent-hue));
+  --brand-accent-ink: oklch(0.4 0.13 var(--brand-accent-hue));
+}
+
+.dark [data-brand-accent] {
+  --brand-accent: oklch(0.70 0.14 var(--brand-accent-hue));
+  --brand-accent-ink: oklch(0.82 0.1 var(--brand-accent-hue));
+}
+
+.brand-stripe {
+  border-inline-start: 3px solid var(--brand-accent);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brand-stripe:hover {
+    border-inline-start-width: 4px;
+  }
+}
+
+.brand-accent-fill {
+  background: var(--brand-accent);
+}
+
+.brand-logo-fallback {
+  background: color-mix(in oklch, var(--brand-accent) 16%, var(--surface));
+  color: var(--brand-accent-ink);
 }
 
 ::selection {
@@ -162,6 +268,10 @@ body {
   background-color: var(--scrollbar-thumb-hover);
 }
 
+/* Varsayılan etkileşim hızı MASTER.md'nin "100-220ms, no bounce" tezine bağlı.
+   Spring (`--motion-spring`/`--motion-ease-spring`) yalnızca momentum taşıyan
+   sürükleme geri bildiriminde kullanılır: hover günde yüzlerce kez görülüyor,
+   orada 360ms spring yoğun panoda tarama hızını gözle görülür şekilde düşürdü. */
 .ui-press,
 .ui-surface {
   transition-duration: var(--motion-standard);
@@ -187,19 +297,35 @@ body {
   }
 }
 
+/* Bir listedeki kardeşlere sırayla uygulanan tek seferlik giriş — sayfa
+   başına bir kez, tüm bölümlerde tekrarlanan aynı animasyon değil (bkz.
+   impeccable craft-floor: "one authored moment"). Kullanım:
+   `<li className="ui-stagger" style={{ "--i": index }}>`. */
+.ui-stagger {
+  animation: ui-enter var(--motion-deliberate) var(--motion-ease-standard) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .ui-surface:hover {
     transform: translateY(-1px);
   }
 }
 
+/* Sürükleme, kullanıcının ivmesini taşıyan tek fiziksel etkileşim — bounce'ı
+   hak eden tek yer burası. Kartı parmağın altında hafifçe küçültüp eğmek
+   "kaldırdım" hissini veriyor; bu yüzden spring easing SADECE burada. */
 .ui-surface[data-dragging="true"] {
-  transform: scale(0.985);
+  transform: scale(0.97) rotate(-0.4deg);
+  box-shadow: var(--shadow-lift);
+  transition-duration: var(--motion-spring);
+  transition-timing-function: var(--motion-ease-spring);
 }
 
 .ui-press:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.98);
   transition-duration: var(--motion-quick);
+  transition-timing-function: var(--motion-ease-standard);
 }
 
 input[type="date"] {
@@ -315,6 +441,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
+/* "Azaltılmış hareket" SIFIR HAREKET DEĞİL: konum/ölçek değişimi kalkar, ama
+   durumu anlatan renk ve opaklık geçişleri KALIR. Eskiden buradaki tek satır
+   (`transition-duration: 1ms`) odak halkasını, hover rengini ve yükleniyor
+   opaklığını da anında kesiyordu — hareket hassasiyeti olan kullanıcı arayüzün
+   geri bildirimini tamamen kaybediyordu. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -325,8 +456,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+    transition-property: color, background-color, border-color, outline-color, opacity, fill, stroke !important;
+    transition-duration: var(--motion-quick) !important;
+  }
+
+  .ui-surface:hover,
+  .ui-surface[data-dragging="true"],
+  .ui-press:active {
+    transform: none !important;
+  }
+}
+
+/* Saydamlık tercihini kapatan kullanıcıda üst çubuk buzlu camdan düz yüzeye
+   döner — `backdrop-filter` kalırsa altındaki içerik okunurluğu bozuyor. */
+@media (prefers-reduced-transparency: reduce) {
+  .app-topbar {
+    background: var(--background);
+    backdrop-filter: none;
+  }
+}
+
+/* Yüksek kontrast tercihinde hairline kenarlıklar 3:1'i geçen güçlü tona çıkar. */
+@media (prefers-contrast: more) {
+  :root,
+  .dark {
+    --border-subtle: var(--border-strong);
+    --border-default: var(--border-strong);
+  }
+
+  .app-topbar {
+    background: var(--background);
+    backdrop-filter: none;
   }
 }
 

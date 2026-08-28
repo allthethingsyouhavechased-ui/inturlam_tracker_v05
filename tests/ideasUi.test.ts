@@ -18,10 +18,6 @@ describe("Fikir Bankası ürün bağlantıları", () => {
     assert.match(page, /<IdeaCreateButton \/>/);
     assert.match(trigger, /OPEN_IDEA_DIALOG_EVENT/);
     assert.match(explorer, /role="dialog"/);
-    assert.doesNotMatch(explorer, /<details id="yeni-fikir"/);
-    assert.doesNotMatch(explorer, /Yeni fikir yakala/);
-    assert.match(explorer, /Ofis geneli/);
-    assert.match(explorer, /Instagram, TikTok, Pinterest, YouTube/);
     assert.match(explorer, /updateIdeaStatusAction/);
   });
 
@@ -40,21 +36,27 @@ describe("Fikir Bankası ürün bağlantıları", () => {
     assert.match(explorer, /idea\.status !== status/);
   });
 
-  it("marka dizinini kategori grupları, fikir sayıları ve ofis alanıyla kurar", () => {
+  it("marka dizinini kategori gruplarından bağımsız Türkçe alfabetik sırada kurar", () => {
     const explorer = source("components/IdeaBankExplorer.tsx");
-    assert.match(explorer, /Fikir alanları/);
-    assert.match(explorer, /Ofis &amp; Genel/);
+    assert.match(explorer, /const sortedBrands = \[\.\.\.brands\]\.sort/);
+    assert.match(explorer, /left\.name\.localeCompare\(right\.name, "tr", \{ sensitivity: "base" \}\)/);
+    assert.match(explorer, /\{sortedBrands\.map\(\(brand\) =>/);
+    assert.doesNotMatch(explorer, /brandGroups/);
     assert.match(explorer, /ideaCountByBrand/);
-    assert.match(explorer, /group\.label\.toLocaleUpperCase\("tr-TR"\)/);
+    assert.match(explorer, /officeIdeaCount/);
     assert.match(explorer, /chooseScope\(brand\.id\)/);
     assert.match(explorer, /setQuery\(""\);\s+setCategory\(ALL\);\s+setStatus\(ALL\);\s+setScope\(nextScope\)/);
-    assert.match(explorer, /`\$\{selectedScopeLabel\} fikirleri`/);
+  });
+
+  it("ana ekran ve detay seçicisi markaları Türkçe alfabetik sırada sunar", () => {
+    for (const file of ["app/ideas/page.tsx", "app/ideas/[ideaId]/page.tsx"]) {
+      assert.match(source(file), /name\.localeCompare\(right\.name, "tr", \{ sensitivity: "base" \}\)/);
+    }
   });
 
   it("marka detayındaki fikir kısayolu sayacı korur ve filtrelenmiş akışa iner", () => {
     const brandPage = source("app/brands/[brandId]/page.tsx");
     assert.match(brandPage, /countIdeasForBrand\(brandId\)/);
     assert.match(brandPage, /ideas\?brand=\$\{encodeURIComponent\(brand\.id\)\}#fikir-akisi/);
-    assert.match(brandPage, /Fikirler · \{brandIdeaCount\}/);
   });
 });

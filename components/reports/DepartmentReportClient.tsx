@@ -387,7 +387,7 @@ export default function DepartmentReportClient({
                       <span
                         className={
                           member.overdue_tasks > 0
-                            ? "font-medium text-rose-600 dark:text-rose-400"
+                            ? "font-medium text-danger"
                             : undefined
                         }
                       >
@@ -447,7 +447,7 @@ export default function DepartmentReportClient({
             showAssignee
             trailing={
               <>
-                <span className="block font-medium text-rose-600 dark:text-rose-400">
+                <span className="block font-medium text-danger">
                   {task.due_date ? `${daysBetween(task.due_date, today)} gün` : "—"}
                 </span>
                 <span className="block text-zinc-500 dark:text-zinc-400">
@@ -502,7 +502,7 @@ export default function DepartmentReportClient({
             task={task}
             showAssignee
             trailing={
-              <span className="block text-emerald-600 dark:text-emerald-400">
+              <span className="block text-success">
                 {formatDateShort(task.completed_at?.slice(0, 10) ?? null)}
               </span>
             }

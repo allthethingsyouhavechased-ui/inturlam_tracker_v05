@@ -31,6 +31,15 @@ beforeEach(resetDb);
 after(resetDb);
 
 describe("merkezi oturum kapısı", () => {
+it("uygulama manifestini oturum kapısının dışında bırakır", () => {
+    // Tarayıcı "ana ekrana ekle" için manifesti oturum çerezi OLMADAN isteyebiliyor.
+    // Gate'lenirse istek /whoami'ye düşer ve uygulama adı/ikonu hiç okunmaz.
+    const response = proxy(request("/manifest.webmanifest"));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("location"), null);
+  });
+
+
   it("oturumsuz panel gezintisini giriş ekranına gönderir", () => {
     const response = proxy(request("/tasks"));
 

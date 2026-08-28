@@ -3,7 +3,7 @@ import { NO_DEPARTMENT, type DepartmentKey } from "@/lib/departments";
 import { departmentPeopleCondition } from "@/lib/repositories/people";
 import { ARCHIVE_AFTER_DAYS } from "@/lib/taskArchive";
 import { plannedTaskCondition } from "@/lib/taskPlanning";
-import { assertWeightPoints } from "@/lib/progress";
+import { assertWeightPoints, DIFFICULTY_DEFAULT_WEIGHT } from "@/lib/progress";
 import type {
   ContentType,
   Task,
@@ -31,7 +31,7 @@ const WITH_CONTEXT_SELECT = `
   SELECT t.*, p.name AS assignee_name,
          p.avatar_path AS assignee_avatar_path,
          ci.title AS content_title, COALESCE(t.type_override, ci.type) AS content_type,
-         b.id AS brand_id, b.name AS brand_name,
+         b.id AS brand_id, b.name AS brand_name, b.accent_hue AS brand_accent_hue,
          (SELECT COUNT(*) FROM comments c WHERE c.task_id = t.id) AS comment_count,
          (SELECT c.body FROM comments c
            WHERE c.task_id = t.id ${LAST_COMMENT_ORDER}) AS last_comment_body,
@@ -72,6 +72,11 @@ const WITH_CONTEXT_SELECT = `
 // işlere konur (bkz. lib/taskArchive.ts), bu yüzden "açık iş" sorgularının
 // ayrıca bunu yazması gerekmez — ama pano/liste gibi yayınlananları da gösteren
 // sorgular bunu EKLEMEK ZORUNDA, yoksa arşiv hiçbir yerde gizlenmez.
+// Arşiv damgası artık YALNIZCA yayınlanmış işe konmuyor: "Görevi iptal et"
+// düğmesi açık bir işi de arşivleyebiliyor (bkz. components/ArchiveTaskButton).
+// Bu yüzden "gecikmiş" ve "bu hafta" sayaçları da bu koşulu uygulamak ZORUNDA —
+// yoksa iptal edilen iş panodan düşüyor ama üstteki metrikte saymaya devam ediyor.
+// Takvim (`listTasksDueInRange`) bilerek DIŞARIDA: geçmişi olduğu gibi gösteriyor.
 const NOT_ARCHIVED = "t.archived_at IS NULL";
 const IS_PLANNED = plannedTaskCondition("t");
 
@@ -124,6 +129,27 @@ export function listAllTasks(includeArchived = false): TaskWithContext[] {
   );
 }
 
+/** Marka çalışma alanı için en yakın açık işleri, tüm görev tablosunu taşımadan getirir. */
+export function listOpenTasksByBrand(
+  brandId: string,
+  limit = 5,
+): TaskWithContext[] {
+  const safeLimit = Math.max(1, Math.min(25, Math.trunc(limit)));
+  return plainList<TaskWithContext>(
+    getDb()
+      .prepare(
+        `${WITH_CONTEXT_SELECT}
+         WHERE b.id = ?
+           AND t.status != 'Yayinlandi'
+           AND ${NOT_ARCHIVED}
+           AND ${IS_PLANNED}
+         ORDER BY ${PRIORITY_ORDER_SQL}, (t.due_date IS NULL), t.due_date, t.created_at, t.id
+         LIMIT ?`,
+      )
+      .all(brandId, safeLimit),
+  );
+}
+
 export function listTasksDueThisWeek(
   start: string,
   end: string,
@@ -133,7 +159,7 @@ export function listTasksDueThisWeek(
       .prepare(
         `${WITH_CONTEXT_SELECT}
          WHERE t.due_date IS NOT NULL AND t.due_date BETWEEN ? AND ?
-           AND t.status != 'Yayinlandi'
+           AND t.status != 'Yayinlandi' AND ${NOT_ARCHIVED}
          ORDER BY t.due_date, b.name`,
       )
       .all(start, end),
@@ -165,7 +191,7 @@ export function listOverdueTasks(today: string): TaskWithContext[] {
       .prepare(
         `${WITH_CONTEXT_SELECT}
          WHERE t.due_date IS NOT NULL AND t.due_date < ?
-           AND t.status != 'Yayinlandi'
+           AND t.status != 'Yayinlandi' AND ${NOT_ARCHIVED}
          ORDER BY t.due_date, b.name`,
       )
       .all(today),
@@ -311,7 +337,9 @@ export function createTask(input: {
   priority?: TaskPriority;
 }): string {
   if (!input.dueDate) throw new Error("Teslim tarihi zorunlu.");
-  const weightPoints = assertWeightPoints(input.weightPoints ?? 1);
+  const weightPoints = assertWeightPoints(
+    input.weightPoints ?? DIFFICULTY_DEFAULT_WEIGHT[input.difficulty ?? "Orta"],
+  );
   const id = crypto.randomUUID();
   getDb()
     .prepare(

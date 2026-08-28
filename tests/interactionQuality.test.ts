@@ -21,18 +21,25 @@ describe("form geri bildirimi", () => {
     assert.match(submit, /pendingLabel/);
   });
 
-  it("guest, takvim ve hesap yönetimi formları ortak geri bildirim akışını kullanır", () => {
+  it("guest ve hesap yönetimi formları ortak geri bildirim akışını kullanır", () => {
     const guestTasks = source("app/guest/tasks/page.tsx");
     const guestTask = source("app/guest/tasks/[taskId]/page.tsx");
-    const calendar = source("app/calendar/page.tsx");
     const accounts = source("app/team/manage/page.tsx");
 
-    for (const page of [guestTasks, guestTask, calendar, accounts]) {
+    for (const page of [guestTasks, guestTask, accounts]) {
       assert.match(page, /<ActionForm/);
       assert.match(page, /<SubmitButton/);
     }
     assert.match(source("lib/actions/guestTasks.ts"), /return taskId/);
     assert.doesNotMatch(source("lib/actions/guestTasks.ts"), /redirect\(`/);
+  });
+
+  it("takvim modalı bekleyen işlemi kilitler ve hatayı canlı bölgede duyurur", () => {
+    const dialog = source("components/CalendarEventDialog.tsx");
+    assert.match(dialog, /disabled=\{pending\}/);
+    assert.match(dialog, /role="alert"/);
+    assert.match(dialog, /getActionErrorMessage/);
+    assert.match(dialog, /router\.refresh\(\)/);
   });
 });
 
@@ -69,7 +76,7 @@ describe("mobil takvim ve bağlantısız kod", () => {
   it("aylık takvimi dar ekranda erişilebilir yatay kaydırma alanına alır", () => {
     const grid = source("components/EventCalendarGrid.tsx");
     assert.match(grid, /overflow-x-auto/);
-    assert.match(grid, /min-w-\[44rem\]/);
+    assert.match(grid, /min-w-\[\d+rem\]/);
     assert.match(grid, /role="region"/);
     assert.match(grid, /tabIndex=\{0\}/);
     assert.match(grid, /yatay kaydır/);

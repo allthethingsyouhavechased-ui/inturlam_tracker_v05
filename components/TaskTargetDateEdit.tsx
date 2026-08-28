@@ -112,7 +112,7 @@ export default function TaskTargetDateEdit({
       </span>
 
       {error && (
-        <span role="alert" className="max-w-40 text-[11px] text-rose-600 dark:text-rose-400">
+        <span role="alert" className="max-w-40 text-[11px] text-danger">
           {error}
         </span>
       )}

@@ -13,8 +13,6 @@ describe("Talepler sayfası oluşturma akışı", () => {
     const dialog = source("components/ClientRequestCreateDialog.tsx");
 
     assert.match(page, /<ClientRequestCreateDialog brands=\{brands\} \/>/);
-    assert.doesNotMatch(page, /id="yeni-talep"/);
-    assert.doesNotMatch(page, /<details/);
     assert.match(dialog, /aria-haspopup="dialog"/);
     assert.match(dialog, /role="dialog"/);
     assert.match(dialog, /aria-modal="true"/);

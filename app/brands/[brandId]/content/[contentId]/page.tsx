@@ -47,7 +47,7 @@ export default async function ContentPage({
   const people = listActivePeople();
   const templates = listTemplatesForContentType(content.type);
   return (
-    <div className="space-y-6">
+    <div>
       <AutoRefresh />
       <PageHeader
         eyebrow={CONTENT_TYPE_LABEL[content.type].toLocaleUpperCase("tr-TR")}
@@ -72,6 +72,7 @@ export default async function ContentPage({
         }
       />
 
+      <div className="space-y-6">
       <section className="space-y-3 rounded-xl border border-border-default bg-surface p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -133,6 +134,7 @@ export default async function ContentPage({
           </ul>
         </details>
       )}
+      </div>
     </div>
   );
 }

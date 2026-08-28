@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { buttonClass } from "@/components/ui/Button";
+import { controlClass } from "@/components/ui/Input";
 import { updateContentItemAction } from "@/lib/actions/content";
 import { CONTENT_TYPES, CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { ContentItem, Person } from "@/lib/types";
 import SubmitButton from "./SubmitButton";
 
-const inputClass =
-  "w-full min-h-11 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+const inputClass = controlClass();
 
 export default function EditContentForm({
   content,
@@ -25,7 +26,7 @@ export default function EditContentForm({
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 dark:hover:text-brand-400"
+        className={buttonClass({ variant: "ghost", className: "px-2 text-xs" })}
       >
         Düzenle
       </button>
@@ -43,10 +44,10 @@ export default function EditContentForm({
           setError(getActionErrorMessage(e));
         }
       }}
-      className="grid w-full gap-3 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900 sm:grid-cols-[1fr_auto_auto_auto]"
+      className="grid w-full gap-3 rounded-xl border border-border-default bg-surface p-4 sm:grid-cols-[1fr_auto_auto_auto]"
     >
       <input type="hidden" name="contentId" value={content.id} />
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Başlık
         <input
           name="title"
@@ -55,7 +56,7 @@ export default function EditContentForm({
           className={inputClass}
         />
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Tür
         <select name="type" defaultValue={content.type} className={inputClass}>
           {CONTENT_TYPES.map((t) => (
@@ -65,7 +66,7 @@ export default function EditContentForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Atanan
         <select
           name="assigneeId"
@@ -80,7 +81,7 @@ export default function EditContentForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Hedef tarih
         <input
           type="date"
@@ -94,11 +95,11 @@ export default function EditContentForm({
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+          className={buttonClass({ variant: "ghost" })}
         >
           Vazgeç
         </button>
-        {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+        {error && <p role="alert" className="text-xs text-danger">{error}</p>}
       </div>
     </form>
   );

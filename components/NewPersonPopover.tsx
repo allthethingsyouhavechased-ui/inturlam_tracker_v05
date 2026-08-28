@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import NewPersonForm from "@/components/NewPersonForm";
+import Button from "@/components/ui/Button";
 
 export default function NewPersonPopover() {
   const [open, setOpen] = useState(false);
@@ -29,32 +30,31 @@ export default function NewPersonPopover() {
 
   return (
     <div ref={wrapperRef} className="relative shrink-0">
-      <button
+      <Button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="ui-press inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-brand-600 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-500"
       >
         <svg viewBox="0 0 20 20" fill="none" className="size-4" aria-hidden="true">
           <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
         Yeni ekip üyesi
-      </button>
+      </Button>
 
       {open && (
         <div
           id={panelId}
           role="dialog"
           aria-labelledby={`${panelId}-title`}
-          className="ui-enter absolute right-0 z-20 mt-2 w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-black/10 bg-white p-4 shadow-lg dark:border-white/10 dark:bg-zinc-900"
+          className="ui-enter absolute right-0 z-20 mt-2 w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border-default bg-surface p-4 shadow-lg"
         >
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
-              <h3 id={`${panelId}-title`} className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              <h3 id={`${panelId}-title`} className="text-sm font-semibold text-foreground">
                 Yeni ekip üyesi ekle
               </h3>
-              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="mt-0.5 text-xs text-muted">
                 İsim, departman ve ilk giriş şifresini birlikte belirle.
               </p>
             </div>
@@ -62,7 +62,7 @@ export default function NewPersonPopover() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Yeni ekip üyesi panelini kapat"
-              className="touch-target rounded-lg p-1 text-lg leading-none text-zinc-400 transition-colors hover:bg-black/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+              className="touch-target ui-press grid size-11 place-items-center rounded-md text-lg leading-none text-muted hover:bg-surface-hover hover:text-foreground md:size-9"
             >
               ×
             </button>

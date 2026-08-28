@@ -169,7 +169,7 @@ function WorkloadList({ rows, kind }: { rows: Array<PersonReportRow | BrandRepor
           <div key={id}>
             <div className="mb-1 flex items-center justify-between gap-3 text-xs">
               <span className="truncate font-medium">{name}</span>
-              <span className="shrink-0 tabular-nums text-zinc-500 dark:text-zinc-400">{row.open_tasks} açık · {row.completed_tasks} tamamlanan{row.overdue_tasks > 0 && <span className="ml-1 text-rose-600 dark:text-rose-400">· {row.overdue_tasks} geciken</span>}</span>
+              <span className="shrink-0 tabular-nums text-zinc-500 dark:text-zinc-400">{row.open_tasks} açık · {row.completed_tasks} tamamlanan{row.overdue_tasks > 0 && <span className="ml-1 text-danger">· {row.overdue_tasks} geciken</span>}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-black/5 dark:bg-white/10"><div className="h-full rounded-full bg-brand-500" style={{ width: `${(row.open_tasks / maxOpen) * 100}%` }} /></div>
           </div>

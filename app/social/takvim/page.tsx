@@ -218,7 +218,7 @@ export default async function SocialTakvimPage({
                               key={kind}
                               className={`px-3 py-2 text-xs font-medium tabular-nums ${
                                 reached
-                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  ? "text-success"
                                   : "text-zinc-600 dark:text-zinc-300"
                               }`}
                             >

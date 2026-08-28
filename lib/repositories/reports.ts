@@ -90,6 +90,7 @@ export interface PersonBrandRow {
   person_id: string;
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
   total_tasks: number;
   completed_tasks: number;
   open_tasks: number;
@@ -98,6 +99,7 @@ export interface PersonBrandRow {
 export interface BrandReportRow {
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
   // Kategori id'si (`clusters.id`). Etikete çevirmek çağıranın işi —
   // `clusterLabelMap()[cluster] ?? UNKNOWN_CLUSTER_LABEL`.
   cluster: string;
@@ -701,6 +703,7 @@ export function listDepartmentReport(
 export interface BrandBreakdownRow {
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
   total_tasks: number;
   completed_tasks: number;
   open_tasks: number;
@@ -716,7 +719,7 @@ export function listBrandBreakdownForScope(
   const opened = periodCondition("t.created_at", range);
   const completed = periodCondition("t.completed_at", range);
   return allForRange<BrandBreakdownRow>(
-    `SELECT b.id AS brand_id, b.name AS brand_name,
+    `SELECT b.id AS brand_id, b.name AS brand_name, b.accent_hue AS brand_accent_hue,
             SUM(CASE WHEN ${opened} THEN 1 ELSE 0 END) AS total_tasks,
             SUM(CASE
               WHEN t.status = 'Yayinlandi' AND ${completed} THEN 1 ELSE 0 END
@@ -742,6 +745,7 @@ export function listPersonBrandBreakdown(
   const completed = periodCondition("t.completed_at", range);
   return allForRange<PersonBrandRow>(
     `SELECT p.id AS person_id, b.id AS brand_id, b.name AS brand_name,
+            b.accent_hue AS brand_accent_hue,
             SUM(CASE WHEN ${opened} THEN 1 ELSE 0 END) AS total_tasks,
             SUM(CASE
               WHEN t.status = 'Yayinlandi' AND ${completed} THEN 1 ELSE 0 END
@@ -770,7 +774,8 @@ export function listBrandReport(
   const taskOpened = periodCondition("t.created_at", range);
   const completed = periodCondition("t.completed_at", range);
   const statement = getDb().prepare(`
-    SELECT b.id AS brand_id, b.name AS brand_name, b.cluster AS cluster,
+    SELECT b.id AS brand_id, b.name AS brand_name,
+      b.accent_hue AS brand_accent_hue, b.cluster AS cluster,
       b.archived AS archived,
       COUNT(DISTINCT CASE WHEN ${contentOpened} THEN ci.id END) AS total_content,
       -- "t.id IS NOT NULL": bkz. listPersonReport — görevi olmayan markanın

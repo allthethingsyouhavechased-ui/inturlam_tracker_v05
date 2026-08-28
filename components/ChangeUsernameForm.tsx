@@ -61,18 +61,18 @@ export default function ChangeUsernameForm({ person }: { person: Person }) {
       <p className="text-xs text-muted">{USERNAME_RULE}</p>
 
       {person.username === null && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
+        <p className="text-xs text-warning">
           Bu hesabın kullanıcı adı henüz belirlenmemiş; şu an yalnızca tam adıyla
           giriş yapabiliyor.
         </p>
       )}
       {saved && (
-        <p role="status" className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+        <p role="status" className="text-xs font-medium text-success">
           Kullanıcı adı kaydedildi.
         </p>
       )}
       {error && (
-        <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+        <p role="alert" className="text-xs text-danger">
           {error}
         </p>
       )}

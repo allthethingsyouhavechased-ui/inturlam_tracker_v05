@@ -115,7 +115,7 @@ export default function CommentItem({
         )
       )}
 
-      {error && <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-xs text-danger">{error}</p>}
 
       {comment.attachments.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">

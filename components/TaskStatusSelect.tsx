@@ -25,7 +25,7 @@ export default function TaskStatusSelect({
         const next = e.target.value as TaskStatus;
         startTransition(() => setTaskStatusAction(taskId, next));
       }}
-      className={`min-h-8 rounded-md border-0 px-2 py-1 text-[10px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${TASK_STATUS_BADGE[status]} ${pending || locked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+      className={`min-h-11 w-full rounded-md border-0 px-2.5 py-1 text-xs font-semibold outline-none transition-[box-shadow,opacity] focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:w-auto ${TASK_STATUS_BADGE[status]} ${pending || locked ? "cursor-not-allowed" : "cursor-pointer"}`}
     >
       {TASK_STATUSES.map((s) => (
         <option key={s} value={s}>

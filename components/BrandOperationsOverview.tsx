@@ -2,6 +2,7 @@ import Link from "next/link";
 import MonthNavigator from "@/components/MonthNavigator";
 import PersonAvatar from "@/components/PersonAvatar";
 import Icon from "@/components/ui/Icon";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import {
   CONTENT_STATUS_BADGE,
   CONTENT_STATUS_LABEL,
@@ -63,10 +64,15 @@ export default function BrandOperationsOverview({
   const monthLabel = formatMonthLabel(monthParamToDate(month));
 
   return (
-    <section aria-labelledby="brand-operations-title" className="overflow-hidden rounded-xl border border-border-default bg-surface">
+    <section
+      aria-labelledby="brand-operations-title"
+      data-brand-accent
+      style={brandAccentStyle(brand.accent_hue)}
+      className="brand-stripe overflow-hidden rounded-r-xl border border-border-default bg-surface"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 sm:px-5">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">OPERASYON ÖZETİ</p>
+          <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">OPERASYON ÖZETİ · {brand.name}</p>
           <h2 id="brand-operations-title" className="mt-0.5 text-sm font-semibold text-foreground">{monthLabel}</h2>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -96,7 +102,7 @@ export default function BrandOperationsOverview({
             </div>
             {progress.percent !== null && <span className="text-xs tabular-nums text-muted">{progress.weighted_earned}/{progress.weighted_total} puan</span>}
           </div>
-          {progress.percent !== null && <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-brand-600" style={{ width: `${progress.percent}%` }} /></div>}
+          {progress.percent !== null && <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-subtle"><div className="brand-accent-fill h-full rounded-full" style={{ width: `${progress.percent}%` }} /></div>}
           <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
             {TASK_STATUSES.map((status) => <span key={status}>{TASK_STATUS_LABEL[status]} <strong className="font-semibold text-secondary">{taskCounts.get(status) ?? 0}</strong></span>)}
           </div>
@@ -144,7 +150,7 @@ export default function BrandOperationsOverview({
           <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">AYLIK İÇERİK AKIŞI</p><span className="text-xs tabular-nums text-muted">{monthlyContents.length} içerik</span></div>
           {monthlyContents.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {CONTENT_STATUSES.map((status) => <span key={status} className={`rounded-full px-2 py-1 text-[11px] font-semibold ${CONTENT_STATUS_BADGE[status]}`}>{CONTENT_STATUS_LABEL[status]} · {contentCounts.get(status) ?? 0}</span>)}
+              {CONTENT_STATUSES.map((status) => <span key={status} className={`rounded-md px-2 py-1 text-[11px] font-semibold ${CONTENT_STATUS_BADGE[status]}`}>{CONTENT_STATUS_LABEL[status]} · {contentCounts.get(status) ?? 0}</span>)}
             </div>
           ) : <p className="mt-3 text-sm text-muted">Bu ay hedef tarihli içerik bulunmuyor.</p>}
         </div>

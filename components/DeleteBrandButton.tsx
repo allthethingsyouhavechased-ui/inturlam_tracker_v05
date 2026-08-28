@@ -25,7 +25,7 @@ export default function DeleteBrandButton({ brandId }: { brandId: string }) {
           });
         }
       }}
-      className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-500 disabled:opacity-50"
+      className="text-xs font-medium text-danger hover:text-rose-500 disabled:opacity-50"
     >
       {pending ? "Siliniyor…" : "Kalıcı sil"}
     </button>

@@ -106,7 +106,7 @@ export default function TaskNotesAttachments({
           ))}
         </div>
       )}
-      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
       <label className="inline-block cursor-pointer text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400">
         📎 Görsel ekle
         <input

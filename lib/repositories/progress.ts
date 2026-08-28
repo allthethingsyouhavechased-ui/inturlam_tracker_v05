@@ -1,4 +1,4 @@
-import { getDb, plainList } from "@/lib/db/client";
+import { getDb, plainList, plainOne } from "@/lib/db/client";
 import { calculateMonthlyProgress, TASK_STATUS_COEFFICIENT } from "@/lib/progress";
 import type { MonthlyProgress, TaskStatus } from "@/lib/types";
 
@@ -9,6 +9,7 @@ interface ProgressTaskRow {
   weight_points: number;
   brand_id: string;
   brand_name: string;
+  brand_accent_hue: number;
 }
 
 export interface TaskContribution extends ProgressTaskRow {
@@ -19,6 +20,7 @@ export interface BrandMonthlyProgressRow {
   brand_id: string;
   brand_name: string;
   brand_logo_path: string | null;
+  brand_accent_hue: number;
   progress: MonthlyProgress;
 }
 
@@ -30,7 +32,7 @@ function validMonth(month: string): string {
 function listProgressTasks(month: string, whereSql = "", params: string[] = []): ProgressTaskRow[] {
   return plainList<ProgressTaskRow>(
     getDb().prepare(
-      `SELECT t.id, t.title, t.status, t.weight_points, b.id AS brand_id, b.name AS brand_name
+      `SELECT t.id, t.title, t.status, t.weight_points, b.id AS brand_id, b.name AS brand_name, b.accent_hue AS brand_accent_hue
          FROM tasks t
          JOIN content_items ci ON ci.id = t.content_item_id
          JOIN brands b ON b.id = ci.brand_id
@@ -50,9 +52,10 @@ export function listBrandMonthlyProgress(month: string): BrandMonthlyProgressRow
     brand_id: string;
     brand_name: string;
     brand_logo_path: string | null;
+    brand_accent_hue: number;
   }>(
     getDb().prepare(
-      `SELECT id AS brand_id, name AS brand_name, logo_path AS brand_logo_path
+      `SELECT id AS brand_id, name AS brand_name, logo_path AS brand_logo_path, accent_hue AS brand_accent_hue
          FROM brands
         WHERE archived = 0
         ORDER BY sort_order, name`,
@@ -94,6 +97,36 @@ export function listBrandMonthlyContributions(brandId: string, month: string): T
 
 export function getPersonMonthlyProgress(personId: string, month: string): MonthlyProgress {
   return calculateMonthlyProgress(month, listProgressTasks(month, "AND t.assignee_id = ?", [personId]));
+}
+
+// Header her istekte çalıştığı için görev satırlarını yüklemez; aynı due_date
+// kapsamını tek aggregate sorgusunda hesaplar.
+export function getPersonMonthlyProgressSummary(personId: string, month: string): MonthlyProgress {
+  const valid = validMonth(month);
+  const row = plainOne<{ weighted_total: number; weighted_earned: number; task_count: number }>(
+    getDb().prepare(
+      `SELECT
+         COALESCE(SUM(t.weight_points), 0) AS weighted_total,
+         COALESCE(SUM(t.weight_points * CASE t.status
+           WHEN 'DevamEdiyor' THEN 0.25
+           WHEN 'Incelemede' THEN 0.6
+           WHEN 'Onaylandi' THEN 0.9
+           WHEN 'Yayinlandi' THEN 1
+           ELSE 0 END), 0) AS weighted_earned,
+         COUNT(*) AS task_count
+       FROM tasks t
+       WHERE t.assignee_id = ? AND substr(t.due_date, 1, 7) = ?`,
+    ).get(personId, valid),
+  );
+  const total = Number(row?.weighted_total ?? 0);
+  const earned = Number(Number(row?.weighted_earned ?? 0).toFixed(2));
+  return {
+    month: valid,
+    weighted_total: total,
+    weighted_earned: earned,
+    percent: total === 0 ? null : Number(((earned / total) * 100).toFixed(1)),
+    task_count: Number(row?.task_count ?? 0),
+  };
 }
 
 export function listPersonMonthlyContributions(personId: string, month: string): TaskContribution[] {

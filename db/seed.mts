@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "../lib/db/client.ts";
+import { brandAccentHueForIndex } from "../lib/brandAccent.ts";
 
 // id = Instagram handle. name = görünen ad (gerekirse düzenle ve tekrar çalıştır).
 const BRANDS: { id: string; name: string; cluster: string }[] = [
@@ -265,12 +266,13 @@ const db = getDb();
 
 const insertBrand = db.prepare(
   `INSERT INTO brands (
-     id, name, cluster, sort_order, instagram_handle,
+     id, name, cluster, sort_order, accent_hue, instagram_handle,
      follower_count, post_count, median_reel_views,
      cover_test_verdict, cover_test_note, key_finding, first_action, tier, logo_path
-   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
    ON CONFLICT(id) DO UPDATE SET
      name = excluded.name, cluster = excluded.cluster, sort_order = excluded.sort_order,
+     accent_hue = excluded.accent_hue,
      instagram_handle = excluded.instagram_handle,
      follower_count = excluded.follower_count, post_count = excluded.post_count,
      median_reel_views = excluded.median_reel_views,
@@ -284,7 +286,7 @@ BRANDS.forEach((b, i) => {
   const logoPath = resolveLogoPath(b.id);
   if (logoPath) logosLinked++;
   insertBrand.run(
-    b.id, b.name, b.cluster, i, b.id,
+    b.id, b.name, b.cluster, i, brandAccentHueForIndex(i), b.id,
     stats?.followerCount ?? null, stats?.postCount ?? null, stats?.medianReelViews ?? null,
     stats?.coverTestVerdict ?? null, stats?.coverTestNote ?? null,
     stats?.keyFinding ?? null, stats?.firstAction ?? null, stats?.tier ?? null, logoPath,

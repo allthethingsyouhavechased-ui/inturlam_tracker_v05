@@ -12,9 +12,12 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import TaskCommentsPanel from "@/components/TaskCommentsPanel";
+import TaskContextMenu, { useTaskContextMenu } from "@/components/TaskContextMenu";
 import TaskGridCard from "@/components/TaskGridCard";
 import { setTaskStatusAction } from "@/lib/actions/tasks";
+import { TASK_DRAG_INSTRUCTIONS, taskDragAnnouncements } from "@/lib/dndAnnouncements";
 import {
   TASK_PRIORITY_LABEL,
   TASK_STATUS_BADGE,
@@ -23,9 +26,13 @@ import {
   TASK_STATUS_LABEL,
   TASK_STATUSES,
 } from "@/lib/constants";
-import type { TaskStatus, TaskWithContext } from "@/lib/types";
+import type { TaskSortKey } from "@/lib/taskFilterParams";
+import type { Person, TaskStatus, TaskWithContext } from "@/lib/types";
 
-export type SortKey = "varsayilan" | "marka" | "durum" | "oncelik" | "atanan";
+// Tek tanım `lib/taskFilterParams.ts`te: URL doğrulaması ile pano sıralaması
+// aynı listeyi paylaşmalı, yoksa adres çubuğundan gelen bir `sort` değeri
+// sessizce yok sayılır.
+export type SortKey = TaskSortKey;
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "varsayilan", label: "Varsayılan" },
@@ -51,7 +58,15 @@ function sortTasks(tasks: TaskWithContext[], key: SortKey): TaskWithContext[] {
   return [...tasks].sort((a, b) => collator.compare(valueOf(a), valueOf(b)));
 }
 
-function DraggableCard({ task }: { task: TaskWithContext }) {
+function DraggableCard({
+  task,
+  onOpenComments,
+  onContextMenu,
+}: {
+  task: TaskWithContext;
+  onOpenComments?: () => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
   });
@@ -74,7 +89,13 @@ function DraggableCard({ task }: { task: TaskWithContext }) {
         }
       }}
     >
-      <TaskGridCard task={task} showStatus={false} badges={task.badges} />
+      <TaskGridCard
+        task={task}
+        showStatus={false}
+        badges={task.badges}
+        onOpenComments={onOpenComments}
+        onContextMenu={onContextMenu}
+      />
     </div>
   );
 }
@@ -82,9 +103,13 @@ function DraggableCard({ task }: { task: TaskWithContext }) {
 function Column({
   status,
   tasks,
+  onOpenComments,
+  onContextMenu,
 }: {
   status: TaskStatus;
   tasks: TaskWithContext[];
+  onOpenComments: (task: TaskWithContext) => void;
+  onContextMenu: (event: React.MouseEvent, task: TaskWithContext) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
@@ -109,7 +134,12 @@ function Column({
       </div>
       <div className="min-h-20 space-y-2">
         {tasks.map((t) => (
-          <DraggableCard key={t.id} task={t} />
+          <DraggableCard
+            key={t.id}
+            task={t}
+            onOpenComments={() => onOpenComments(t)}
+            onContextMenu={(event) => onContextMenu(event, t)}
+          />
         ))}
         {tasks.length === 0 && (
           <div
@@ -151,11 +181,16 @@ function Column({
 // sabit, benzersiz bir `id` vermek (bkz. dnd-kit SSR dokümantasyonu).
 export default function TaskBoard({
   tasks,
+  people = [],
+  canDeleteTasks = false,
   sortKey: externalSortKey,
   boardId,
   toolbar,
 }: {
   tasks: TaskWithContext[];
+  /** Yorum panelindeki @etiket vurgusu için. */
+  people?: Person[];
+  canDeleteTasks?: boolean;
   sortKey?: SortKey;
   boardId: string;
   // "Sırala:" satırının sağ ucuna yerleşen ek denetim (Panom'da Pano/Liste
@@ -167,6 +202,8 @@ export default function TaskBoard({
   const [prevTasks, setPrevTasks] = useState(tasks);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [internalSortKey, setInternalSortKey] = useState<SortKey>("varsayilan");
+  const [openComments, setOpenComments] = useState<{ id: string; title: string } | null>(null);
+  const contextMenu = useTaskContextMenu();
   const [, startTransition] = useTransition();
 
   const isControlled = externalSortKey !== undefined;
@@ -180,6 +217,15 @@ export default function TaskBoard({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
+  );
+
+  const announcements = useMemo(
+    () =>
+      taskDragAnnouncements({
+        taskName: (id) => taskList.find((task) => task.id === id)?.title ?? "",
+        columnLabel: (id) => TASK_STATUS_LABEL[id as TaskStatus] ?? id,
+      }),
+    [taskList],
   );
 
   function handleDragEnd(event: DragEndEvent) {
@@ -228,11 +274,12 @@ export default function TaskBoard({
       <DndContext
         id={boardId}
         sensors={sensors}
+        accessibility={{ announcements, screenReaderInstructions: TASK_DRAG_INSTRUCTIONS }}
         onDragStart={(e: DragStartEvent) => setActiveId(e.active.id as string)}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {TASK_STATUSES.map((s) => (
             <Column
               key={s}
@@ -241,6 +288,12 @@ export default function TaskBoard({
                 taskList.filter((t) => t.status === s),
                 sortKey,
               )}
+              onOpenComments={(task) => setOpenComments({ id: task.id, title: task.title })}
+              onContextMenu={(event, task) => contextMenu.open(event, {
+                id: task.id,
+                title: task.title,
+                archived: task.archived_at !== null,
+              })}
             />
           ))}
         </div>
@@ -252,6 +305,26 @@ export default function TaskBoard({
           )}
         </DragOverlay>
       </DndContext>
+
+      {/* Yorumlar göreve girmeden yan panelde okunuyor — liste görünümündeki
+          davranışın aynısı, aynı bileşen. */}
+      {openComments && (
+        <TaskCommentsPanel
+          taskId={openComments.id}
+          taskTitle={openComments.title}
+          people={people}
+          onClose={() => setOpenComments(null)}
+        />
+      )}
+
+      {contextMenu.state && (
+        <TaskContextMenu
+          target={contextMenu.state.target}
+          position={contextMenu.state.position}
+          canDelete={canDeleteTasks}
+          onClose={contextMenu.close}
+        />
+      )}
     </div>
   );
 }

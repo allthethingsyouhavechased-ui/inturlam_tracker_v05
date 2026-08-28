@@ -5,8 +5,11 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { hashPassword, validatePassword, verifyPassword } from "@/lib/auth/password";
-import { LoginThrottle } from "@/lib/auth/loginThrottle";
-import { sqliteLoginAttemptStore } from "@/lib/auth/loginThrottleStore";
+import {
+  guestThrottleKey,
+  loginThrottle,
+  teamThrottleKey,
+} from "@/lib/auth/loginGate";
 import { SECURE_COOKIE_ENV, shouldUseSecureCookie } from "@/lib/auth/cookieSecurity";
 import { IDENTITY_COOKIE } from "@/lib/auth/constants";
 import { getCurrentPerson } from "@/lib/identity";
@@ -23,15 +26,9 @@ import {
   updatePersonPassword,
 } from "@/lib/repositories/people";
 
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const MAX_LOGIN_FAILURES = 5;
-// Sayaçlar SQLite'ta: süreç belleğinde tutulunca her yeniden başlatma sınırı
-// sıfırlıyor, ikinci bir örnek/worker de aynı hesaba baştan 5 deneme tanıyordu.
-const loginThrottle = new LoginThrottle(
-  MAX_LOGIN_FAILURES,
-  LOGIN_WINDOW_MS,
-  sqliteLoginAttemptStore(LOGIN_WINDOW_MS),
-);
+// Sayaç ve anahtar üretimi `lib/auth/loginGate.ts`te — şifre sıfırlayan action
+// da aynı sayaca erişip kilidi kaldırabilsin diye (bu dosya "use server",
+// buradan async olmayan bir değer export edilemiyor).
 const LOGIN_FAILED = "Kullanıcı adı veya şifre hatalı.";
 
 // Olmayan, pasif veya şifresiz hesaplarda da gerçek bir scrypt doğrulaması
@@ -74,7 +71,7 @@ export async function loginPerson(
   if (!username || !password) return { error: LOGIN_FAILED };
 
   const credentials = findLoginCandidate(username);
-  const throttleKey = `team:${credentials?.id ?? username.toLocaleLowerCase("tr-TR")}`;
+  const throttleKey = teamThrottleKey(credentials?.id ?? username);
   if (loginThrottle.isBlocked(throttleKey)) {
     return { error: "Çok fazla hatalı deneme yapıldı. 15 dakika sonra tekrar dene." };
   }
@@ -98,7 +95,7 @@ export async function loginGuest(
 ): Promise<IdentityActionState> {
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const throttleKey = `guest:${username.toLocaleLowerCase("tr-TR")}`;
+  const throttleKey = guestThrottleKey(username);
   const credentials = getGuestCredentials(username);
   if (!credentials || credentials.active !== 1 || !credentials.password_hash) {
     return { error: "Kullanıcı adı veya şifre hatalı." };

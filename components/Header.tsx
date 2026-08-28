@@ -6,18 +6,22 @@ import NotificationBell from "@/components/NotificationBell";
 import QuickAddModal from "@/components/QuickAddModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getCurrentPerson } from "@/lib/identity";
-import { listBrands } from "@/lib/repositories/brands";
-import { listAllContentSummaries } from "@/lib/repositories/content";
+import { todayISO } from "@/lib/date";
+import { formatPoints } from "@/lib/progress";
 import { countUnreadForPerson, listNotificationsForPerson } from "@/lib/repositories/notifications";
-import { listActivePeople } from "@/lib/repositories/people";
+import { getPersonMonthlyProgressSummary } from "@/lib/repositories/progress";
 
+// Header LAYOUT'ta duruyor, yani uygulamanın HER isteğinde çalışıyor. Bu yüzden
+// burada yalnızca gerçekten her ekranda gösterilen veri okunur. Hızlı görev
+// penceresinin marka/içerik/kişi listeleri buradan KALDIRILDI (2026-08-27):
+// pencere kapalıyken bile üç tam tablo okunup istemciye serileştiriliyordu.
+// Artık `QuickAddModal` ilk açılışta `loadQuickAddOptionsAction` ile kendi çekiyor.
 export default async function Header() {
   const person = await getCurrentPerson();
-  const brands = person ? listBrands() : [];
-  const contents = person ? listAllContentSummaries() : [];
-  const people = person ? listActivePeople() : [];
   const notifications = person ? listNotificationsForPerson(person.id) : [];
   const unreadCount = person ? countUnreadForPerson(person.id) : 0;
+  const month = todayISO().slice(0, 7);
+  const monthlyProgress = person ? getPersonMonthlyProgressSummary(person.id, month) : null;
 
   return (
     <header className="app-topbar sticky top-0 z-30 border-b border-border-subtle bg-background/90 backdrop-blur-xl">
@@ -31,11 +35,19 @@ export default async function Header() {
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          {person && monthlyProgress && (
+            <Link
+              href={`/panom/katkim?month=${month}`}
+              title={`Bu ay ${formatPoints(monthlyProgress.weighted_earned)} / ${formatPoints(monthlyProgress.weighted_total)} puan`}
+              className="ui-press hidden min-h-9 items-center gap-1 rounded-md border border-border-default bg-surface px-2.5 text-[11px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground sm:inline-flex"
+            >
+              <span className="text-muted">Bu ay</span>
+              <span className="tabular-nums text-foreground">{monthlyProgress.percent === null ? "Plan yok" : `%${monthlyProgress.percent}`}</span>
+            </Link>
+          )}
           {person && (
             <QuickAddModal
-              brands={brands}
-              contents={contents}
-              people={people}
+              listenForShortcut
               defaultAssigneeId={person.id}
               canSetWeight={person.is_manager === 1}
               triggerLabel="Yeni görev"

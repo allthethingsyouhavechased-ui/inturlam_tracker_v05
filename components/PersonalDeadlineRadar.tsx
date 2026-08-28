@@ -21,6 +21,7 @@ import { useMemo, useOptimistic, useState, useTransition } from "react";
 import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
 import Icon from "@/components/ui/Icon";
 import { setPersonalTaskTargetAction } from "@/lib/actions/tasks";
+import { brandAccentStyle } from "@/lib/brandAccent";
 import {
   CONTENT_TYPE_LABEL,
   TASK_PRIORITY_DOT,
@@ -44,7 +45,7 @@ import type { TaskWithPersonalTarget } from "@/lib/types";
 // bırakmak o gün için kişisel hedef koyar. Sürükleyemeyen (klavye/dokunmatik)
 // kullanıcı için her satırda ayrıca tarih düğmesi var — sürükle-bırak tek yol
 // değil, kısayol.
-const PANEL_KEY = "panom-radar";
+const PANEL_KEY = "personal-deadline";
 const DROP_PREFIX = "radar-day:";
 
 const collator = new Intl.Collator("tr");
@@ -85,6 +86,57 @@ interface RadarRow {
   attention: string | null;
 }
 
+function buildRadarRows(
+  tasks: TaskWithPersonalTarget[],
+  targets?: Readonly<Record<string, string | null>>,
+): RadarRow[] {
+  return tasks
+    .map((task) => {
+      const target = targets ? (targets[task.id] ?? null) : task.personal_target_date;
+      const dates = [task.due_date, target]
+        .filter((date): date is string => date !== null)
+        .sort();
+      return { task, target, attention: dates[0] ?? null };
+    })
+    .sort(
+      (left, right) =>
+        (left.attention ?? "9999-12-31").localeCompare(right.attention ?? "9999-12-31") ||
+        collator.compare(left.task.title, right.task.title),
+    );
+}
+
+function summarizeRadar(rows: RadarRow[], today: string, horizonDays: number) {
+  const horizonEnd = shiftISODate(today, horizonDays);
+  const overdueCount = rows.filter((row) => row.attention !== null && row.attention < today).length;
+  const todayCount = rows.filter((row) => row.attention === today).length;
+  const soonCount = rows.filter(
+    (row) => row.attention !== null && row.attention > today && row.attention <= horizonEnd,
+  ).length;
+  const targetCount = rows.filter((row) => row.target !== null).length;
+  const nextAttention = rows.find(
+    (row): row is RadarRow & { attention: string } =>
+      row.attention !== null && row.attention > today,
+  )?.attention;
+  const summary = overdueCount > 0
+    ? `${overdueCount} işte resmi teslim veya kişisel hedef geçmiş.`
+    : todayCount > 0
+      ? `Bugün ${todayCount} iş için hedef ya da teslim var.`
+      : nextAttention
+        ? `Sıradaki kritik tarih ${formatDateShort(nextAttention)}.`
+        : targetCount > 0
+          ? `${targetCount} kişisel hedefin planlandı.`
+          : `Önümüzdeki ${horizonDays} gün için zaman baskısı görünmüyor.`;
+
+  return {
+    overdueCount,
+    todayCount,
+    soonCount,
+    summary,
+    hasImmediateRisk: overdueCount > 0 || todayCount > 0,
+    riskCount: overdueCount + todayCount,
+  };
+}
+
 function MetricChip({
   label,
   value,
@@ -98,17 +150,17 @@ function MetricChip({
     danger:
       value > 0
         ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
-        : "border-black/10 bg-white text-zinc-500 dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-400",
+        : "border-border-default bg-surface text-muted",
     warning:
       value > 0
         ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
-        : "border-black/10 bg-white text-zinc-500 dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-400",
-    neutral: "border-black/10 bg-white text-zinc-600 dark:border-white/15 dark:bg-zinc-950 dark:text-zinc-300",
+        : "border-border-default bg-surface text-muted",
+    neutral: "border-border-default bg-surface text-secondary",
   }[tone];
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${toneClass}`}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium ${toneClass}`}
     >
       {label}
       <span className="font-semibold tabular-nums">{value}</span>
@@ -128,8 +180,10 @@ function TaskRow({ row, today }: { row: RadarRow; today: string }) {
       {...listeners}
       {...attributes}
       data-dragging={isDragging || undefined}
-      className={`ui-surface grid cursor-grab touch-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-black/[0.06] bg-white px-2.5 py-2 active:cursor-grabbing dark:border-white/[0.08] dark:bg-zinc-950/40 ${
-        isDragging ? "opacity-30" : "hover:border-brand-300 dark:hover:border-brand-800"
+      data-brand-accent
+      style={brandAccentStyle(task.brand_accent_hue)}
+      className={`brand-stripe ui-surface grid cursor-grab touch-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-r-xl border border-border-subtle bg-surface px-2.5 py-2 active:cursor-grabbing ${
+        isDragging ? "opacity-30" : "hover:border-border-strong"
       }`}
       onPointerDownCapture={(event) => {
         // Satırın içindeki link ve tarih düğmesi sürüklemeyi başlatmasın.
@@ -146,17 +200,17 @@ function TaskRow({ row, today }: { row: RadarRow; today: string }) {
       <span className="min-w-0">
         <Link
           href={`/tasks/${task.id}`}
-          className="block truncate text-sm font-medium text-zinc-800 hover:text-brand-700 dark:text-zinc-200 dark:hover:text-brand-300"
+          className="block truncate text-sm font-medium text-foreground hover:text-brand-700 dark:hover:text-brand-300"
         >
           {task.title}
         </Link>
-        <span className="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+        <span className="block truncate text-[11px] text-muted">
           {task.brand_name} · {CONTENT_TYPE_LABEL[task.content_type]}
           {task.due_date && (
             <span
               className={
                 overdue && task.due_date <= today
-                  ? " font-medium text-rose-600 dark:text-rose-400"
+                  ? " font-medium text-danger"
                   : ""
               }
             >
@@ -220,8 +274,8 @@ function DayCell({
           : isToday
             ? "border-brand-300 bg-brand-50/70 dark:border-brand-800 dark:bg-brand-950/30"
             : isPast
-              ? "border-transparent bg-zinc-50 dark:bg-white/[0.02]"
-              : "border-black/[0.06] bg-white hover:border-brand-300 dark:border-white/[0.08] dark:bg-zinc-950/40 dark:hover:border-brand-800"
+              ? "border-transparent bg-surface-subtle opacity-60"
+              : "border-border-subtle bg-surface hover:border-brand-300 dark:hover:border-brand-800"
       }`}
     >
       <span
@@ -230,9 +284,9 @@ function DayCell({
             ? "font-bold text-brand-700 dark:text-brand-300"
             : inMonth
               ? isPast
-                ? "text-zinc-400 dark:text-zinc-600"
-                : "font-medium text-zinc-700 dark:text-zinc-200"
-              : "text-zinc-400 dark:text-zinc-600"
+                ? "text-faint"
+                : "font-medium text-secondary"
+              : "text-faint"
         }`}
       >
         {Number(date.slice(-2))}
@@ -244,7 +298,7 @@ function DayCell({
           )}
           {dueTitles.length > 0 && (
             <span
-              className={`size-1.5 rounded-full ${isPast ? "bg-zinc-300 dark:bg-zinc-700" : "bg-rose-500"}`}
+              className={`size-1.5 rounded-full ${isPast ? "bg-border-strong" : "bg-rose-500"}`}
               aria-hidden="true"
             />
           )}
@@ -254,24 +308,22 @@ function DayCell({
   );
 }
 
-export default function PersonalDeadlineRadar({
-  personId,
-  tasks,
-  today,
-  horizonDays,
-  headerAction = false,
-  dock = false,
-}: {
+interface PersonalDeadlineRadarProps {
   personId: string;
   tasks: TaskWithPersonalTarget[];
   today: string;
   horizonDays: number;
-  headerAction?: boolean;
-  dock?: boolean;
-}) {
+}
+
+function PersonalDeadlineRadarPanelContent({
+  personId,
+  tasks,
+  today,
+  horizonDays,
+}: PersonalDeadlineRadarProps) {
   // Radar bir kullanici tercihi: ayni tarayicida kimlik degistirildiginde bir
   // kisinin acik/kapali secimi digerinin Panom'unu etkilemesin.
-  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${personId}`, false);
+  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${personId}`, true);
   // Takvim ayı istemci state'i ama başlangıcı SUNUCUDAN gelen `today` —
   // render sırasında `new Date()` çağrılmadığı için SSR/istemci aynı ayı çizer.
   const [monthParam, setMonthParam] = useState(() => today.slice(0, 7));
@@ -298,40 +350,12 @@ export default function PersonalDeadlineRadar({
     }),
   );
 
-  const rows: RadarRow[] = useMemo(() => {
-    const mapped = tasks.map((task) => {
-      const target = targets[task.id] ?? null;
-      const dates = [task.due_date, target].filter((date): date is string => date !== null).sort();
-      return { task, target, attention: dates[0] ?? null };
-    });
-    // Tarihsizler en sonda; aynı tarihte alfabetik.
-    return mapped.sort(
-      (a, b) =>
-        (a.attention ?? "9999-12-31").localeCompare(b.attention ?? "9999-12-31") ||
-        collator.compare(a.task.title, b.task.title),
-    );
-  }, [tasks, targets]);
-
-  const horizonEnd = shiftISODate(today, horizonDays);
-  const overdueCount = rows.filter((row) => row.attention !== null && row.attention < today).length;
-  const todayCount = rows.filter((row) => row.attention === today).length;
-  const soonCount = rows.filter(
-    (row) => row.attention !== null && row.attention > today && row.attention <= horizonEnd,
-  ).length;
-  const targetCount = rows.filter((row) => row.target !== null).length;
-  const nextRow = rows.find((row) => row.attention !== null && row.attention > today);
-  const hasImmediateRisk = overdueCount > 0 || todayCount > 0;
-
-  const summary =
-    overdueCount > 0
-      ? `${overdueCount} işte resmi teslim veya kişisel hedef geçmiş.`
-      : todayCount > 0
-        ? `Bugün ${todayCount} iş için hedef ya da teslim var.`
-        : nextRow
-          ? `Sıradaki kritik tarih ${formatDateShort(nextRow.attention)}.`
-          : targetCount > 0
-            ? `${targetCount} kişisel hedefin planlandı.`
-            : `Önümüzdeki ${horizonDays} gün için zaman baskısı görünmüyor.`;
+  const rows = useMemo(() => buildRadarRows(tasks, targets), [tasks, targets]);
+  const { overdueCount, todayCount, soonCount, summary, hasImmediateRisk } = summarizeRadar(
+    rows,
+    today,
+    horizonDays,
+  );
 
   const marks = useMemo(() => {
     const map = new Map<string, { targets: string[]; dues: string[] }>();
@@ -386,91 +410,35 @@ export default function PersonalDeadlineRadar({
       ? "border-rose-200 dark:border-rose-900/70"
       : hasImmediateRisk
         ? "border-amber-200 dark:border-amber-900/70"
-        : "border-black/10 dark:border-white/10";
+        : "border-border-default";
   const toneHeader =
     overdueCount > 0
       ? "bg-rose-50/80 dark:bg-rose-950/20"
       : hasImmediateRisk
         ? "bg-amber-50/80 dark:bg-amber-950/20"
-        : "bg-zinc-50/80 dark:bg-white/[0.025]";
-  const riskCount = overdueCount + todayCount;
-  const dockTrigger = (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={`Kişisel teslim radarını ${open ? "kapat" : "aç"}`}
-      aria-expanded={open}
-      aria-controls="personal-deadline-body"
-      title={summary}
-      className={`ui-press inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border bg-surface px-3 text-left shadow-sm hover:bg-surface-hover ${toneBorder} ${open ? "ring-1 ring-brand-500/15" : ""}`}
-    >
-      <Icon
-        name="clock"
-        className={riskCount > 0 ? "size-4 text-rose-500" : "size-4 text-brand-500"}
-      />
-      <span className="truncate text-xs font-semibold text-foreground">Kişisel teslim radarı</span>
-      {riskCount > 0 && (
-        <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-          {riskCount}
-        </span>
-      )}
-      <span className="text-[11px] font-medium text-brand-600 dark:text-brand-300">{open ? "Kapat" : "Aç"}</span>
-    </button>
-  );
-
-  if (!open) {
-    return (
-      <div
-        className={
-          dock
-            ? "flex items-center"
-            : headerAction
-            ? "mb-5 flex items-center lg:absolute lg:right-0 lg:top-8 lg:z-10 lg:mb-0"
-            : "flex items-center"
-        }
-      >
-        {dockTrigger}
-      </div>
-    );
-  }
+        : "bg-surface-subtle";
+  if (!open) return null;
 
   return (
-    <>
-    {dock && <div className="flex items-center">{dockTrigger}</div>}
     <section
       aria-labelledby="personal-deadline-title"
-      className={`${dock ? "order-last w-full basis-full" : "mb-7"} overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-zinc-900 ${toneBorder}`}
+      className={`mb-5 overflow-hidden rounded-xl border bg-surface ${toneBorder}`}
     >
       <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4 ${toneHeader}`}>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={open}
-          aria-controls="personal-deadline-body"
-          className="ui-press flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 text-left"
-        >
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-            className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 dark:text-zinc-400 ${
-              open ? "rotate-90" : ""
-            }`}
-          >
-            <path d="M7.21 14.77a.75.75 0 0 1 0-1.06L10.94 10 7.21 6.29a.75.75 0 1 1 1.06-1.06l4.25 4.24a.75.75 0 0 1 0 1.06l-4.25 4.24a.75.75 0 0 1-1.06 0Z" />
-          </svg>
+        <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-1">
+          <Icon name="clock" className="size-4 shrink-0 text-brand-500" />
           <span className="min-w-0">
             <span
               id="personal-deadline-title"
-              className="block font-semibold text-zinc-900 dark:text-zinc-100"
+              className="block font-semibold text-foreground"
             >
               Kişisel teslim radarı
             </span>
-            <span className="block truncate text-xs text-zinc-600 dark:text-zinc-300">
+            <span className="block truncate text-xs text-secondary">
               {summary}
             </span>
           </span>
-        </button>
+        </div>
 
         {/* Sayaçlar kart KAPALIYKEN de görünür: radarın tek satırlık hâli bile
             "acil bir şey var mı" sorusunu cevaplamalı. */}
@@ -484,10 +452,18 @@ export default function PersonalDeadlineRadar({
           >
             Tüm görevlerim →
           </Link>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label="Kişisel teslim radarını kapat"
+            aria-controls="personal-deadline-body"
+            className="ui-press inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-secondary hover:bg-surface-hover hover:text-foreground"
+          >
+            <Icon name="close" className="size-3.5" /> Kapat
+          </button>
         </div>
       </div>
 
-      {open && (
         <div id="personal-deadline-body" className="ui-enter">
           <DndContext
             id="panom-radar"
@@ -500,10 +476,10 @@ export default function PersonalDeadlineRadar({
             <div className="grid min-w-0 gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4 lg:p-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
                     Öncelik sırası
                   </p>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <p className="text-[11px] text-muted">
                     Bir görevi takvimde bir güne bırak → o gün kişisel hedefin olur
                   </p>
                 </div>
@@ -518,7 +494,7 @@ export default function PersonalDeadlineRadar({
                 )}
 
                 {rows.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-black/10 px-3 py-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+                  <p className="rounded-xl border border-dashed border-border-default bg-surface-subtle px-3 py-6 text-center text-sm text-muted">
                     Sana atanmış açık görev yok. 🎉
                   </p>
                 ) : (
@@ -530,13 +506,13 @@ export default function PersonalDeadlineRadar({
                 )}
               </div>
 
-              <div className="min-w-0 rounded-xl border border-black/[0.07] bg-zinc-50/70 p-2.5 dark:border-white/[0.08] dark:bg-white/[0.02]">
+              <div className="min-w-0 rounded-xl border border-border-subtle bg-surface-subtle p-2.5">
                 <div className="flex items-center justify-between gap-1 pb-1.5">
                   <button
                     type="button"
                     onClick={() => setMonthParam((month) => shiftMonthParam(month, -1))}
                     aria-label="Önceki ay"
-                    className="ui-press inline-flex size-8 items-center justify-center rounded-lg text-lg leading-none text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                    className="ui-press inline-flex size-8 items-center justify-center rounded-lg text-lg leading-none text-secondary hover:bg-surface-hover"
                   >
                     ‹
                   </button>
@@ -555,7 +531,7 @@ export default function PersonalDeadlineRadar({
                       type="button"
                       onClick={() => setMonthParam((month) => shiftMonthParam(month, 1))}
                       aria-label="Sonraki ay"
-                      className="ui-press inline-flex size-8 items-center justify-center rounded-lg text-lg leading-none text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                      className="ui-press inline-flex size-8 items-center justify-center rounded-lg text-lg leading-none text-secondary hover:bg-surface-hover"
                     >
                       ›
                     </button>
@@ -566,7 +542,7 @@ export default function PersonalDeadlineRadar({
                   {WEEKDAY_LABELS.map((label, index) => (
                     <div
                       key={`${label}-${index}`}
-                      className="pb-0.5 text-center text-[10px] font-semibold uppercase text-zinc-500 dark:text-zinc-400"
+                      className="pb-0.5 text-center text-[10px] font-semibold uppercase text-muted"
                     >
                       {label.slice(0, 2)}
                     </div>
@@ -586,7 +562,7 @@ export default function PersonalDeadlineRadar({
                   })}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-[10px] text-zinc-500 dark:text-zinc-400">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-[10px] text-muted">
                   <span className="inline-flex items-center gap-1">
                     <span className="size-1.5 rounded-full bg-brand-500" aria-hidden="true" />
                     Kişisel hedef
@@ -601,19 +577,66 @@ export default function PersonalDeadlineRadar({
 
             <DragOverlay modifiers={[snapToCursor]} dropAnimation={null}>
               {activeRow && (
-                <div className="flex items-center gap-1.5 rotate-[1deg] rounded-xl border border-brand-400 bg-surface px-3 py-2 text-xs font-medium shadow-xl">
+                <div className="flex rotate-[1deg] items-center gap-1.5 rounded-xl border border-brand-400 bg-surface px-3 py-2 text-xs font-medium shadow-[0_12px_30px_rgb(35_30_24/0.10)]">
                   <Icon name="clock" className="size-3.5" /> {activeRow.task.title}
                 </div>
               )}
             </DragOverlay>
           </DndContext>
 
-          <p className="border-t border-black/[0.07] px-3 py-2 text-[11px] text-zinc-500 sm:px-4 dark:border-white/[0.08] dark:text-zinc-400">
+          <p className="border-t border-border-subtle px-3 py-2 text-[11px] text-muted sm:px-4">
             Kişisel hedef yalnızca sana görünür; resmi teslim tarihini değiştirmez veya gizlemez.
           </p>
         </div>
-      )}
     </section>
-    </>
   );
 }
+
+export function PersonalDeadlineRadarTrigger(props: PersonalDeadlineRadarProps) {
+  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${props.personId}`, true);
+  const rows = useMemo(() => buildRadarRows(props.tasks), [props.tasks]);
+  const { overdueCount, summary, hasImmediateRisk, riskCount } = summarizeRadar(
+    rows,
+    props.today,
+    props.horizonDays,
+  );
+  const toneBorder = overdueCount > 0
+    ? "border-rose-200 dark:border-rose-900/70"
+    : hasImmediateRisk
+      ? "border-amber-200 dark:border-amber-900/70"
+      : "border-border-default";
+
+  return (
+    <div className="flex items-center">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={`Kişisel teslim radarını ${open ? "kapat" : "aç"}`}
+        aria-expanded={open}
+        aria-controls="personal-deadline-body"
+        title={summary}
+        className={`ui-press inline-flex min-h-11 max-w-full items-center gap-2 rounded-md border bg-surface px-4 text-left hover:bg-surface-hover md:min-h-10 ${toneBorder} ${open ? "ring-1 ring-brand-500/15" : ""}`}
+      >
+        <Icon
+          name="clock"
+          className={riskCount > 0 ? "size-4 text-rose-500" : "size-4 text-brand-500"}
+        />
+        <span className="truncate text-xs font-semibold text-foreground">Kişisel teslim radarı</span>
+        {riskCount > 0 && (
+          <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+            {riskCount}
+          </span>
+        )}
+        <span className="text-[11px] font-medium text-brand-600 dark:text-brand-300">
+          {open ? "Kapat" : "Aç"}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+export function PersonalDeadlineRadarPanel(props: PersonalDeadlineRadarProps) {
+  return <PersonalDeadlineRadarPanelContent {...props} />;
+}
+
+export default PersonalDeadlineRadarPanel;

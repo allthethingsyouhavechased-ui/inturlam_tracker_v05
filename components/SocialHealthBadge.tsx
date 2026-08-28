@@ -25,7 +25,7 @@ export default function SocialHealthBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${TONE[health]}`}
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-semibold ${TONE[health]}`}
     >
       {SOCIAL_HEALTH_LABEL[health]}
       {detail && <span className="font-normal tabular-nums opacity-80">{detail}</span>}

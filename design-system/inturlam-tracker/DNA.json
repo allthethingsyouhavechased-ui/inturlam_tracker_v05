@@ -1,6 +1,6 @@
 {
   "meta": {
-    "name": "INTURLAM Operations Desk",
+    "name": "INTracker",
     "description": "A disciplined editorial operations system for an internal creative-agency tracker.",
     "source_references": ["current localhost:3001 product", "Linear project model", "Plane workspace model", "Jira navigation model"],
     "created_at": "2026-08-11"

@@ -67,6 +67,8 @@ function IconGlyph({ name }: { name: IconName }) {
       return <path d="M3 5h14M5.8 10h8.4M8.3 15h3.4"/>;
     case "archive":
       return <><rect x="2.8" y="3" width="14.4" height="4" rx="1"/><path d="M4.2 7.5v8.7h11.6V7.5M7.5 11h5"/></>;
+    case "undo":
+      return <><path d="M3.2 8.4h9a4.4 4.4 0 0 1 0 8.8H7"/><path d="M6.6 4.6 3 8.4l3.6 3.8"/></>;
   }
 }
 

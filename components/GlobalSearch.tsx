@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Icon from "@/components/ui/Icon";
+import { FOCUS_SEARCH_EVENT } from "@/lib/shortcuts";
 
 export default function GlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -16,8 +17,16 @@ export default function GlobalSearch() {
         inputRef.current?.blur();
       }
     };
+    // `/` kısayolu tek yerde (lib/shortcuts.ts) tanımlı ve buraya olay olarak
+    // geliyor — iki bileşenin aynı tuşu ayrı ayrı dinlemesi, birinin diğerini
+    // sessizce gölgelemesi demek olurdu.
+    const focusSearch = () => inputRef.current?.focus();
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    window.addEventListener(FOCUS_SEARCH_EVENT, focusSearch);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(FOCUS_SEARCH_EVENT, focusSearch);
+    };
   }, []);
 
   return (

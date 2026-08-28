@@ -73,6 +73,8 @@ export interface RouteContext {
 }
 
 export function routeContextForPathname(pathname: string): RouteContext {
+  if (pathname.startsWith("/panom/katkim")) return { section: "Panom", label: "Katkı analizi" };
+  if (pathname.startsWith("/panom/markalar")) return { section: "Panom", label: "Marka analizi" };
   if (pathname.startsWith("/settings/security")) return { section: "Ayarlar", label: "Güvenlik" };
   if (pathname.startsWith("/settings/profile")) return { section: "Ayarlar", label: "Profil bilgileri" };
   if (pathname.startsWith("/settings")) return { section: "Ayarlar", label: "Hesap" };
@@ -98,5 +100,5 @@ export function routeContextForPathname(pathname: string): RouteContext {
       if (isNavActive(pathname, item.href)) return { section: group.label, label: item.label };
     }
   }
-  return { section: "INTURLAM", label: "Tracker" };
+  return { section: "INTracker", label: "Çalışma alanı" };
 }

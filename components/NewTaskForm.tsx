@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { controlClass } from "@/components/ui/Input";
 import { createTaskAction } from "@/lib/actions/tasks";
 import {
   CONTENT_TYPES,
@@ -11,11 +12,11 @@ import {
   TASK_PRIORITY_LABEL,
 } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
-import type { ContentType, Person } from "@/lib/types";
+import { DIFFICULTY_DEFAULT_WEIGHT } from "@/lib/progress";
+import type { ContentType, Person, TaskDifficulty } from "@/lib/types";
 import SubmitButton from "./SubmitButton";
 
-const inputClass =
-  "w-full min-h-11 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] focus:border-brand-500 dark:border-white/15 dark:bg-zinc-900";
+const inputClass = controlClass();
 
 export default function NewTaskForm({
   contentItemId,
@@ -32,6 +33,7 @@ export default function NewTaskForm({
 }) {
   const ref = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [difficulty, setDifficulty] = useState<TaskDifficulty>("Orta");
   return (
     <form
       ref={ref}
@@ -51,7 +53,7 @@ export default function NewTaskForm({
       }`}
     >
       <input type="hidden" name="contentItemId" value={contentItemId} />
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Görev
         <input
           name="title"
@@ -60,7 +62,7 @@ export default function NewTaskForm({
           className={inputClass}
         />
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Görev türü
         <select name="contentType" required className={inputClass} defaultValue={defaultContentType}>
           {CONTENT_TYPES.map((type) => (
@@ -68,9 +70,9 @@ export default function NewTaskForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Zorluk
-        <select name="difficulty" required className={inputClass} defaultValue="Orta">
+        <select name="difficulty" required className={inputClass} value={difficulty} onChange={(event) => setDifficulty(event.target.value as TaskDifficulty)}>
           {TASK_DIFFICULTIES.map((difficulty) => (
             <option key={difficulty} value={difficulty}>
               {TASK_DIFFICULTY_LABEL[difficulty]}
@@ -78,7 +80,7 @@ export default function NewTaskForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Öncelik
         <select name="priority" className={inputClass} defaultValue="Normal">
           {TASK_PRIORITIES.map((p) => (
@@ -88,7 +90,7 @@ export default function NewTaskForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Atanan
         <select
           name="assigneeId"
@@ -103,12 +105,12 @@ export default function NewTaskForm({
           ))}
         </select>
       </label>
-      <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <label className="grid gap-1 text-xs font-medium text-secondary">
         Teslim
         <input type="date" name="dueDate" required className={inputClass} />
       </label>
       {canSetWeight && (
-        <label className="grid gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <label className="grid gap-1 text-xs font-medium text-secondary">
           Puan
           <input
             type="number"
@@ -116,14 +118,14 @@ export default function NewTaskForm({
             min={1}
             max={100}
             step={1}
-            required
-            defaultValue={1}
+            placeholder={String(DIFFICULTY_DEFAULT_WEIGHT[difficulty])}
+            aria-label={`Puan; boşsa ${DIFFICULTY_DEFAULT_WEIGHT[difficulty]}`}
             className={inputClass}
           />
         </label>
       )}
       <SubmitButton>Ekle</SubmitButton>
-      {error && <p role="alert" className={`text-xs text-rose-600 dark:text-rose-400 sm:col-span-2 ${canSetWeight ? "xl:col-span-8" : "xl:col-span-7"}`}>{error}</p>}
+      {error && <p role="alert" className={`text-xs text-danger sm:col-span-2 ${canSetWeight ? "xl:col-span-8" : "xl:col-span-7"}`}>{error}</p>}
     </form>
   );
 }

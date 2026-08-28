@@ -71,7 +71,7 @@ export default function RequestImagePicker() {
                 type="button"
                 onClick={() => removeImage(index)}
                 aria-label={`${image.file.name} görselini kaldır`}
-                className="absolute -right-1.5 -top-1.5 grid size-6 place-items-center rounded-full bg-danger text-white shadow-sm"
+                className="absolute -right-1.5 -top-1.5 grid size-6 place-items-center rounded-full bg-danger-solid text-white shadow-sm"
               >
                 ×
               </button>

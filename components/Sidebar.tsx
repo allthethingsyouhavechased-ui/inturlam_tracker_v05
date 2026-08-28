@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import ProductWordmark from "@/components/ProductWordmark";
 import SidebarNav from "@/components/SidebarNav";
 import SidebarToggle from "@/components/SidebarToggle";
 import Icon from "@/components/ui/Icon";
@@ -19,15 +20,12 @@ export default async function Sidebar() {
         <Link
           href="/"
           className="flex min-w-0 items-center gap-3 rounded-[10px] px-1.5 py-1.5 text-foreground transition-colors hover:bg-surface-hover"
-          aria-label="INTURLAM Tracker ana sayfa"
+          aria-label="INTracker ana sayfa"
         >
           <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-border-default bg-white text-zinc-900 shadow-sm">
             <Logo className="size-6" />
           </span>
-          <span className="sidebar-wordmark min-w-0 whitespace-nowrap transition-[width,opacity] duration-150">
-            <span className="block text-[13px] font-semibold tracking-[-0.015em]">INTURLAM</span>
-            <span className="block text-[9px] font-semibold tracking-[0.12em] text-muted">OPERATIONS</span>
-          </span>
+          <ProductWordmark className="sidebar-wordmark min-w-0 text-[15px] transition-[width,opacity] duration-150" />
         </Link>
       </div>
 
