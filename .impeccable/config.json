@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "border-l-[3px] border-l-[var(--brand-accent)]",
+        "createdAt": "2026-08-29T13:09:34.869Z",
+        "reason": "Projenin yerleşik marka aksan şeridi (CLAUDE.md 'Portföy Şeridi revizyonu' 2026-08-28); TaskGridCard testi de aynı 3px şeridi doğruluyor. Bu turda dokunulmadı, satır numarası başka edit yüzünden kaydı."
+      }
+    ]
+  }
+}
