@@ -149,23 +149,23 @@ export default async function BrandPage({
           )}
         </div>
       }
+      activityBadge={
+        socialHealth ? (
+          <SocialHealthBadge
+            health={socialHealth}
+            detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
+          />
+        ) : null
+      }
       activity={
-        <div className="mt-1.5 flex min-w-0 items-center gap-2">
-          {socialHealth ? (
-            <>
-              <SocialHealthBadge
-                health={socialHealth}
-                detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
-              />
-              <span className="min-w-0 truncate text-xs text-muted">
-                {socialRow?.last_post_at
-                  ? `Son paylaşım ${formatIsoDateTime(socialRow.last_post_at)}`
-                  : "Paylaşım kaydı yok"}
-              </span>
-            </>
-          ) : (
-            <span className="text-xs text-muted">Takip hesabı bağlanmamış</span>
-          )}
+        <div className="mt-1.5 min-w-0">
+          <span className="block truncate text-xs text-muted">
+            {socialHealth
+              ? socialRow?.last_post_at
+                ? `Son paylaşım ${formatIsoDateTime(socialRow.last_post_at)}`
+                : "Paylaşım kaydı yok"
+              : "Takip hesabı bağlanmamış"}
+          </span>
         </div>
       }
       shoots={

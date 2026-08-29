@@ -10,12 +10,16 @@ import type { ReactNode } from "react";
 export default function BrandWorkspaceSummary({
   overview,
   activity,
+  activityBadge,
   responsibles,
   shoots,
   action,
 }: {
   overview: ReactNode;
   activity: ReactNode;
+  /** Tarama durumu rozeti — başlığın YANINDA durur: aşağıdaki satır o zaman
+      yalnız açıklama metnini taşır, rozet metnin önüne sıkışmaz. */
+  activityBadge?: ReactNode;
   responsibles: ReactNode;
   shoots: ReactNode;
   action?: ReactNode;
@@ -31,7 +35,10 @@ export default function BrandWorkspaceSummary({
           {overview}
         </div>
         <div data-brand-info="activity" className="min-w-0">
-          <p className="text-eyebrow text-brand-600 dark:text-brand-300">AKTİFLİK</p>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-eyebrow text-brand-600 dark:text-brand-300">AKTİFLİK</p>
+            {activityBadge}
+          </div>
           {activity}
         </div>
         <div data-brand-info="responsibles" className="min-w-0">

@@ -12,6 +12,7 @@ import {
   TASK_DIFFICULTY_LABEL,
   TASK_PRIORITY_BADGE,
   TASK_PRIORITY_LABEL,
+  taskWeightBadgeClass,
 } from "@/lib/constants";
 import { formatDateShort, isOverdue } from "@/lib/date";
 import { formatRevisionDuration, isRevisionOverTarget } from "@/lib/taskMetadata";
@@ -177,10 +178,14 @@ export default function TaskGridCard({
               ))}
           </div>
           <span className="flex items-center justify-self-end gap-1.5">
+              {/* `shrink-0` + `leading-none`: flex çocuğu olarak daralıp ovale
+                  dönmesin ve rakam satır yüksekliğinden bağımsız olarak tam
+                  ortada dursun. Boyut her kartta sabit (28px); rengi puana
+                  göre değişir. */}
               <span
                 aria-label={`${task.weight_points} puan`}
                 title={`Görev ağırlığı: ${task.weight_points} puan`}
-                className="grid size-7 place-items-center rounded-full bg-brand-100 text-[10px] font-bold tabular-nums text-brand-700 dark:bg-brand-950 dark:text-brand-200"
+                className={`grid size-7 shrink-0 place-items-center rounded-full text-[10px] font-bold leading-none tabular-nums ${taskWeightBadgeClass(task.weight_points)}`}
               >
                 {task.weight_points}
               </span>

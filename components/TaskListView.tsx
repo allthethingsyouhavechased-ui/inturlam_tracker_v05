@@ -30,6 +30,7 @@ import {
   TASK_PRIORITY_LABEL,
   TASK_STATUS_LABEL,
   TASK_STATUSES,
+  taskWeightBadgeClass,
 } from "@/lib/constants";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import {
@@ -575,7 +576,7 @@ export default function TaskListView({
                     </div>
                   </td>}
                   {visibleColumns.has("puan") && <td className="px-3 py-2">
-                    <span className="inline-block whitespace-nowrap rounded-md bg-surface-subtle px-2 py-1 text-xs font-semibold tabular-nums text-secondary">
+                    <span className={`inline-block whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${taskWeightBadgeClass(t.weight_points)}`}>
                       {t.weight_points}
                     </span>
                   </td>}

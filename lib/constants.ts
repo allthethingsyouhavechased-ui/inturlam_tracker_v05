@@ -136,6 +136,19 @@ export const TASK_STATUS_PROGRESS: Record<TaskStatus, string> = {
   Yayinlandi: "bg-emerald-600",
 };
 
+// Ağırlık puanı rozetinin rengi: sayıya bakmadan da işin ne kadar ağır
+// olduğu anlaşılsın. Eşikler `tasks.weight_points` CHECK'i (1-100) içinde,
+// pratikte kullanılan aralığa göre — 1-2 küçük iş, 11+ ise ayın taşıyıcısı.
+// Tailwind derleme-zamanı tarayıcısı runtime'da üretilen string'leri
+// yakalayamadığı için sınıflar burada LİTERAL yazılı (TASK_STATUS_BORDER_TOP
+// ile aynı gerekçe).
+export function taskWeightBadgeClass(points: number): string {
+  if (points >= 11) return "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200";
+  if (points >= 6) return "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200";
+  if (points >= 3) return "bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-200";
+  return "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+}
+
 // Bir görevin "açık" (tamamlanmamış) sayılması için: yayınlanmamış olması.
 export const OPEN_TASK_STATUSES: TaskStatus[] = TASK_STATUSES.filter(
   (s) => s !== "Yayinlandi",
