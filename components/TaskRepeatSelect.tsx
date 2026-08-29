@@ -19,8 +19,9 @@ export default function TaskRepeatSelect({
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">Tekrar</span>
+    // Etiket ("Tekrar") çağıranın kendi <label>'ında; burada tekrar yazılması
+    // yan sütunda aynı kelimeyi iki kez gösteriyordu.
+    <span className="flex w-full min-w-0 items-center gap-1.5">
       <select
         aria-label="Tekrar aralığı"
         value={value}
@@ -39,7 +40,7 @@ export default function TaskRepeatSelect({
             }
           });
         }}
-        className="rounded-md border border-black/10 bg-white px-2 py-1 text-xs outline-none focus:border-brand-500 disabled:opacity-50 dark:border-white/15 dark:bg-zinc-900"
+        className="min-h-9 w-full min-w-0 rounded-md border border-border-default bg-background px-2 py-1 text-xs outline-none focus:border-brand-500 disabled:opacity-50"
       >
         {REPEAT_OPTIONS.map((o) => (
           <option key={o.days} value={o.days}>
