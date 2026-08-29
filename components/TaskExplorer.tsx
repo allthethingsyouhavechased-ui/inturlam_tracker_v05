@@ -368,8 +368,18 @@ export default function TaskExplorer({
               </Link>
             )}
 
-            <div className="ml-auto flex items-center gap-2">
-              <WorkspaceViewToggle view={view} onChange={changeView} />
+            <p className="ml-auto whitespace-nowrap text-xs text-muted">
+              <span className="font-semibold text-zinc-700 dark:text-zinc-200">
+                {filtered.length}
+              </span>{" "}
+              / {tasks.length} görev
+              {view === "pano" && sortKey !== "varsayilan" && (
+                <span> · {SORT_LABEL[sortKey]} sıralaması</span>
+              )}
+              {view === "liste" && <span> · sütun başlıklarından sıralanabilir</span>}
+            </p>
+
+            <div className="flex items-center gap-3 sm:border-l sm:border-border-subtle sm:pl-3">
               {view === "liste" && (
                 <span className="hidden md:block">
                   <TaskListColumnsControl
@@ -378,6 +388,7 @@ export default function TaskExplorer({
                   />
                 </span>
               )}
+              <WorkspaceViewToggle view={view} onChange={changeView} />
             </div>
           </div>
         </div>
@@ -554,17 +565,6 @@ export default function TaskExplorer({
         </div>
         )}
       </section>
-
-      <p className="text-xs text-muted">
-          <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-            {filtered.length}
-          </span>{" "}
-          / {tasks.length} görev
-          {view === "pano" && sortKey !== "varsayilan" && (
-            <span> · {SORT_LABEL[sortKey]} sıralaması</span>
-          )}
-          {view === "liste" && <span> · sütun başlıklarından sıralanabilir</span>}
-      </p>
 
       {filtered.length === 0 ? (
         <EmptyState

@@ -391,6 +391,7 @@ export default function TaskListView({
                 id: t.id,
                 title: t.title,
                 archived: t.archived_at !== null,
+                status: t.status,
               })}
               className={`brand-stripe min-w-0 max-w-full overflow-hidden rounded-r-xl border border-border-default bg-surface p-3 ${
                 isSel ? "bg-brand-50/60 dark:bg-brand-950/20" : ""
@@ -527,6 +528,7 @@ export default function TaskListView({
                     id: t.id,
                     title: t.title,
                     archived: t.archived_at !== null,
+                    status: t.status,
                   })}
                   className={`group border-b border-border-subtle last:border-0 ${
                     isSel ? "bg-brand-50/60 dark:bg-brand-950/20" : ""

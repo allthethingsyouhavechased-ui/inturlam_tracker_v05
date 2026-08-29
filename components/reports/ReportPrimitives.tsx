@@ -377,25 +377,25 @@ export function ReportSectionHeader({
   extra?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <h2 className="text-h2">{title}</h2>
         <p className="text-sm text-muted">{description}</p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {extra}
         <button
           type="button"
           onClick={onToggleTable}
           aria-expanded={tableVisible}
-          className="ui-press inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-secondary hover:bg-surface-hover hover:text-foreground"
+          className="ui-press inline-flex min-h-9 items-center rounded-md border border-brand-500/30 bg-brand-500/[0.06] px-3 text-sm font-medium text-brand-700 hover:bg-brand-500/15 dark:text-brand-300"
         >
           {tableVisible ? "Tabloyu gizle" : "Tabloyu göster"}
         </button>
         <button
           type="button"
           onClick={onExportCSV}
-          className="ui-press inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium text-brand-600 hover:bg-brand-500/10 dark:text-brand-400"
+          className="ui-press inline-flex min-h-9 items-center gap-2 rounded-md border border-brand-500/30 bg-brand-500/[0.06] px-3 text-sm font-medium text-brand-700 hover:bg-brand-500/15 dark:text-brand-300"
         >
           CSV
         </button>

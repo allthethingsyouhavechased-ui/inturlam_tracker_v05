@@ -50,7 +50,7 @@ export default function RangeFilterBar({
   return (
     <section
       aria-label="Rapor filtreleri"
-      className="sticky top-[calc(var(--header-h)+0.75rem)] z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border-default bg-surface p-3 shadow-sm print:hidden"
+      className="sticky top-[calc(var(--header-h)+0.75rem)] z-20 flex flex-wrap items-center gap-1.5 rounded-xl border border-border-default bg-surface p-2.5 shadow-sm print:hidden"
     >
       <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-muted">
         Dönem
@@ -63,7 +63,10 @@ export default function RangeFilterBar({
           aria-pressed={rangeKey === option.key}
           className={buttonClass({
             variant: rangeKey === option.key ? "primary" : "ghost",
-            className: "px-3 text-[13px]",
+            className:
+              rangeKey === option.key
+                ? "px-3 text-[13px]"
+                : "px-3 text-[13px] text-brand-700 hover:bg-brand-500/10 hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200",
           })}
         >
           {option.label}
@@ -144,7 +147,11 @@ export function ExcelDownloadLink({
       href={`/reports/export${query ? `?${query}` : ""}`}
       // Sunucu Content-Disposition gönderiyor; `download` yalnızca ipucu.
       download
-      className={buttonClass({ variant: "secondary", className: "gap-2" })}
+      className={buttonClass({
+        variant: "secondary",
+        className:
+          "gap-2 border-brand-500/35 bg-brand-500/[0.06] text-brand-700 hover:border-brand-500/60 hover:bg-brand-500/15 hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200",
+      })}
     >
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
         <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v7.19L6.53 7.22a.75.75 0 0 0-1.06 1.06l3.75 3.75a.75.75 0 0 0 1.06 0l3.75-3.75a.75.75 0 1 0-1.06-1.06l-2.72 2.72V2.75Z" />
@@ -160,7 +167,11 @@ export function PrintButton() {
     <button
       type="button"
       onClick={() => window.print()}
-      className={buttonClass({ variant: "secondary", className: "gap-2" })}
+      className={buttonClass({
+        variant: "secondary",
+        className:
+          "gap-2 border-brand-500/35 bg-brand-500/[0.06] text-brand-700 hover:border-brand-500/60 hover:bg-brand-500/15 hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200",
+      })}
     >
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
         <path

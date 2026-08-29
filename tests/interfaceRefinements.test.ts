@@ -20,7 +20,17 @@ describe("Panom teslim radari", () => {
     const panom = source("app/panom/page.tsx");
     const views = source("components/PanomViews.tsx");
 
-    assert.match(radar, /usePanelOpen\(`\$\{PANEL_KEY\}:\$\{personId\}`, true\)/);
+    assert.match(radar, /usePanelOpen\(`\$\{PANEL_KEY\}:\$\{personId\}`, false\)/);
+    assert.match(radar, /createPortal/);
+    assert.match(radar, /role="dialog"/);
+    assert.match(radar, /aria-modal="true"/);
+    assert.match(radar, /items-start justify-center[\s\S]*max-w-6xl/);
+    assert.doesNotMatch(radar, /inset-y-0 right-0/);
+    assert.match(radar, /event\.key === "Escape"/);
+    assert.match(radar, /document\.body\.style\.overflow = "hidden"/);
+    assert.match(radar, /<DndContext[\s\S]*collisionDetection=\{dayCollisionDetection\}[\s\S]*onDragEnd=\{handleDragEnd\}/);
+    assert.match(radar, /useDraggable\(\{ id: task\.id \}\)/);
+    assert.match(radar, /useDroppable\(\{ id: `\$\{DROP_PREFIX\}\$\{date\}`/);
     assert.match(radar, /export function PersonalDeadlineRadarTrigger/);
     assert.match(radar, /export function PersonalDeadlineRadarPanel/);
     assert.match(panom, /aria-label="Kişisel pano araçları"/);
@@ -37,6 +47,17 @@ describe("Panom teslim radari", () => {
 });
 
 describe("İkincil operasyon panelleri", () => {
+  it("görev sonucunu ayrı satır açmadan görünüm seçicinin solunda gösterir", () => {
+    const explorer = source("components/TaskExplorer.tsx");
+    const result = explorer.indexOf("{filtered.length}");
+    const viewToggle = explorer.indexOf("<WorkspaceViewToggle", result);
+    const board = explorer.indexOf("filtered.length === 0", viewToggle);
+
+    assert.ok(result >= 0 && viewToggle > result && board > viewToggle);
+    assert.equal(explorer.match(/\{filtered\.length\}/g)?.length, 1);
+    assert.match(explorer, /ml-auto whitespace-nowrap text-xs text-muted/);
+  });
+
   it("tarih bekleyenleri Görevler başlığındaki açılır düğmeye taşır", () => {
     const tasks = source("app/tasks/page.tsx");
     const queue = source("components/TaskPlanningQueue.tsx");
@@ -46,15 +67,37 @@ describe("İkincil operasyon panelleri", () => {
     assert.match(queue, /Planlama kuyruğu/);
   });
 
-  it("ekip aylık puanını aktif iş akışının hemen altındaki kapalı panele alır", () => {
+  it("aktif iş akışı ve ekip aylık puanını aynı sekmeli analiz yüzeyinde tutar", () => {
     const reports = source("components/ReportsClient.tsx");
-    const workflowPanel = reports.indexOf('panelKey="workflow"');
-    const scorePanel = reports.indexOf('panelKey="team-monthly-score"');
+    const workflowPanel = reports.indexOf('["workflow", `Aktif akış');
+    const scorePanel = reports.indexOf('["score", "Aylık puan"]');
     const departmentSection = reports.indexOf('id="departman-raporu"');
 
     assert.ok(workflowPanel >= 0 && scorePanel > workflowPanel && departmentSection > scorePanel);
-    assert.match(reports, /defaultOpen=\{false\}/);
+    assert.match(reports, /role="tablist" aria-label="Operasyon analizi"/);
+    assert.match(reports, /analysisView === "score"/);
     assert.match(source("app/reports/page.tsx"), /teamMonthlyProgress=\{teamMonthlyProgress\}/);
+  });
+
+  it("raporları açılır yönetim, analiz ve detay yüzeylerinde doğru sırada toplar", () => {
+    const reports = source("components/ReportsClient.tsx");
+    const panels = source("components/reports/CollapsiblePanel.tsx");
+    const management = reports.indexOf('panelKey="reports-management"');
+    const analysis = reports.indexOf('panelKey="reports-analysis"');
+    const details = reports.indexOf('panelKey="reports-details"');
+    const flow = reports.indexOf('panelKey="reports-flow-health"');
+
+    assert.match(reports, /<RangeFilterBar[\s\S]*<ExcelDownloadLink[\s\S]*<PrintButton/);
+    assert.ok(management >= 0 && analysis > management && details > analysis && flow > details);
+    assert.match(reports, /titleId="report-summary-title"/);
+    assert.match(reports, /titleId="flow-health-title"[\s\S]*<TrendChart report=\{trend\} embedded \/>[\s\S]*<CycleTimePanel report=\{cycleTime\} embedded \/>[\s\S]*<DueHealthPanel rows=\{dueHealth\} embedded \/>/);
+    assert.match(reports, /role="tablist" aria-label="Rapor detayları"/);
+    assert.match(reports, /hidden=\{detailView !== "department"\}/);
+    assert.match(reports, /hidden=\{detailView !== "people"\}/);
+    assert.match(reports, /hidden=\{detailView !== "brands"\}/);
+    assert.match(panels, /aria-expanded=\{open\}/);
+    assert.match(panels, /onClick=\{toggle\}/);
+    assert.match(panels, /actions && open/);
   });
 });
 
@@ -108,6 +151,21 @@ describe("Marka Instagram erişimi", () => {
     assert.match(detail, /rel="noopener noreferrer"/);
     assert.match(listPage, /instagramProfileUrl/);
     assert.match(list, /aria-label=\{`\$\{row\.name\} Instagram hesabını aç`\}/);
+  });
+});
+
+describe("Görev durum renkleri", () => {
+  it("Bugün ve marka operasyon özetlerini kanban sütunlarıyla aynı paletten besler", () => {
+    const constants = source("lib/constants.ts");
+    const homeProgress = source("components/HomeBrandProgress.tsx");
+    const brandOperations = source("components/BrandOperationsOverview.tsx");
+
+    assert.match(constants, /DevamEdiyor: "text-sky-900 dark:text-sky-200"/);
+    assert.match(constants, /Incelemede: "text-violet-800 dark:text-violet-200"/);
+    assert.match(constants, /Onaylandi: "text-amber-900 dark:text-amber-200"/);
+    assert.match(constants, /Yayinlandi: "text-emerald-800 dark:text-emerald-200"/);
+    assert.match(homeProgress, /TASK_STATUS_TEXT\[status\]/);
+    assert.match(brandOperations, /TASK_STATUS_TEXT\[status\]/);
   });
 });
 

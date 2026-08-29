@@ -23,9 +23,11 @@ import { getActionErrorMessage } from "@/lib/errorMessage";
 export default function TaskTargetDateEdit({
   taskId,
   targetDate,
+  compact = false,
 }: {
   taskId: string;
   targetDate: string | null;
+  compact?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,9 @@ export default function TaskTargetDateEdit({
               ? "Kişisel hedef tarihini değiştir"
               : "Kişisel hedef tarihi belirle (yalnızca sana görünür)"
           }
-          className={`ui-press inline-flex min-h-8 items-center gap-1 whitespace-nowrap rounded-lg px-1.5 text-[11px] tabular-nums hover:bg-surface-hover disabled:opacity-50 ${
+          className={`ui-press inline-flex items-center gap-1 whitespace-nowrap rounded-lg text-[11px] tabular-nums hover:bg-surface-hover disabled:opacity-50 ${
+            compact ? "min-h-7 px-0 hover:bg-transparent" : "min-h-8 px-1.5"
+          } ${
             targetDate
               ? "font-medium text-brand-600 dark:text-brand-400"
               : "text-zinc-500 dark:text-zinc-400"
@@ -86,7 +90,7 @@ export default function TaskTargetDateEdit({
             disabled={pending}
             title="Kişisel hedefi kaldır"
             aria-label="Kişisel hedefi kaldır"
-            className="touch-target inline-flex size-7 items-center justify-center rounded-lg text-faint hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+            className={`${compact ? "ml-0.5" : "touch-target"} inline-flex size-7 items-center justify-center rounded-lg text-faint hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 dark:hover:bg-rose-950/30 dark:hover:text-rose-400`}
           >
             <Icon name="close" className="size-3" />
           </button>

@@ -13,12 +13,16 @@ describe("Panom görev görünümü araçları", () => {
 
     assert.match(views, /TaskListColumnsControl/);
     assert.match(views, /DEFAULT_TASK_LIST_COLUMNS/);
-    assert.match(views, /aria-label="Bana atanmış görev görünümü araçları"/);
+    assert.match(views, /aria-label="Kişisel görev görünümü araçları"/);
+    assert.match(views, /aria-label="Kişisel görevleri sırala"/);
+    assert.match(views, /sortKey=\{sortKey\}/);
     assert.match(views, /view === "liste"[\s\S]*?<TaskListColumnsControl/);
     assert.match(views, /visibleColumns=\{taskListColumns\}/);
     assert.match(views, /onVisibleColumnsChange=\{setTaskListColumns\}/);
     assert.match(views, /showColumnsControl=\{false\}/);
-    assert.doesNotMatch(views, /toolbar=\{toggle\}/);
+    assert.match(views, /<WorkspaceViewToggle view=\{view\} onChange=\{changeView\}/);
+    assert.doesNotMatch(views, /toolbar=\{/);
+    assert.doesNotMatch(views, /Bana atanmış görevler/);
   });
 });
 
@@ -30,7 +34,11 @@ describe("Pano görev kartı bilgi hiyerarşisi", () => {
 
     assert.ok(title >= 0 && contentTitle > title);
     assert.doesNotMatch(card, /h-\[210px\]/);
-    assert.match(card, /aria-label="Görev zamanlaması"/);
+    assert.match(card, /aria-label="Görev zamanlaması ve sorumlusu"/);
     assert.match(card, /aria-label="Görev ayrıntıları"/);
+    assert.match(card, /className="relative flex min-w-0 flex-col overflow-hidden rounded-xl[^"]* p-3/);
+    assert.match(card, /absolute inset-y-0 left-0 w-\[3px\]/);
+    assert.doesNotMatch(card, /className="brand-stripe/);
+    assert.match(card, /grid-cols-\[minmax\(0,1fr\)_auto\][^"]*gap-x-2 gap-y-1/);
   });
 });

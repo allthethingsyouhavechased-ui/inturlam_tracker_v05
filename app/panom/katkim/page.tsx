@@ -43,22 +43,22 @@ export default async function ContributionPage({
       <div className="space-y-6">
       <section aria-label="Katkı özeti" className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-subtle sm:grid-cols-2 lg:grid-cols-4">
         <div className="bg-surface p-4 sm:p-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">AYLIK İLERLEME</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">AYLIK İLERLEME</p>
           <p className="mt-1 font-display text-2xl font-semibold text-foreground">{progress.percent === null ? "Plan yok" : `%${progress.percent}`}</p>
           <p className="mt-1 text-xs text-muted">Teslim ayına göre tamamlanma</p>
         </div>
         <div className="bg-surface p-4 sm:p-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">KAZANILAN PUAN</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">KAZANILAN PUAN</p>
           <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-foreground">{formatPoints(progress.weighted_earned)}</p>
           <p className="mt-1 text-xs tabular-nums text-muted">{formatPoints(progress.weighted_total)} toplam puan üzerinden</p>
         </div>
         <div className="bg-surface p-4 sm:p-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">GÖREV KAPSAMI</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">GÖREV KAPSAMI</p>
           <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-foreground">{progress.task_count}</p>
           <p className="mt-1 text-xs text-muted">Teslim ayına göre görev</p>
         </div>
         <div className="bg-surface p-4 sm:p-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">DÖNEM KARŞILAŞTIRMASI</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">DÖNEM KARŞILAŞTIRMASI</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{comparison}</p>
           <p className="mt-1 text-xs text-muted">Önceki ay {previous.percent === null ? "plan yok" : `%${previous.percent}`}</p>
         </div>

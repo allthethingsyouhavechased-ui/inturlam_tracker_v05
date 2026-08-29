@@ -17,7 +17,16 @@ import {
   type Modifier,
 } from "@dnd-kit/core";
 import Link from "next/link";
-import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
+import {
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import TaskTargetDateEdit from "@/components/TaskTargetDateEdit";
 import Icon from "@/components/ui/Icon";
 import { setPersonalTaskTargetAction } from "@/lib/actions/tasks";
@@ -47,6 +56,10 @@ import type { TaskWithPersonalTarget } from "@/lib/types";
 // değil, kısayol.
 const PANEL_KEY = "personal-deadline";
 const DROP_PREFIX = "radar-day:";
+const DIALOG_ID = "personal-deadline-dialog";
+const emptySubscribe = () => () => {};
+const useIsClient = () =>
+  useSyncExternalStore(emptySubscribe, () => true, () => false);
 
 const collator = new Intl.Collator("tr");
 
@@ -323,13 +336,57 @@ function PersonalDeadlineRadarPanelContent({
 }: PersonalDeadlineRadarProps) {
   // Radar bir kullanici tercihi: ayni tarayicida kimlik degistirildiginde bir
   // kisinin acik/kapali secimi digerinin Panom'unu etkilemesin.
-  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${personId}`, true);
+  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${personId}`, false);
+  const isClient = useIsClient();
+  const dialogRef = useRef<HTMLDivElement>(null);
   // Takvim ayı istemci state'i ama başlangıcı SUNUCUDAN gelen `today` —
   // render sırasında `new Date()` çağrılmadığı için SSR/istemci aynı ayı çizer.
   const [monthParam, setMonthParam] = useState(() => today.slice(0, 7));
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!open) return;
+    const dialog = dialogRef.current;
+    const trigger = document.querySelector<HTMLButtonElement>(
+      `button[aria-controls="${DIALOG_ID}"]`,
+    );
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog?.querySelector<HTMLElement>("button, a, input, select, textarea")?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        toggle();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      trigger?.focus();
+    };
+  }, [open, toggle]);
 
   const baseTargets = useMemo(
     () =>
@@ -417,14 +474,27 @@ function PersonalDeadlineRadarPanelContent({
       : hasImmediateRisk
         ? "bg-amber-50/80 dark:bg-amber-950/20"
         : "bg-surface-subtle";
-  if (!open) return null;
+  if (!open || !isClient) return null;
 
-  return (
-    <section
-      aria-labelledby="personal-deadline-title"
-      className={`mb-5 overflow-hidden rounded-xl border bg-surface ${toneBorder}`}
-    >
-      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4 ${toneHeader}`}>
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-950/65 p-3 pt-6 backdrop-blur-[2px] sm:p-6 sm:pt-10">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Kişisel teslim radarını kapat"
+        onClick={toggle}
+        className="absolute inset-0 cursor-default"
+      />
+      <div
+        ref={dialogRef}
+        id={DIALOG_ID}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="personal-deadline-title"
+        className={`ui-enter relative flex max-h-[calc(100dvh-3rem)] w-full max-w-6xl flex-col overflow-hidden rounded-xl border bg-surface-elevated shadow-2xl outline-none sm:max-h-[calc(100dvh-5rem)] ${toneBorder}`}
+      >
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border-subtle px-3 py-2.5 sm:px-4 ${toneHeader}`}>
         <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-1">
           <Icon name="clock" className="size-4 shrink-0 text-brand-500" />
           <span className="min-w-0">
@@ -456,7 +526,7 @@ function PersonalDeadlineRadarPanelContent({
             type="button"
             onClick={toggle}
             aria-label="Kişisel teslim radarını kapat"
-            aria-controls="personal-deadline-body"
+            aria-controls={DIALOG_ID}
             className="ui-press inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-secondary hover:bg-surface-hover hover:text-foreground"
           >
             <Icon name="close" className="size-3.5" /> Kapat
@@ -464,7 +534,7 @@ function PersonalDeadlineRadarPanelContent({
         </div>
       </div>
 
-        <div id="personal-deadline-body" className="ui-enter">
+        <div id="personal-deadline-body" className="min-h-0 flex-1 overflow-y-auto">
           <DndContext
             id="panom-radar"
             sensors={sensors}
@@ -588,12 +658,14 @@ function PersonalDeadlineRadarPanelContent({
             Kişisel hedef yalnızca sana görünür; resmi teslim tarihini değiştirmez veya gizlemez.
           </p>
         </div>
-    </section>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
 export function PersonalDeadlineRadarTrigger(props: PersonalDeadlineRadarProps) {
-  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${props.personId}`, true);
+  const { open, toggle } = usePanelOpen(`${PANEL_KEY}:${props.personId}`, false);
   const rows = useMemo(() => buildRadarRows(props.tasks), [props.tasks]);
   const { overdueCount, summary, hasImmediateRisk, riskCount } = summarizeRadar(
     rows,
@@ -613,7 +685,7 @@ export function PersonalDeadlineRadarTrigger(props: PersonalDeadlineRadarProps) 
         onClick={toggle}
         aria-label={`Kişisel teslim radarını ${open ? "kapat" : "aç"}`}
         aria-expanded={open}
-        aria-controls="personal-deadline-body"
+        aria-controls={DIALOG_ID}
         title={summary}
         className={`ui-press inline-flex min-h-11 max-w-full items-center gap-2 rounded-md border bg-surface px-4 text-left hover:bg-surface-hover md:min-h-10 ${toneBorder} ${open ? "ring-1 ring-brand-500/15" : ""}`}
       >

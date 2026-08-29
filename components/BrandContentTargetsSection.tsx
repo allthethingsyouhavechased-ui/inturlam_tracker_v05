@@ -30,7 +30,7 @@ export default function BrandContentTargetsSection({
         month,
         !monthlyContentCompleted,
       )}
-      className={compact ? "self-end" : "mt-3"}
+      className={compact ? "shrink-0 self-end" : "mt-3"}
     >
       <button
         type="submit"
@@ -38,7 +38,7 @@ export default function BrandContentTargetsSection({
         aria-label="Aylık içerikler tamamlandı"
         className={monthlyContentCompleted
           ? "ui-press inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-emerald-700/30 bg-emerald-500/10 px-2.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300"
-          : "ui-press inline-flex min-h-8 items-center justify-center rounded-lg border border-border-default bg-surface px-2.5 text-[10px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground"}
+          : "ui-press inline-flex min-h-8 items-center justify-center rounded-lg border border-brand-500/30 bg-brand-500/[0.06] px-2.5 text-[10px] font-semibold text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 dark:text-brand-300"}
         title={monthlyContentCompleted ? "Teslim işaretini geri al" : "Canlı stoktan bağımsız olarak bu ayın teslimini kapat"}
       >
         {monthlyContentCompleted
@@ -49,9 +49,9 @@ export default function BrandContentTargetsSection({
   );
 
   return (
-    <section className={compact ? "min-w-0" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
-      <div>
-        <h2 className={compact ? "text-[9px] font-semibold tracking-[0.08em] text-faint" : "text-sm font-semibold text-foreground"}>
+    <section className={compact ? "flex min-w-0 items-center justify-center gap-8 overflow-x-auto pb-1" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
+      <div className={compact ? "flex shrink-0 items-center justify-center self-stretch" : undefined}>
+        <h2 className={compact ? "text-center text-eyebrow text-brand-600 dark:text-brand-300" : "text-sm font-semibold text-foreground"}>
           {compact ? "AYLIK HEDEF" : "Aylık içerik hedefleri"}
         </h2>
         {!compact && <p className="mt-0.5 text-xs text-muted">
@@ -67,12 +67,12 @@ export default function BrandContentTargetsSection({
       </div>
       <div
         data-compact-target-grid={compact || undefined}
-        className={compact ? "mt-2 grid grid-cols-2 items-end gap-x-3 gap-y-2" : "flex flex-wrap gap-x-6 gap-y-3"}
+        className={compact ? "flex w-max flex-nowrap items-end justify-center gap-3" : "flex flex-wrap gap-x-6 gap-y-3"}
       >
         {CONTENT_KINDS.map((kind) => (
           <label
             key={kind}
-            className={compact ? "grid gap-1 text-[9px] font-medium uppercase tracking-wide text-muted" : "grid gap-1 text-xs font-medium text-muted"}
+            className={compact ? "grid shrink-0 gap-1 text-center text-[9px] font-medium uppercase tracking-wide text-muted" : "grid gap-1 text-xs font-medium text-muted"}
           >
             {CONTENT_KIND_LABEL[kind]}
             <CountStepper

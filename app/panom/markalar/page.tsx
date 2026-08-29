@@ -59,10 +59,10 @@ export default async function AssignedBrandsDetailPage({
 
       <div className="space-y-6">
       <section className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
-        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">TOPLAM İLERLEME</p><p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{totalProgress.percent === null ? "Plan yok" : `%${totalProgress.percent}`}</p></div>
-        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">ATANMIŞ MARKA</p><p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{brands.length}</p><p className="mt-0.5 text-[10px] text-muted">{plannedBrands} markada aylık plan var</p></div>
-        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">AYLIK GÖREV</p><p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{totalProgress.task_count}</p></div>
-        <div className="px-4 py-4 sm:px-5"><p className="text-[10px] font-semibold tracking-[0.08em] text-muted">AĞIRLIKLI PUAN</p><p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{formatPoints(totalProgress.weighted_earned)}<span className="text-sm font-medium text-muted"> / {formatPoints(totalProgress.weighted_total)}</span></p></div>
+        <div className="px-4 py-4 sm:px-5"><p className="text-eyebrow text-brand-600 dark:text-brand-300">TOPLAM İLERLEME</p><p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{totalProgress.percent === null ? "Plan yok" : `%${totalProgress.percent}`}</p></div>
+        <div className="px-4 py-4 sm:px-5"><p className="text-eyebrow text-brand-600 dark:text-brand-300">ATANMIŞ MARKA</p><p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{brands.length}</p><p className="mt-0.5 text-[10px] text-muted">{plannedBrands} markada aylık plan var</p></div>
+        <div className="px-4 py-4 sm:px-5"><p className="text-eyebrow text-brand-600 dark:text-brand-300">AYLIK GÖREV</p><p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{totalProgress.task_count}</p></div>
+        <div className="px-4 py-4 sm:px-5"><p className="text-eyebrow text-brand-600 dark:text-brand-300">AĞIRLIKLI PUAN</p><p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{formatPoints(totalProgress.weighted_earned)}<span className="text-sm font-medium text-muted"> / {formatPoints(totalProgress.weighted_total)}</span></p></div>
       </section>
 
       {brands.length > 0 ? (

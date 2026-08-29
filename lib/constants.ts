@@ -101,6 +101,17 @@ export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
   Yayinlandi: "bg-emerald-600",
 };
 
+// Kanban sütunlarının semantik renklerini metin üzerinde kullanan yüzeyler.
+// Durum özeti gibi arka plansız alanlarda BADGE sınıflarını parçalamak yerine
+// aynı renk ailesini tek kaynaktan korur.
+export const TASK_STATUS_TEXT: Record<TaskStatus, string> = {
+  Beklemede: "text-zinc-800 dark:text-zinc-200",
+  DevamEdiyor: "text-sky-900 dark:text-sky-200",
+  Incelemede: "text-violet-800 dark:text-violet-200",
+  Onaylandi: "text-amber-900 dark:text-amber-200",
+  Yayinlandi: "text-emerald-800 dark:text-emerald-200",
+};
+
 // Kanban kolon başlıklarının üst çizgisi — TASK_STATUS_DOT ile aynı renk
 // paleti, ama Tailwind'in derleme-zamanı taraması runtime'da üretilen class
 // string'lerini yakalayamadığı için (ör. .replace("bg-","border-t-")) ayrı

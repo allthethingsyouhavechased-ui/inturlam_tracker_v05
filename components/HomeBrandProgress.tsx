@@ -3,7 +3,7 @@ import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
 import Icon from "@/components/ui/Icon";
 import { brandAccentStyle } from "@/lib/brandAccent";
-import { TASK_STATUS_LABEL } from "@/lib/constants";
+import { TASK_STATUS_LABEL, TASK_STATUS_TEXT } from "@/lib/constants";
 import { formatPoints } from "@/lib/progress";
 import type { BrandMonthlyProgressRow } from "@/lib/repositories/progress";
 import type { MonthlyProgress, TaskStatus } from "@/lib/types";
@@ -33,6 +33,16 @@ function ProgressValue({ progress, showPoints = true }: { progress: MonthlyProgr
   );
 }
 
+interface HomeBrandProgressProps {
+  month: string;
+  portfolioBrands: BrandMonthlyProgressRow[];
+  portfolioProgress: MonthlyProgress;
+  portfolioStatusCounts: Record<TaskStatus, number>;
+  personalProgress: MonthlyProgress;
+  assignedBrandIds: string[];
+  section?: "all" | "summary" | "details";
+}
+
 export default function HomeBrandProgress({
   month,
   portfolioBrands,
@@ -40,28 +50,22 @@ export default function HomeBrandProgress({
   portfolioStatusCounts,
   personalProgress,
   assignedBrandIds,
-}: {
-  month: string;
-  portfolioBrands: BrandMonthlyProgressRow[];
-  portfolioProgress: MonthlyProgress;
-  portfolioStatusCounts: Record<TaskStatus, number>;
-  personalProgress: MonthlyProgress;
-  assignedBrandIds: string[];
-}) {
+  section = "all",
+}: HomeBrandProgressProps) {
   const assigned = new Set(assignedBrandIds);
   const plannedBrandCount = portfolioBrands.filter((brand) => brand.progress.percent !== null).length;
   const statuses: TaskStatus[] = ["Beklemede", "DevamEdiyor", "Incelemede", "Onaylandi", "Yayinlandi"];
 
   return (
     <div className="space-y-5">
-      <section aria-label="Aylık analiz özeti" className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-subtle sm:grid-cols-3">
+      {section !== "details" && <section aria-label="Aylık analiz özeti" className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-subtle sm:grid-cols-3">
         <div className="bg-surface px-4 py-4 sm:px-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">BENİM AYLIK İLERLEMEM</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">BENİM AYLIK İLERLEMEM</p>
           <div className="mt-1"><ProgressValue progress={personalProgress} showPoints={false} /></div>
           <ProgressTrack progress={personalProgress} />
         </div>
         <div className="bg-surface px-4 py-4 sm:px-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">BU AYKİ PUANIM</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">BU AYKİ PUANIM</p>
           <div className="mt-1 flex items-end justify-between gap-3">
             <div>
               <p className="font-display text-2xl font-semibold tabular-nums text-foreground">{formatPoints(personalProgress.weighted_earned)}</p>
@@ -71,13 +75,13 @@ export default function HomeBrandProgress({
           </div>
         </div>
         <div className="bg-surface px-4 py-4 sm:px-5">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-muted">PORTFÖY İLERLEMESİ</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">PORTFÖY İLERLEMESİ</p>
           <div className="mt-1 flex items-end justify-between gap-3"><ProgressValue progress={portfolioProgress} /><span className="text-[11px] text-muted">{plannedBrandCount}/{portfolioBrands.length} marka planlı</span></div>
           <ProgressTrack progress={portfolioProgress} />
         </div>
-      </section>
+      </section>}
 
-      <section aria-labelledby="monthly-flow-title" className="grid overflow-hidden rounded-xl border border-border-default bg-surface sm:grid-cols-2 xl:grid-cols-[minmax(15rem,1.25fr)_repeat(5,minmax(7rem,0.75fr))]">
+      {section !== "summary" && <section aria-labelledby="monthly-flow-title" className="grid overflow-hidden rounded-xl border border-border-default bg-surface sm:grid-cols-2 xl:grid-cols-[minmax(15rem,1.25fr)_repeat(5,minmax(7rem,0.75fr))]">
         <div className="border-b border-border-subtle px-4 py-3.5 sm:col-span-2 sm:px-5 xl:col-span-1 xl:border-b-0 xl:border-r">
           <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">AYLIK ÜRETİM AKIŞI</p>
           <h2 id="monthly-flow-title" className="mt-1 text-sm font-semibold text-foreground">{portfolioProgress.task_count} planlı görev</h2>
@@ -85,13 +89,13 @@ export default function HomeBrandProgress({
         </div>
         {statuses.map((status) => (
           <div key={status} className="border-b border-border-subtle px-4 py-3 last:border-b-0 odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 xl:border-b-0 xl:border-r xl:odd:border-r xl:last:border-r-0">
-            <p className="text-[10px] font-semibold text-muted">{TASK_STATUS_LABEL[status]}</p>
+            <p className={`text-[10px] font-semibold ${TASK_STATUS_TEXT[status]}`}>{TASK_STATUS_LABEL[status]}</p>
             <p className="mt-1 font-display text-xl font-semibold tabular-nums text-foreground">{portfolioStatusCounts[status]}</p>
           </div>
         ))}
-      </section>
+      </section>}
 
-      <section className="overflow-hidden rounded-xl border border-border-default bg-surface">
+      {section !== "summary" && <section className="overflow-hidden rounded-xl border border-border-default bg-surface">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border-subtle px-4 py-4 sm:px-5">
           <div><p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">PORTFÖY AYLIK İLERLEME</p><h2 className="mt-1 text-[15px] font-semibold text-foreground">Tüm markalar</h2><p className="mt-1 text-[11px] text-muted">Kişisel sorumlulukların aynı listede “Sen” etiketiyle görünür.</p></div>
           <Link href="/brands" className="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">Portföy tablosu</Link>
@@ -120,7 +124,7 @@ export default function HomeBrandProgress({
             ))}
           </div>
         )}
-      </section>
+      </section>}
     </div>
   );
 }

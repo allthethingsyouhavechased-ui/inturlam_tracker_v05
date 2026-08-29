@@ -3,11 +3,9 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
-import { brandAccentStyle } from "@/lib/brandAccent";
 import CollapsiblePanel from "@/components/reports/CollapsiblePanel";
 import DeliveryQualityPanel from "@/components/reports/DeliveryQualityPanel";
 import {
-  MetricCard,
   ReportSectionHeader,
   comparePeriod,
   formatDays,
@@ -77,6 +75,9 @@ export interface BrandReportView extends BrandReportRow {
   people: PersonBreakdown[];
 }
 
+type AnalysisView = "workload" | "workflow" | "quality" | "score";
+type DetailView = "department" | "people" | "brands";
+
 export default function ReportsClient({
   summary,
   previousSummary,
@@ -117,6 +118,8 @@ export default function ReportsClient({
   const [showPeopleTable, setShowPeopleTable] = useState(true);
   const [showBrandTable, setShowBrandTable] = useState(true);
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [analysisView, setAnalysisView] = useState<AnalysisView>("workload");
+  const [detailView, setDetailView] = useState<DetailView>("department");
 
   const visibleBrands = hideArchived ? brands.filter((brand) => brand.archived === 0) : brands;
   const workflowTotal = workflow.reduce((total, row) => total + row.task_count, 0);
@@ -269,7 +272,7 @@ export default function ReportsClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="hidden items-start justify-between border-b border-zinc-300 pb-4 print:flex">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">İNTURLAM · OPERASYON RAPORU</p>
@@ -291,233 +294,128 @@ export default function ReportsClient({
         <PrintButton />
       </RangeFilterBar>
 
-      <nav
-        aria-label="Rapor kırılımları"
-        className="grid overflow-hidden rounded-xl border border-border-default bg-surface sm:grid-cols-3"
-      >
-        {[
-          {
-            href: "#departman-raporu",
-            eyebrow: "DEPARTMAN",
-            title: `${departments.length} çalışma alanı`,
-            description: "Üretim, açık yük ve teslim performansı",
-          },
-          {
-            href: "#kisi-raporu",
-            eyebrow: "EKİP",
-            title: `${people.length} kişi`,
-            description: "Kişi bazında iş yükü ve tamamlanma",
-          },
-          {
-            href: "#marka-raporu",
-            eyebrow: "PORTFÖY",
-            title: `${visibleBrands.length} marka`,
-            description: "Marka bazında üretim ve teslim sağlığı",
-          },
-        ].map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className="group min-w-0 border-b border-border-subtle px-4 py-3 transition-colors hover:bg-surface-hover last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"
-          >
-            <span className="block text-[10px] font-semibold tracking-[0.08em] text-brand-600 dark:text-brand-300">
-              {item.eyebrow}
-            </span>
-            <span className="mt-1 block text-sm font-semibold text-foreground group-hover:text-brand-600 dark:group-hover:text-brand-300">
-              {item.title} →
-            </span>
-            <span className="mt-0.5 block truncate text-[11px] text-muted">
-              {item.description}
-            </span>
-          </a>
-        ))}
-      </nav>
-
-      <section aria-labelledby="report-summary-title" className="space-y-3">
-        <div>
-          <h2 id="report-summary-title" className="text-lg font-semibold">
-            Operasyon özeti
-          </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Açılan ve tamamlanan seçili dönemi; açık ve geciken değerleri bugünkü iş
-            yükünü gösterir.
-          </p>
-        </div>
-        <div className="report-surface grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-black/10 bg-black/10 dark:border-white/10 dark:bg-white/10 md:grid-cols-4 xl:grid-cols-8">
-          <MetricCard
-            label="Dönemde açılan"
-            value={summary.opened_tasks}
-            note={comparePeriod(summary.opened_tasks, previousSummary?.opened_tasks)}
-          />
-          <MetricCard
-            label="Tamamlanan"
-            value={summary.completed_tasks}
-            note={comparePeriod(summary.completed_tasks, previousSummary?.completed_tasks)}
-            tone="success"
-          />
-          <MetricCard
-            label="Akış dengesi"
-            value={netFlow > 0 ? `+${netFlow}` : netFlow}
-            note="Tamamlanan − açılan"
-            tone={netFlow >= 0 ? "success" : "danger"}
-          />
-          <MetricCard
-            label="Karşılama"
-            value={completionCoverage == null ? "—" : `%${completionCoverage}`}
-            note="Tamamlanan / açılan"
-            tone={completionCoverage != null && completionCoverage >= 100 ? "success" : "neutral"}
-          />
-          <MetricCard
-            label="Açık iş yükü"
-            value={summary.open_tasks}
-            note="Güncel iş yükü"
-          />
-          <MetricCard
-            label="Geciken"
-            value={summary.overdue_tasks}
-            note="Teslim tarihi geçmiş"
-            tone={summary.overdue_tasks > 0 ? "danger" : "neutral"}
-          />
-          <MetricCard
-            label="Zamanında"
-            value={formatRate(summary.on_time_rate)}
-            note="Tamamlanan tarihli işler"
-            tone="success"
-          />
-          <MetricCard
-            label="Tarih kapsamı"
-            value={dueCoverage == null ? "—" : `%${dueCoverage}`}
-            note="Açık işlerde teslim tarihi"
-          />
-        </div>
-      </section>
-
-      <section aria-label="Rapor öne çıkanları" className="grid gap-3 lg:grid-cols-3">
-        <div className="report-surface rounded-2xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            En yoğun kişi
-          </p>
-          <p className="mt-2 truncate text-base font-semibold">
-            {busiestPerson?.person_name ?? "Veri yok"}
-          </p>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {busiestPerson ? `${busiestPerson.open_tasks} açık görev` : "Henüz iş yükü oluşmadı"}
-          </p>
-        </div>
-        <div className="report-surface rounded-2xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            En yoğun marka
-          </p>
-          <p className="mt-2 truncate text-base font-semibold">
-            {busiestBrand?.brand_name ?? "Veri yok"}
-          </p>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {busiestBrand ? `${busiestBrand.open_tasks} açık görev` : "Henüz iş yükü oluşmadı"}
-          </p>
-        </div>
-        <div
-          className={`rounded-2xl border p-4 ${
-            summary.overdue_tasks > 0
-              ? "border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/20"
-              : "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20"
-          }`}
-        >
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Takip gerektiren
-          </p>
-          <p className="mt-2 text-base font-semibold">
-            {summary.overdue_tasks > 0
-              ? `${summary.overdue_tasks} gecikmiş görev`
-              : "Gecikmiş görev yok"}
-          </p>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {summary.overdue_tasks > 0 ? "Önceliklendirme gerekebilir" : "Teslim görünümü sağlıklı"}
-          </p>
-        </div>
-      </section>
-
-      <section aria-label="Süre ve teslim analizi" className="grid items-start gap-4 xl:grid-cols-2">
-        <CycleTimePanel report={cycleTime} />
-        <DueHealthPanel rows={dueHealth} />
-      </section>
-
-      <WorkloadComparison people={people} brands={visibleBrands} />
-
       <CollapsiblePanel
-        panelKey="workflow"
-        title="Aktif iş akışı"
-        description="İşlerin şu anda hangi aşamada beklediği"
-        meta={<span className="tabular-nums">{workflowTotal} açık görev</span>}
+        panelKey="reports-management"
+        titleId="report-summary-title"
+        title="Yönetim görünümü"
+        description="Seçili dönem üretimi ile güncel operasyon yükünün tek görünümü"
+        meta={reportLabel}
+        bodyClassName=""
       >
-        {workflowTotal === 0 ? (
-          <EmptyState
-            compact
-            title="Aktif iş akışı boş"
-            description="Açık görev oluştuğunda durum dağılımı burada görünecek."
-          />
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {workflow.map((row) => {
-              const percentage = (row.task_count / workflowTotal) * 100;
-              return (
-                <div key={row.status}>
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
-                    <span className="font-medium">{TASK_STATUS_LABEL[row.status]}</span>
-                    <span className="tabular-nums text-zinc-500 dark:text-zinc-400">
-                      {row.task_count}
-                    </span>
-                  </div>
-                  <div
-                    className="h-2 overflow-hidden rounded-full bg-black/5 dark:bg-white/10"
-                    role="progressbar"
-                    aria-label={`${TASK_STATUS_LABEL[row.status]} görevleri`}
-                    aria-valuemin={0}
-                    aria-valuemax={workflowTotal}
-                    aria-valuenow={row.task_count}
-                  >
-                    <div
-                      className={`h-full rounded-full transition-[width] duration-500 ${TASK_STATUS_PROGRESS[row.status]}`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CollapsiblePanel>
-
-      <CollapsiblePanel
-        panelKey="delivery-quality"
-        title="Teslim ve revize kalitesi"
-        description="Versiyonlu teslimlerin onay oranı, revize nedenleri ve marka dağılımı."
-        meta={<span className="tabular-nums text-muted">{deliveryQuality.total_deliveries} versiyon</span>}
-        defaultOpen={false}
-      >
-        <DeliveryQualityPanel report={deliveryQuality} />
-      </CollapsiblePanel>
-
-      <CollapsiblePanel
-        panelKey="team-monthly-score"
-        title="Ekip aylık puanı"
-        description="Teslim tarihi bu ayda olan görevlerin ağırlıklı durum ilerlemesi."
-        meta={<span className="tabular-nums text-muted">{teamMonthlyProgress.filter((row) => row.progress.percent !== null).length}/{teamMonthlyProgress.length} kişi planlı</span>}
-        defaultOpen={false}
-      >
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {teamMonthlyProgress.map((row) => (
-            <div key={row.person_id} className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="truncate font-semibold text-foreground">{row.person_name}</span>
-                <span className="shrink-0 tabular-nums text-muted">{row.progress.percent === null ? "Bu ay plan yok" : `%${row.progress.percent} · ${formatPoints(row.progress.weighted_earned)}/${formatPoints(row.progress.weighted_total)} puan`}</span>
-              </div>
-              {row.progress.percent !== null && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-brand-600" style={{ width: `${row.progress.percent}%` }} /></div>}
+        <dl className="grid grid-cols-2 divide-x divide-y divide-border-subtle sm:grid-cols-3 xl:grid-cols-6 xl:divide-y-0">
+          {[
+            ["Dönemde açılan", summary.opened_tasks, comparePeriod(summary.opened_tasks, previousSummary?.opened_tasks), "text-foreground"],
+            ["Tamamlanan", summary.completed_tasks, comparePeriod(summary.completed_tasks, previousSummary?.completed_tasks), "text-success"],
+            ["Akış dengesi", netFlow > 0 ? `+${netFlow}` : netFlow, "Tamamlanan − açılan", netFlow >= 0 ? "text-success" : "text-danger"],
+            ["Açık iş", summary.open_tasks, "Güncel iş yükü", "text-info"],
+            ["Geciken", summary.overdue_tasks, "Teslim tarihi geçmiş", summary.overdue_tasks > 0 ? "text-danger" : "text-foreground"],
+            ["Zamanında", formatRate(summary.on_time_rate), "Tamamlanan tarihli işler", "text-success"],
+          ].map(([label, value, note, tone]) => (
+            <div key={String(label)} className="min-w-0 px-4 py-3">
+              <dt className="text-eyebrow text-brand-600 dark:text-brand-300">{label}</dt>
+              <dd className={`mt-1 text-2xl font-semibold tabular-nums ${tone}`}>{value}</dd>
+              <p className="mt-1 truncate text-[11px] text-muted">{note}</p>
             </div>
           ))}
-        </div>
+        </dl>
+        <dl className="grid border-t border-border-subtle sm:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-border-subtle">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5"><dt className="text-xs text-muted">Karşılama oranı</dt><dd className="font-semibold tabular-nums">{completionCoverage == null ? "—" : `%${completionCoverage}`}</dd></div>
+          <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-2.5 sm:border-t-0"><dt className="text-xs text-muted">Teslim tarihi kapsamı</dt><dd className="font-semibold tabular-nums">{dueCoverage == null ? "—" : `%${dueCoverage}`}</dd></div>
+          <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border-subtle px-4 py-2.5 xl:border-t-0"><dt className="text-xs text-muted">En yoğun kişi</dt><dd className="truncate text-sm font-semibold">{busiestPerson ? `${busiestPerson.person_name} · ${busiestPerson.open_tasks}` : "Veri yok"}</dd></div>
+          <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border-subtle px-4 py-2.5 xl:border-t-0"><dt className="text-xs text-muted">En yoğun marka</dt><dd className="truncate text-sm font-semibold">{busiestBrand ? `${busiestBrand.brand_name} · ${busiestBrand.open_tasks}` : "Veri yok"}</dd></div>
+        </dl>
       </CollapsiblePanel>
 
-      <section id="departman-raporu" className="scroll-mt-24 space-y-3">
+      <CollapsiblePanel
+        panelKey="reports-analysis"
+        titleId="analysis-workspace-title"
+        title="Operasyon analizi"
+        description="İş yükü, aktif akış, teslim kalitesi ve aylık puan"
+        bodyClassName="p-3 sm:p-4"
+        actions={(
+          <div role="tablist" aria-label="Operasyon analizi" className="flex max-w-full gap-1 overflow-x-auto rounded-lg border border-brand-500/25 bg-brand-500/[0.06] p-1 print:hidden">
+            {([
+              ["workload", "İş yükü"],
+              ["workflow", `Aktif akış · ${workflowTotal}`],
+              ["quality", `Teslim kalitesi · ${deliveryQuality.total_deliveries}`],
+              ["score", "Aylık puan"],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={analysisView === id}
+                onClick={() => setAnalysisView(id)}
+                className={`ui-press min-h-9 shrink-0 rounded-md px-3 text-xs font-semibold transition-colors ${analysisView === id ? "bg-brand-600 text-white shadow-sm" : "text-brand-700 hover:bg-brand-500/10 dark:text-brand-300"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      >
+          {analysisView === "workload" && <WorkloadComparison people={people} brands={visibleBrands} embedded />}
+          {analysisView === "workflow" && (
+            workflowTotal === 0 ? (
+              <EmptyState compact title="Aktif iş akışı boş" description="Açık görev oluştuğunda durum dağılımı burada görünecek." />
+            ) : (
+              <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
+                {workflow.map((row) => {
+                  const percentage = (row.task_count / workflowTotal) * 100;
+                  return (
+                    <div key={row.status}>
+                      <div className="mb-1.5 flex items-center justify-between text-sm"><span className="font-medium">{TASK_STATUS_LABEL[row.status]}</span><span className="tabular-nums text-muted">{row.task_count}</span></div>
+                      <div className="h-2 overflow-hidden rounded-full bg-black/5 dark:bg-white/10" role="progressbar" aria-label={`${TASK_STATUS_LABEL[row.status]} görevleri`} aria-valuemin={0} aria-valuemax={workflowTotal} aria-valuenow={row.task_count}>
+                        <div className={`h-full rounded-full transition-[width] duration-500 ${TASK_STATUS_PROGRESS[row.status]}`} style={{ width: `${percentage}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+          {analysisView === "quality" && <DeliveryQualityPanel report={deliveryQuality} />}
+          {analysisView === "score" && (
+            <div className="divide-y divide-border-subtle">
+              {teamMonthlyProgress.map((row) => (
+                <div key={row.person_id} className="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(10rem,0.7fr)_1fr_auto] sm:items-center">
+                  <span className="truncate text-sm font-semibold text-foreground">{row.person_name}</span>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-brand-600" style={{ width: `${row.progress.percent ?? 0}%` }} /></div>
+                  <span className="shrink-0 text-xs tabular-nums text-muted">{row.progress.percent === null ? "Bu ay plan yok" : `%${row.progress.percent} · ${formatPoints(row.progress.weighted_earned)}/${formatPoints(row.progress.weighted_total)} puan`}</span>
+                </div>
+              ))}
+            </div>
+          )}
+      </CollapsiblePanel>
+
+      <CollapsiblePanel
+        panelKey="reports-details"
+        titleId="detail-workspace-title"
+        title="Detay çalışma alanı"
+        description="Aynı dönem içinde departman, ekip ve portföy kırılımları"
+        bodyClassName="p-3 sm:p-4"
+        actions={(
+          <div role="tablist" aria-label="Rapor detayları" className="flex max-w-full gap-1 overflow-x-auto rounded-lg border border-brand-500/25 bg-brand-500/[0.06] p-1 print:hidden">
+            {([
+              ["department", `Departman · ${departments.length}`],
+              ["people", `Ekip · ${people.length}`],
+              ["brands", `Marka · ${visibleBrands.length}`],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={detailView === id}
+                onClick={() => setDetailView(id)}
+                className={`ui-press min-h-9 shrink-0 rounded-md px-3 text-xs font-semibold transition-colors ${detailView === id ? "bg-brand-600 text-white shadow-sm" : "text-brand-700 hover:bg-brand-500/10 dark:text-brand-300"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      >
+      <section id="departman-raporu" hidden={detailView !== "department"} className="scroll-mt-24 space-y-3">
         <ReportSectionHeader
           title="Departman görünümü"
           description="Departmanın toplam üretimi ve teslim sağlığı — departman kişinin alanı olduğu için atanmamış görevler hiçbir satıra girmez"
@@ -637,7 +535,7 @@ export default function ReportsClient({
         )}
       </section>
 
-      <section id="kisi-raporu" className="scroll-mt-24 space-y-3">
+      <section id="kisi-raporu" hidden={detailView !== "people"} className="scroll-mt-24 space-y-3">
         <ReportSectionHeader
           title="Ekip görünümü"
           description="Performans puanı değil, iş yükü ve teslim görünümü — satır sonundaki bağlantı o kişinin detaylı raporunu açar"
@@ -816,7 +714,7 @@ export default function ReportsClient({
           ))}
       </section>
 
-      <section id="marka-raporu" className="scroll-mt-24 space-y-3">
+      <section id="marka-raporu" hidden={detailView !== "brands"} className="scroll-mt-24 space-y-3">
         <ReportSectionHeader
           title="Marka görünümü"
           description="Üretim hacmi, açık işler ve teslim sağlığı"
@@ -824,11 +722,12 @@ export default function ReportsClient({
           onToggleTable={() => setShowBrandTable((visible) => !visible)}
           onExportCSV={exportBrandsCSV}
           extra={(
-            <label className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm text-secondary">
+            <label className="flex min-h-9 items-center gap-2 rounded-md border border-brand-500/30 bg-brand-500/[0.06] px-3 text-sm text-brand-700 dark:text-brand-300">
               <input
                 type="checkbox"
                 checked={hideArchived}
                 onChange={(event) => setHideArchived(event.target.checked)}
+                className="accent-brand-600"
               />
               Arşivi gizle
             </label>
@@ -854,15 +753,13 @@ export default function ReportsClient({
               {visibleBrands.map((brand) => (
                 <tr
                   key={brand.brand_id}
-                  data-brand-accent
-                  style={brandAccentStyle(brand.brand_accent_hue)}
                   className={`border-b border-border-subtle transition-colors last:border-0 hover:bg-surface-hover ${
                     brand.brand_id === busiestBrand?.brand_id
                       ? "bg-brand-50/45 dark:bg-brand-950/15"
                       : ""
                   }`}
                 >
-                  <td className="border-l-[3px] border-l-[var(--brand-accent)] px-4 py-3">
+                  <td className="px-4 py-3">
                     <details>
                       <summary className="cursor-pointer font-medium">
                         {brand.brand_name}
@@ -936,13 +833,26 @@ export default function ReportsClient({
             />
           ))}
       </section>
+        <div className="hidden print:block">
+          <p className="pt-3 text-xs text-muted">Yazdırma görünümünde sekmeli detayların tamamı dışa aktarma araçlarıyla ayrı ayrı alınabilir.</p>
+        </div>
+      </CollapsiblePanel>
 
-      <div className="border-t border-border-subtle pt-6">
-        <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted">
-          İLERİ ANALİZ
-        </p>
-        <TrendChart report={trend} />
-      </div>
+      <CollapsiblePanel
+        panelKey="reports-flow-health"
+        titleId="flow-health-title"
+        title="Akış ve teslim sağlığı"
+        description="Üretim trendi, tamamlanma hızı ve yaklaşan teslim riski"
+        bodyClassName=""
+      >
+        <div className="grid divide-y divide-border-subtle xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)_minmax(20rem,0.9fr)] xl:divide-x xl:divide-y-0">
+          <div className="min-w-0 p-3 sm:p-4">
+          <TrendChart report={trend} embedded />
+          </div>
+          <div className="min-w-0 p-3 sm:p-4"><CycleTimePanel report={cycleTime} embedded /></div>
+          <div className="min-w-0 p-3 sm:p-4"><DueHealthPanel rows={dueHealth} embedded /></div>
+        </div>
+      </CollapsiblePanel>
     </div>
   );
 }

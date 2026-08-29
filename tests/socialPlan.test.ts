@@ -229,10 +229,22 @@ describe("saf yardımcı fonksiyonlar (lib/socialPlan.ts)", () => {
     const assetPage = fs.readFileSync(path.join(process.cwd(), "app/social/varlik/page.tsx"), "utf8");
     assert.match(brandSection, /Aylık içerikler tamamlandı/);
     assert.match(brandSection, /aria-pressed/);
-    assert.match(assetPage, /canlı stoktur/);
+    assert.match(assetPage, /canlı stok/);
     assert.match(assetPage, /eksik teslim anlamına gelmez/);
     assert.match(assetPage, /monthly_content_completed/);
-    assert.match(assetPage, /w-full rounded-lg border/);
-    assert.doesNotMatch(assetPage, /max-w-3xl rounded-lg border/);
+    assert.match(assetPage, /Hazır içerik varlığı[\s\S]*Yayına hazır canlı stok/);
+    assert.doesNotMatch(assetPage, /max-w-4xl/);
+    assert.doesNotMatch(assetPage, /role="note"/);
+  });
+
+  it("hafta ve ay seçicilerini tek araç satırında tutar", () => {
+    const calendarPage = fs.readFileSync(path.join(process.cwd(), "app/social/takvim/page.tsx"), "utf8");
+    const toolbarStart = calendarPage.indexOf('className="flex flex-col gap-2 sm:flex-row');
+    const weekNav = calendarPage.indexOf('aria-label="Hafta seçimi"', toolbarStart);
+    const monthNav = calendarPage.indexOf('aria-label="Önceki ay"', weekNav);
+    assert.ok(toolbarStart >= 0);
+    assert.ok(weekNav > toolbarStart);
+    assert.ok(monthNav > weekNav);
+    assert.doesNotMatch(calendarPage, /Haftalık paylaşım planı/);
   });
 });

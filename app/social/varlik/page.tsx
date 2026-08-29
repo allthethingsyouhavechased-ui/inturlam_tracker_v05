@@ -44,11 +44,10 @@ export default async function SocialVarlikPage() {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-3">
+      <div>
         <h2 className="text-base font-semibold text-foreground">Hazır içerik varlığı</h2>
-        <p className="mt-1 text-xs text-muted">Yayına hazır stok ve marka bazlı aylık hedef karşılaştırması.</p>
-        <p className="w-full rounded-lg border border-border-subtle bg-surface-subtle px-4 py-2.5 text-xs leading-5 text-secondary">
-          Hazır varlık sayıları canlı stoktur ve içerikler paylaşıldıkça azalır. Bu azalma eksik teslim anlamına gelmez; aylık teslim durumu marka sayfasından ayrıca işaretlenir.
+        <p className="mt-1 text-xs leading-5 text-muted">
+          Yayına hazır canlı stok ve marka bazlı aylık hedef karşılaştırması. İçerikler paylaşıldıkça stok azalır; bu azalma eksik teslim anlamına gelmez. Aylık teslim durumu marka sayfasından ayrıca işaretlenir.
         </p>
       </div>
 
@@ -106,7 +105,7 @@ export default async function SocialVarlikPage() {
                           ) : (
                             <Link
                               href={`/brands/${row.brand_id}`}
-                              className="text-xs font-medium text-zinc-400 underline decoration-dotted underline-offset-2 hover:decoration-solid dark:text-zinc-500"
+                              className="text-xs font-medium text-brand-700 underline decoration-dotted underline-offset-2 hover:text-brand-800 hover:decoration-solid dark:text-brand-300"
                             >
                               / hedef gir
                             </Link>
@@ -120,7 +119,7 @@ export default async function SocialVarlikPage() {
                       href={`/brands/${row.brand_id}`}
                       className={row.monthly_content_completed
                         ? "inline-flex rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300"
-                        : "inline-flex rounded-full border border-border-default px-2 py-1 text-[10px] font-semibold text-muted hover:bg-surface-hover hover:text-foreground"}
+                        : "inline-flex rounded-full border border-brand-500/30 bg-brand-500/[0.06] px-2 py-1 text-[10px] font-semibold text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 dark:text-brand-300"}
                     >
                       {row.monthly_content_completed ? `${monthLabel} teslimi tamamlandı` : `${monthLabel} teslimi açık`}
                     </Link>

@@ -5,11 +5,12 @@ import ArchiveContentButton from "@/components/ArchiveContentButton";
 import AutoRefresh from "@/components/AutoRefresh";
 import BrandContentTargetsSection from "@/components/BrandContentTargetsSection";
 import BrandLogo from "@/components/BrandLogo";
-import BrandOperationsOverview from "@/components/BrandOperationsOverview";
+import BrandOperationsOverview, { BrandOperationLinks } from "@/components/BrandOperationsOverview";
 import BrandWorkspaceSummary from "@/components/BrandWorkspaceSummary";
 import EditBrandForm from "@/components/EditBrandForm";
 import EmptyState from "@/components/EmptyState";
 import NewContentForm from "@/components/NewContentForm";
+import PersonAvatar from "@/components/PersonAvatar";
 import QuickAddModal from "@/components/QuickAddModal";
 import SocialHealthBadge from "@/components/SocialHealthBadge";
 import { buttonClass } from "@/components/ui/Button";
@@ -25,8 +26,7 @@ import {
   TASK_STATUS_LABEL,
   UNKNOWN_CLUSTER_LABEL,
 } from "@/lib/constants";
-import { brandAccentStyle } from "@/lib/brandAccent";
-import { daysAgoISO, formatDateShort, formatIsoDateTime, monthParamISO, monthParamToDate, shiftMonthParam, todayISO } from "@/lib/date";
+import { formatDateShort, formatIsoDateTime, monthParamISO, monthParamToDate, shiftMonthParam, todayISO } from "@/lib/date";
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
 import { classifySocial } from "@/lib/socialSilence";
@@ -48,6 +48,9 @@ import { emptyKindRecord } from "@/lib/socialPlan";
 import type { ContentKind } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const BRAND_SECONDARY_CONTROL =
+  "border-brand-500/30 bg-brand-500/[0.06] text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200";
 
 export default async function BrandPage({
   params,
@@ -93,11 +96,6 @@ export default async function BrandPage({
     rangeEnd: `${year + 1}-01-01`,
     brandId,
   });
-  // Sayılar haftalık tazeleniyor; 7 günden eskiyse (ya da hiç girilmemişse)
-  // "tazelenmeli" uyarısı çıkar. Tarihler 'YYYY-MM-DD' olduğu için düz metin
-  // karşılaştırması kronolojik sıralamayı doğru verir.
-  const staleStats = (brand.stats_updated_at ?? "") < daysAgoISO(7);
-
   // Instagram kullanıcı adı girilmemiş markalar takip listesinde yok; o zaman
   // rozet de çizilmez (yanlışlıkla "taranmadı" demek yerine hiç bahsetmemek).
   const socialRow = listBrandSocialRows().find((row) => row.brand_id === brandId) ?? null;
@@ -109,46 +107,22 @@ export default async function BrandPage({
 
   const workspaceSummary = (
     <BrandWorkspaceSummary
-      embedded
       overview={
-        <>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-xs font-semibold tabular-nums text-foreground">
+            {brand.follower_count != null
+              ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi`
+              : "Takipçi verisi yok"}
+          </span>
+          {brand.post_count != null && (
             <span className="text-xs font-semibold tabular-nums text-foreground">
-              {brand.follower_count != null
-                ? `${brand.follower_count.toLocaleString("tr-TR")} takipçi`
-                : "Takipçi verisi yok"}
+              {brand.post_count.toLocaleString("tr-TR")} gönderi
             </span>
-            {brand.post_count != null && (
-              <span className="text-xs font-semibold tabular-nums text-foreground">
-                {brand.post_count.toLocaleString("tr-TR")} gönderi
-              </span>
-            )}
-            {staleStats && (
-              <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                Tazelenmeli
-              </span>
-            )}
-          </div>
-          <p
-            className="mt-2 line-clamp-2 text-xs leading-5 text-secondary"
-            title={brand.key_finding ?? undefined}
-          >
-            {brand.key_finding?.split("\n")[0] ?? "Kısa marka notu eklenmemiş"}
-          </p>
-        </>
-      }
-      targets={
-        <BrandContentTargetsSection
-          brandId={brand.id}
-          brandName={brand.name}
-          targets={contentTargets}
-          month={month}
-          monthlyContentCompleted={Boolean(monthlyContentCompletion)}
-          compact
-        />
+          )}
+        </div>
       }
       activity={
-        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+        <div className="mt-1.5 flex min-w-0 items-center gap-2">
           {socialHealth ? (
             <>
               <SocialHealthBadge
@@ -166,42 +140,62 @@ export default async function BrandPage({
           )}
         </div>
       }
-      actions={
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <QuickAddModal
-            options={{
-              brands: [{ id: brand.id, name: brand.name }],
-              contents: items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title, type: item.type })),
-              people,
-            }}
-            defaultAssigneeId={me.id}
-            canSetWeight={me.is_manager === 1}
-            defaultBrandId={brand.id}
-            triggerLabel="Görev oluştur"
-            triggerClassName={buttonClass({ size: "sm", className: "col-span-2 w-full" })}
-          />
-          <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary", size: "sm", className: canManageBrand ? "w-full" : "col-span-2 w-full" })}>
-            <Icon name="ideas" className="size-3.5" /> Fikirler · {brandIdeaCount}
-          </Link>
-          {canManageBrand ? (
-            <EditBrandForm
-              brand={brand}
-              clusters={clusters}
-              people={people}
-              assignments={assignments}
-              triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: "w-full" })}
-            />
-          ) : null}
+      shoots={
+        <div className="mt-1.5 flex items-center gap-4">
+          <div className="shrink-0">
+            <p className="text-caption text-muted">Aylık</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+              {monthlyEvents.filter((event) => event.type === "Cekim").length}
+              {brand.monthly_shoot_allowance !== null && <span className="text-xs font-medium text-muted"> / {brand.monthly_shoot_allowance}</span>}
+            </p>
+          </div>
+          <div className="shrink-0">
+            <p className="text-caption text-muted">Yıllık</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+              {annualEvents.filter((event) => event.type === "Cekim").length}
+              {brand.annual_shoot_allowance !== null && <span className="text-xs font-medium text-muted"> / {brand.annual_shoot_allowance}</span>}
+            </p>
+          </div>
         </div>
       }
     />
+  );
+
+  const headerActions = (
+    <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+      <QuickAddModal
+        options={{
+          brands: [{ id: brand.id, name: brand.name }],
+          contents: items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title, type: item.type })),
+          people,
+        }}
+        defaultAssigneeId={me.id}
+        canSetWeight={me.is_manager === 1}
+        defaultBrandId={brand.id}
+        triggerLabel="Görev oluştur"
+        triggerClassName={buttonClass({ size: "sm" })}
+      />
+      <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}>
+        <Icon name="ideas" className="size-3.5" /> Fikirler · {brandIdeaCount}
+      </Link>
+      {canManageBrand ? (
+        <EditBrandForm
+          brand={brand}
+          clusters={clusters}
+          people={people}
+          assignments={assignments}
+          triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}
+        />
+      ) : null}
+    </div>
   );
 
   return (
     <div>
       <AutoRefresh />
       <PageHeader
-        className="lg:items-stretch xl:flex-nowrap"
+        className="!mb-0"
+        layout="workspace"
         eyebrow="MARKA ÇALIŞMA ALANI"
         title={brand.name}
         description={
@@ -226,20 +220,50 @@ export default async function BrandPage({
         breadcrumb={[{ label: "Markalar", href: "/brands" }, { label: brand.name }]}
         media={<BrandLogo name={brand.name} logoPath={brand.logo_path} accentHue={brand.accent_hue} size="lg" />}
         summary={workspaceSummary}
-        summaryClassName="lg:max-w-none xl:basis-[64rem]"
+        summaryClassName="lg:max-w-none xl:min-w-0"
+        actions={headerActions}
       />
 
-      <div className="space-y-6">
+      <section
+        aria-label="Marka sorumluları"
+        className="mb-5 flex min-h-12 min-w-0 flex-wrap items-center justify-between gap-3 border-b border-border-subtle py-3"
+      >
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+          <p className="shrink-0 text-eyebrow text-brand-600 dark:text-brand-300">MARKA SORUMLULARI</p>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+            {assignments.length > 0 ? assignments.map((assignment) => (
+              <Link
+                key={assignment.person_id}
+                href={`/team/${assignment.person_id}`}
+                className="flex min-w-0 items-center gap-1.5 rounded-md py-0.5 hover:text-brand-600 dark:hover:text-brand-300"
+              >
+                <PersonAvatar name={assignment.person_name} avatarPath={assignment.person_avatar_path} size="xs" />
+                <span className="min-w-0 truncate text-xs font-semibold text-foreground">{assignment.person_name}</span>
+              </Link>
+            )) : <p className="text-xs leading-5 text-muted">Henüz sorumlu atanmadı.</p>}
+          </div>
+        </div>
+        <BrandOperationLinks brand={brand} month={month} />
+      </section>
+
+      <div className="space-y-5">
       <BrandOperationsOverview
         brand={brand}
         month={month}
-        assignments={assignments}
         progress={progress}
         contributions={contributions}
         monthlyContents={monthlyContents}
         periodEvents={monthlyEvents}
-        monthlyShootCount={monthlyEvents.filter((event) => event.type === "Cekim").length}
-        annualShootCount={annualEvents.filter((event) => event.type === "Cekim").length}
+        targets={
+          <BrandContentTargetsSection
+            brandId={brand.id}
+            brandName={brand.name}
+            targets={contentTargets}
+            month={month}
+            monthlyContentCompleted={Boolean(monthlyContentCompletion)}
+            compact
+          />
+        }
       />
 
       <section className="space-y-3" aria-labelledby="open-brand-tasks">
@@ -250,7 +274,7 @@ export default async function BrandPage({
           </div>
           <Link
             href={`/tasks?brand=${encodeURIComponent(brand.id)}&focus=open`}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
+            className={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}
           >
             Tüm görevleri aç
             <Icon name="arrow-right" className="size-3.5" />
@@ -264,13 +288,11 @@ export default async function BrandPage({
             description="Yeni görev oluşturulduğunda en yakın işler burada görünecek."
           />
         ) : (
-          <ul className="grid gap-2 lg:grid-cols-2">
+          <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface">
             {openTasks.map((task) => (
               <li
                 key={task.id}
-                data-brand-accent
-                style={brandAccentStyle(task.brand_accent_hue)}
-                className="brand-stripe rounded-r-xl border border-border-default bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
+                className="px-4 py-3 transition-colors hover:bg-surface-hover"
               >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <span className="min-w-0 flex-1">
@@ -313,7 +335,7 @@ export default async function BrandPage({
             Projeler ve içerikler ({items.length})
           </h2>
           <details className="group relative">
-            <summary className="ui-press flex min-h-9 cursor-pointer list-none items-center rounded-[9px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <summary className="ui-press flex min-h-9 cursor-pointer list-none items-center rounded-[9px] border border-brand-500/30 bg-brand-500/[0.06] px-3 text-xs font-semibold text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 dark:text-brand-300 [&::-webkit-details-marker]:hidden">
               Yeni proje oluştur
             </summary>
             <div className="ui-enter absolute right-0 top-[calc(100%+0.5rem)] z-20 w-[min(62rem,calc(100vw-2rem))] rounded-xl border border-border-default bg-surface p-4 shadow-lg">
@@ -336,13 +358,11 @@ export default async function BrandPage({
             <p className="mt-1 text-xs text-muted">Tek bir iş açacaksan “Görev oluştur”; çok adımlı bir iş akışı için “Yeni proje oluştur”u kullan.</p>
           </div>
         ) : (
-          <ul className="grid gap-2">
+          <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface">
             {items.map((item) => (
               <li
                 key={item.id}
-                data-brand-accent
-                style={brandAccentStyle(brand.accent_hue)}
-                className="brand-stripe flex flex-wrap items-center gap-x-3 gap-y-1 rounded-r-xl border border-border-default bg-surface px-4 py-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-surface-hover"
               >
                 <Link
                   href={`/brands/${brand.id}/content/${item.id}`}
@@ -384,13 +404,11 @@ export default async function BrandPage({
           <h2 className="text-eyebrow text-muted">
             Arşivlenenler ({archivedItems.length})
           </h2>
-          <ul className="grid gap-2">
+          <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-dashed border-border-default bg-surface-subtle">
             {archivedItems.map((item) => (
               <li
                 key={item.id}
-                data-brand-accent
-                style={brandAccentStyle(brand.accent_hue)}
-                className="brand-stripe flex flex-wrap items-center gap-x-3 gap-y-1 rounded-r-xl border border-dashed border-border-default bg-surface-subtle px-4 py-3 text-sm text-muted"
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-sm text-muted"
               >
                 <Link
                   href={`/brands/${brand.id}/content/${item.id}`}

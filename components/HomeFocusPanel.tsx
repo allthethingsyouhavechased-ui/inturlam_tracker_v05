@@ -63,11 +63,11 @@ export default function HomeFocusPanel({
       <FocusColumn eyebrow="KİŞİSEL ODAK" title="Yakın teslimlerim" count={personalDeadlines.length} empty="Yaklaşan kişisel teslimin yok.">
         {personalDeadlines.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={task.due_date ? `Teslim ${formatDateShort(task.due_date)}` : "Tarih bekliyor"} />)}
       </FocusColumn>
-      <FocusColumn eyebrow="REVİZE ODAĞIM" title="Aktif revizelerim" count={revisionTasks.length} empty="Sana ait aktif revize turu yok.">
-        {revisionTasks.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={`R${task.revision_count} · ${formatRevisionDuration(task.active_revision_elapsed_minutes)}${isRevisionOverTarget(task.active_revision_elapsed_minutes, task.active_revision_target_minutes) ? " · süre aşıldı" : ""}`} />)}
-      </FocusColumn>
       <FocusColumn eyebrow="KARAR BEKLİYOR" title="İncelemedeki işlerim" count={reviewTasks.length} empty="Sana ait incelemede bekleyen iş yok.">
         {reviewTasks.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={`${task.difficulty ? TASK_DIFFICULTY_LABEL[task.difficulty] : "Zorluk belirsiz"} · ${task.weight_points} puan`} />)}
+      </FocusColumn>
+      <FocusColumn eyebrow="REVİZE ODAĞIM" title="Aktif revizelerim" count={revisionTasks.length} empty="Sana ait aktif revize turu yok.">
+        {revisionTasks.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={`R${task.revision_count} · ${formatRevisionDuration(task.active_revision_elapsed_minutes)}${isRevisionOverTarget(task.active_revision_elapsed_minutes, task.active_revision_target_minutes) ? " · süre aşıldı" : ""}`} />)}
       </FocusColumn>
     </section>
   );

@@ -27,24 +27,38 @@ describe("masaüstü uygulama kabuğu", () => {
 });
 
 describe("marka başlığı bilgi hiyerarşisi", () => {
-  it("marka özeti, aylık hedef, aktiflik ve hızlı işlemleri bu sırayla verir", () => {
+  it("başlık özetini sade tutup sorumluları ve hedefleri ilgili çalışma yüzeylerine taşır", () => {
     const page = source("app/brands/[brandId]/page.tsx");
     const summary = source("components/BrandWorkspaceSummary.tsx");
     const brandSummary = summary.indexOf('data-brand-info="summary"');
-    const targets = summary.indexOf('data-brand-info="targets"', brandSummary);
-    const activity = summary.indexOf('data-brand-info="activity"', targets);
-    const actions = summary.indexOf('data-brand-info="actions"', activity);
+    const activity = summary.indexOf('data-brand-info="activity"', brandSummary);
+    const shoots = summary.indexOf('data-brand-info="shoots"', activity);
+    const pageHeader = page.indexOf("<PageHeader");
+    const responsibility = page.indexOf('aria-label="Marka sorumluları"', pageHeader);
+    const operations = page.indexOf("<BrandOperationsOverview", responsibility);
+    const targets = page.indexOf("<BrandContentTargetsSection", operations);
 
     assert.match(page, /<BrandWorkspaceSummary/);
-    assert.match(page, /<BrandWorkspaceSummary\s+embedded/);
-    assert.match(page, /<PageHeader[\s\S]*summary=\{workspaceSummary\}/);
+    assert.match(page, /<PageHeader[\s\S]*summary=\{workspaceSummary\}[\s\S]*actions=\{headerActions\}/);
+    assert.equal(page.match(/\{workspaceSummary\}/g)?.length, 1);
     assert.ok(brandSummary >= 0);
-    assert.ok(targets > brandSummary);
-    assert.ok(activity > targets);
-    assert.ok(actions > activity);
+    assert.ok(activity > brandSummary);
+    assert.ok(shoots > activity);
+    assert.doesNotMatch(summary, /data-brand-info="(?:responsibility|targets)"/);
+    assert.ok(responsibility > pageHeader);
+    assert.ok(operations > responsibility);
+    assert.ok(targets > operations);
+    assert.doesNotMatch(page, /brand\.key_finding|staleStats/);
   });
 
-  it("kompakt hedef ızgarasında tamamlama kontrolünü ayrı satır açmadan sunar", () => {
-    assert.match(source("components/BrandContentTargetsSection.tsx"), /compact && completionControl/);
+  it("kompakt hedefleri başlık solda, kontroller sağda tek satırda sunar", () => {
+    const targets = source("components/BrandContentTargetsSection.tsx");
+    assert.match(targets, /compact && completionControl/);
+    assert.match(targets, /flex min-w-0 items-center justify-center gap-8/);
+    assert.ok(targets.indexOf('compact \? "AYLIK HEDEF"') < targets.indexOf("data-compact-target-grid"));
+    assert.match(targets, /flex-nowrap/);
+    assert.match(targets, /grid shrink-0 gap-1 text-center text-\[9px\]/);
+    assert.match(source("components/BrandOperationsOverview.tsx"), /xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]/);
+    assert.match(source("app/brands/\[brandId\]/page.tsx"), /className="!mb-0"/);
   });
 });

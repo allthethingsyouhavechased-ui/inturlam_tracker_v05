@@ -46,13 +46,15 @@ function Metric({
   label: string;
   value: number;
   icon: IconName;
-  tone?: "default" | "danger" | "warning";
+  tone?: "default" | "brand" | "info" | "danger" | "warning";
 }) {
-  const valueClass = tone === "danger"
-    ? "text-danger"
-    : tone === "warning"
-      ? "text-warning"
-      : "text-foreground";
+  const valueClass = {
+    default: "text-foreground",
+    brand: "text-brand-600 dark:text-brand-300",
+    info: "text-info",
+    danger: "text-danger",
+    warning: "text-warning",
+  }[tone];
 
   return (
     <Link href={href} className="group flex min-w-0 items-center gap-3 px-3 py-4 hover:bg-surface-hover sm:px-5">
@@ -130,6 +132,16 @@ export default async function HomePage({
       />
 
       <div className="space-y-6">
+      <HomeBrandProgress
+        month={month}
+        portfolioBrands={portfolioBrands}
+        portfolioProgress={portfolioProgress}
+        portfolioStatusCounts={portfolioStatusCounts}
+        personalProgress={personalProgress}
+        assignedBrandIds={assignedBrandIds}
+        section="summary"
+      />
+
       <HomeFocusPanel
         personalDeadlines={personalDeadlines}
         revisionTasks={revisionTasks}
@@ -137,8 +149,8 @@ export default async function HomePage({
       />
 
       <section aria-label="Operasyon göstergeleri" className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
-        <Metric href="/brands" label="Aktif marka" value={brands.length} icon="brands" />
-        <Metric href="/tasks?focus=open" label="Açık görev" value={openTasks.length} icon="tasks" />
+        <Metric href="/brands" label="Aktif marka" value={brands.length} icon="brands" tone="brand" />
+        <Metric href="/tasks?focus=open" label="Açık görev" value={openTasks.length} icon="tasks" tone="info" />
         <Metric href="/tasks?focus=overdue" label="Gecikmiş" value={overdue.length} icon="alert" tone="danger" />
         <Metric href="/tasks?focus=week" label="Bu hafta" value={thisWeek.length} icon="clock" tone="warning" />
       </section>
@@ -157,6 +169,7 @@ export default async function HomePage({
         portfolioStatusCounts={portfolioStatusCounts}
         personalProgress={personalProgress}
         assignedBrandIds={assignedBrandIds}
+        section="details"
       />
       </div>
     </div>

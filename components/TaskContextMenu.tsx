@@ -7,7 +7,9 @@ import Icon from "@/components/ui/Icon";
 import type { IconName } from "@/lib/icons";
 import { deleteTaskAction, setTaskArchivedAction } from "@/lib/actions/tasks";
 import { restoreArchivedTaskAction } from "@/lib/actions/tasks";
+import { taskArchiveMenuLabel } from "@/lib/taskArchiveLabel";
 import { runUndoable } from "@/lib/undoQueue";
+import type { TaskStatus } from "@/lib/types";
 
 // Pano ve liste görünümünde karta SAĞ TIKLAYINCA açılan işlem menüsü.
 // Aynı işlemler için karta girip çıkmak gerekmesin diye: bir işi iptal etmek
@@ -23,6 +25,7 @@ export interface TaskMenuTarget {
   readonly id: string;
   readonly title: string;
   readonly archived: boolean;
+  readonly status: TaskStatus;
 }
 
 interface MenuItem {
@@ -101,12 +104,12 @@ export default function TaskContextMenu({
     },
     target.archived
       ? {
-        label: "Yeniden aç",
+        label: taskArchiveMenuLabel(target),
         icon: "undo",
         onSelect: () => startTransition(() => restoreArchivedTaskAction(target.id)),
       }
       : {
-        label: "Görevi iptal et",
+        label: taskArchiveMenuLabel(target),
         icon: "archive",
         onSelect: () => startTransition(() => setTaskArchivedAction(target.id, true)),
       },

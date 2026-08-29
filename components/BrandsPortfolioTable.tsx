@@ -8,7 +8,6 @@ import EmptyState from "@/components/EmptyState";
 import SocialHealthBadge from "@/components/SocialHealthBadge";
 import Icon from "@/components/ui/Icon";
 import Input from "@/components/ui/Input";
-import { brandAccentStyle } from "@/lib/brandAccent";
 import {
   filterAndSortBrandPortfolio,
   type BrandPortfolioRow,
@@ -38,11 +37,10 @@ function SortButton({ column, sort, onChange }: { column: BrandPortfolioSortKey;
 
 export default function BrandsPortfolioTable({ rows, canManageBrands }: { rows: BrandPortfolioRow[]; canManageBrands: boolean }) {
   const [query, setQuery] = useState("");
-  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [sort, setSort] = useState<BrandPortfolioSort | null>(null);
   const visible = useMemo(
-    () => filterAndSortBrandPortfolio(rows, query, selectedBrandId, sort),
-    [query, rows, selectedBrandId, sort],
+    () => filterAndSortBrandPortfolio(rows, query, null, sort),
+    [query, rows, sort],
   );
 
   function toggleSort(key: BrandPortfolioSortKey) {
@@ -53,26 +51,6 @@ export default function BrandsPortfolioTable({ rows, canManageBrands }: { rows: 
 
   return (
     <section aria-labelledby="brand-portfolio-table-title" className="space-y-3">
-      <div>
-        <div className="flex h-4 min-w-0 overflow-hidden rounded-md border border-border-default bg-surface" role="group" aria-label="Açık iş yüküne göre marka portföyü">
-          {rows.map((row) => (
-            <button
-              key={row.id}
-              type="button"
-              data-brand-accent
-              style={{ ...brandAccentStyle(row.accentHue), flexGrow: Math.max(row.openCount, 1) }}
-              aria-pressed={selectedBrandId === row.id}
-              title={`${row.name} · ${row.openCount} açık iş`}
-              onClick={() => setSelectedBrandId((current) => current === row.id ? null : row.id)}
-              className={`brand-accent-fill min-w-1 border-r border-background/60 transition-[filter,opacity] last:border-r-0 hover:brightness-110 ${selectedBrandId && selectedBrandId !== row.id ? "opacity-25" : "opacity-100"}`}
-            >
-              <span className="sr-only">{row.name} markasını {selectedBrandId === row.id ? "filtreden çıkar" : "filtrele"}</span>
-            </button>
-          ))}
-        </div>
-        <p className="mt-1.5 text-[11px] text-muted">Şerit genişliği açık iş yükünü gösterir; bir markaya dokunarak tabloyu filtreleyebilirsin.</p>
-      </div>
-
       <div className="flex flex-wrap items-center gap-2">
         <h2 id="brand-portfolio-table-title" className="mr-auto text-sm font-semibold text-foreground">Aktif portföy</h2>
         <label className="relative min-w-0 flex-1 sm:max-w-xs">
@@ -80,16 +58,16 @@ export default function BrandsPortfolioTable({ rows, canManageBrands }: { rows: 
           <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-faint" />
           <Input value={query} onChange={(event) => setQuery(event.target.value)} type="search" placeholder="Marka, kategori veya sorumlu ara…" className="min-h-9 py-1 pl-8 text-xs md:min-h-9" />
         </label>
-        {(query || selectedBrandId) && <button type="button" onClick={() => { setQuery(""); setSelectedBrandId(null); }} className="ui-press min-h-9 rounded-md px-2.5 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground">Temizle</button>}
+        {query && <button type="button" onClick={() => setQuery("")} className="ui-press min-h-9 rounded-md px-2.5 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground">Temizle</button>}
       </div>
 
       {visible.length === 0 ? (
-        <EmptyState compact title="Eşleşen marka yok" description="Aramayı veya portföy şeridindeki marka filtresini temizle." />
+        <EmptyState compact title="Eşleşen marka yok" description="Arama alanını temizleyip yeniden dene." />
       ) : (
         <>
           <div className="grid gap-2 md:hidden">
             {visible.map((row) => (
-              <article key={row.id} data-brand-accent style={brandAccentStyle(row.accentHue)} className="brand-stripe rounded-xl border border-border-default bg-surface p-3">
+              <article key={row.id} className="rounded-xl border border-border-default bg-surface p-3">
                 <div className="flex items-start gap-3">
                   <BrandLogo name={row.name} logoPath={row.logoPath} accentHue={row.accentHue} />
                   <div className="min-w-0 flex-1">
@@ -115,7 +93,7 @@ export default function BrandsPortfolioTable({ rows, canManageBrands }: { rows: 
               </thead>
               <tbody className="divide-y divide-border-subtle">
                 {visible.map((row) => (
-                  <tr key={row.id} data-brand-accent style={brandAccentStyle(row.accentHue)} className="brand-stripe hover:bg-surface-hover">
+                  <tr key={row.id} className="hover:bg-surface-hover">
                     <td className="px-3 py-3"><span className="flex min-w-0 items-center gap-2.5"><BrandLogo name={row.name} logoPath={row.logoPath} accentHue={row.accentHue} /><Link href={`/brands/${row.id}`} className="brand-name truncate font-semibold text-foreground hover:text-brand-600 dark:hover:text-brand-300">{row.name}</Link></span></td>
                     <td className="px-3 py-3 text-secondary">{row.clusterLabel}</td>
                     <td className="px-3 py-3"><span className="font-semibold tabular-nums text-foreground">{row.progressPercent === null ? "Plan yok" : `%${row.progressPercent}`}</span>{row.progressPercent !== null && <span className="ml-1 text-[10px] tabular-nums text-muted">{formatPoints(row.weightedEarned)}/{formatPoints(row.weightedTotal)} puan</span>}</td>

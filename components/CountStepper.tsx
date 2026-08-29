@@ -101,7 +101,7 @@ export default function CountStepper({
         onClick={() => commit(value - 1)}
         disabled={pending || value <= 0}
         aria-label={`${label} azalt`}
-        className="touch-target ui-press grid size-7 place-items-center rounded-md border border-black/10 text-sm text-zinc-600 hover:bg-black/5 disabled:opacity-40 dark:border-white/15 dark:text-zinc-300 dark:hover:bg-white/10"
+        className="touch-target ui-press grid size-7 place-items-center rounded-md border border-brand-500/30 bg-brand-500/[0.05] text-sm text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 disabled:opacity-40 dark:text-brand-300"
       >
         −
       </button>
@@ -110,7 +110,7 @@ export default function CountStepper({
         onClick={() => setEditing(true)}
         disabled={pending}
         aria-label={`${label}: ${value}, değiştirmek için tıkla`}
-        className="min-w-8 rounded-md px-1 py-1 text-center text-sm font-semibold tabular-nums underline decoration-dotted underline-offset-2 hover:bg-black/5 hover:decoration-solid disabled:opacity-50 dark:hover:bg-white/10"
+        className="min-w-8 rounded-md px-1 py-1 text-center text-sm font-semibold tabular-nums text-brand-700 underline decoration-dotted underline-offset-2 hover:bg-brand-500/[0.08] hover:decoration-solid disabled:opacity-50 dark:text-brand-300"
       >
         {value}
       </button>
@@ -119,7 +119,7 @@ export default function CountStepper({
         onClick={() => commit(value + 1)}
         disabled={pending}
         aria-label={`${label} artır`}
-        className="touch-target ui-press grid size-7 place-items-center rounded-md border border-black/10 text-sm text-zinc-600 hover:bg-black/5 disabled:opacity-40 dark:border-white/15 dark:text-zinc-300 dark:hover:bg-white/10"
+        className="touch-target ui-press grid size-7 place-items-center rounded-md border border-brand-500/30 bg-brand-500/[0.05] text-sm text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 disabled:opacity-40 dark:text-brand-300"
       >
         +
       </button>

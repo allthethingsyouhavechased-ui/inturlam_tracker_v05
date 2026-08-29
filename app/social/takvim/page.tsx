@@ -92,17 +92,38 @@ export default async function SocialTakvimPage({
     // bu div) koyduğu için artık torun oluyor. Tablo zaten kendi
     // `overflow-x-auto` sarmalayıcısıyla yatay kaydırıyor, standart genişlik
     // yeterli — global CSS'i tek sayfa için karmaşıklaştırmaya değmez.
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Haftalık paylaşım planı</h2>
-          <p className="mt-1 text-xs text-muted">Bir hücre seçerek marka ve gün için planlanan içerik türünü değiştir.</p>
-        </div>
-        <div className="inline-flex items-center gap-1 rounded-[10px] border border-border-default bg-surface p-0.5 text-sm">
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <nav aria-label="Hafta seçimi" className="flex min-w-0 flex-wrap gap-1.5">
+          {weeks.map((week) => (
+            <Link
+              key={week.index}
+              href={weekHref(week.index)}
+              aria-current={week.index === selectedIndex ? "page" : undefined}
+              className={`ui-press inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium ${
+                week.index === selectedIndex
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-brand-500/25 bg-brand-500/[0.05] text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 dark:text-brand-300"
+              }`}
+            >
+              {week.index}. Hafta
+              <span
+                className={
+                  week.index === selectedIndex
+                    ? "text-white/75"
+                    : "text-brand-700/70 dark:text-brand-300/70"
+                }
+              >
+                {week.label}
+              </span>
+            </Link>
+          ))}
+        </nav>
+        <div className="inline-flex shrink-0 items-center gap-1 self-start rounded-[10px] border border-brand-500/30 bg-brand-500/[0.06] p-0.5 text-sm sm:self-auto">
           <Link
             href={monthHref(-1)}
             aria-label="Önceki ay"
-            className="ui-press touch-target grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
+            className="ui-press touch-target grid size-9 place-items-center rounded-lg text-brand-700 hover:bg-brand-500/10 dark:text-brand-300"
           >
             <Icon name="chevron-left" className="size-4" />
           </Link>
@@ -112,38 +133,12 @@ export default async function SocialTakvimPage({
           <Link
             href={monthHref(1)}
             aria-label="Sonraki ay"
-            className="ui-press touch-target grid size-9 place-items-center rounded-lg text-secondary hover:bg-surface-hover"
+            className="ui-press touch-target grid size-9 place-items-center rounded-lg text-brand-700 hover:bg-brand-500/10 dark:text-brand-300"
           >
             <Icon name="chevron-right" className="size-4" />
           </Link>
         </div>
       </div>
-
-      <nav aria-label="Hafta seçimi" className="flex flex-wrap gap-1.5">
-        {weeks.map((week) => (
-          <Link
-            key={week.index}
-            href={weekHref(week.index)}
-            aria-current={week.index === selectedIndex ? "page" : undefined}
-            className={`ui-press inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium ${
-              week.index === selectedIndex
-                ? "border-brand-600 bg-brand-600 text-white"
-                : "border-border-default bg-surface text-muted hover:bg-surface-hover"
-            }`}
-          >
-            {week.index}. Hafta
-            <span
-              className={
-                week.index === selectedIndex
-                  ? "text-white/75"
-                  : "text-zinc-500 dark:text-zinc-400"
-              }
-            >
-              {week.label}
-            </span>
-          </Link>
-        ))}
-      </nav>
 
       {brands.length === 0 ? (
         <EmptyState

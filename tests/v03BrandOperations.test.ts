@@ -52,6 +52,8 @@ describe("v03 marka operasyon özeti", () => {
 
   it("marka, Panom ve görev yüzeylerinde istenen operasyon bilgilerini gösterir", () => {
     const overview = fs.readFileSync(path.join(process.cwd(), "components/BrandOperationsOverview.tsx"), "utf8");
+    const workspace = fs.readFileSync(path.join(process.cwd(), "components/BrandWorkspaceSummary.tsx"), "utf8");
+    const brandPage = fs.readFileSync(path.join(process.cwd(), "app/brands/[brandId]/page.tsx"), "utf8");
     const panom = fs.readFileSync(path.join(process.cwd(), "app/panom/page.tsx"), "utf8");
     const card = fs.readFileSync(path.join(process.cwd(), "components/TaskGridCard.tsx"), "utf8");
     const list = fs.readFileSync(path.join(process.cwd(), "components/TaskListView.tsx"), "utf8");
@@ -59,8 +61,9 @@ describe("v03 marka operasyon özeti", () => {
     const editBrand = fs.readFileSync(path.join(process.cwd(), "components/EditBrandForm.tsx"), "utf8");
     const brandsPage = fs.readFileSync(path.join(process.cwd(), "app/brands/page.tsx"), "utf8");
     const teamManagement = fs.readFileSync(path.join(process.cwd(), "app/team/manage/page.tsx"), "utf8");
-    assert.match(overview, /ÇEKİM HAKLARI/);
-    assert.match(overview, /YILLIK/);
+    assert.match(workspace, /ÇEKİM HAKLARI/);
+    assert.match(brandPage, /aria-label="Marka sorumluları"/);
+    assert.match(brandPage, /<BrandOperationsOverview[\s\S]*targets=\{/);
     assert.match(overview, /AYLIK İŞ İLERLEMESİ/);
     assert.match(overview, /AYLIK İÇERİK AKIŞI/);
     assert.match(overview, /Toplantılar/);

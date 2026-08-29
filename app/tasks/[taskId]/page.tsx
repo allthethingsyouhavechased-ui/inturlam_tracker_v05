@@ -11,13 +11,13 @@ import SubmitButton from "@/components/SubmitButton";
 import TaskNotesAttachments from "@/components/TaskNotesAttachments";
 import TaskPrioritySelect from "@/components/TaskPrioritySelect";
 import TaskDifficultySelect from "@/components/TaskDifficultySelect";
+import TaskDetailTabs from "@/components/TaskDetailTabs";
 import TaskDeliveryPanel from "@/components/TaskDeliveryPanel";
 import TaskRepeatSelect from "@/components/TaskRepeatSelect";
 import TaskRevisionPanel from "@/components/TaskRevisionPanel";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskWeightSelect from "@/components/TaskWeightSelect";
 import PageHeader from "@/components/ui/PageHeader";
-import SectionJumpNav from "@/components/SectionJumpNav";
 import { controlClass } from "@/components/ui/Input";
 import { CONTENT_TYPES, CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { updateTaskDetailsAction } from "@/lib/actions/tasks";
@@ -36,16 +36,6 @@ import { listSharedAttachments, listSharedComments } from "@/lib/repositories/gu
 import { markTaskNotificationsReadForPerson } from "@/lib/repositories/notifications";
 import { daysUntilArchive } from "@/lib/taskArchive";
 
-// Basliktan atlanabilen bolumler. Kimlikler sayfadaki `id` degerleriyle
-// birebir; `SectionJumpNav` hangi bolumde olundugunu da isaretliyor.
-const JUMP_SECTIONS = [
-  { id: "gorev-ayrintilari", label: "Ayrıntılar" },
-  { id: "is-akisi", label: "İş akışı" },
-  { id: "teslim", label: "Teslim" },
-  { id: "revize", label: "Revize" },
-  { id: "yorumlar", label: "Yorumlar" },
-  { id: "hareketler", label: "Hareketler" },
-] as const;
 export const dynamic = "force-dynamic";
 
 const inputClass = controlClass();
@@ -93,10 +83,6 @@ export default async function TaskPage({
         ]}
       />
 
-      <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-5 overflow-x-auto border-y border-border-subtle bg-background/90 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6">
-        <SectionJumpNav sections={JUMP_SECTIONS} />
-      </div>
-
       {task.origin === "guest" && <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm dark:border-amber-900 dark:bg-amber-950/20"><p className="font-semibold text-foreground">Guest tarafından açıldı · İstenen tarih {task.requested_date}</p><p className="mt-1 whitespace-pre-wrap text-xs text-secondary">{task.guest_brief}</p>{!task.due_date && <p className="mt-2 text-xs font-semibold text-warning">Planlanacak: iç teslim tarihini ve görev sahibini atayın.</p>}</div>}
 
       {(task.status === "Yayinlandi" || task.archived_at !== null) && (
@@ -121,9 +107,9 @@ export default async function TaskPage({
         </div>
       )}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <main className="min-w-0 space-y-5">
-          <form id="gorev-ayrintilari" action={updateTaskDetailsAction} className="scroll-mt-24 space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
+      <TaskDetailTabs
+        details={
+          <form key="details" action={updateTaskDetailsAction} className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
             <div className="border-b border-border-subtle pb-4">
               <h2 className="text-base font-semibold text-foreground">Görev ayrıntıları</h2>
               <p className="mt-1 text-xs text-muted">Brief, teslim tarihi ve ekip bildirimini tek yerde güncelle.</p>
@@ -162,9 +148,10 @@ export default async function TaskPage({
               {canDeleteTask && <DeleteTaskButton taskId={task.id} />}
             </div>
           </form>
-
-          <div id="teslim" className="scroll-mt-24">
+        }
+        delivery={
           <TaskDeliveryPanel
+            key="delivery"
             taskId={task.id}
             taskStatus={task.status}
             taskOrigin={task.origin}
@@ -172,18 +159,19 @@ export default async function TaskPage({
             archived={task.archived_at !== null}
             deliveries={deliveries}
           />
-          </div>
-
-          <div id="revize" className="scroll-mt-24">
+        }
+        revision={
           <TaskRevisionPanel
+            key="revision"
             taskId={task.id}
             status={task.status}
             archived={task.archived_at !== null}
             rounds={revisionRounds}
           />
-          </div>
-
-          <section id="yorumlar" className="scroll-mt-24 rounded-xl border border-border-default bg-surface">
+        }
+        comments={
+          <div key="comments" className="space-y-5">
+          <section className="rounded-xl border border-border-default bg-surface">
             <div className="border-b border-border-subtle px-4 py-3 sm:px-5">
               <h2 className="text-sm font-semibold text-foreground">Yorumlar <span className="font-normal text-muted">· {comments.length}</span></h2>
             </div>
@@ -203,10 +191,10 @@ export default async function TaskPage({
           </section>
 
           {task.origin === "guest" && <section className="rounded-xl border border-border-default bg-surface"><div className="border-b border-border-subtle px-4 py-3 sm:px-5"><h2 className="text-sm font-semibold text-foreground">Guest ile paylaşılan konuşma</h2></div><div className="space-y-3 p-4 sm:p-5">{sharedComments.map((comment) => <div key={comment.id} className="rounded-lg bg-surface-subtle px-3 py-2"><p className="text-xs font-semibold text-foreground">{comment.author_name}</p><p className="mt-1 whitespace-pre-wrap text-sm text-secondary">{comment.body}</p></div>)}{sharedAttachments.length > 0 && <div className="flex flex-wrap gap-2">{sharedAttachments.map((attachment) => <a key={attachment.id} href={attachment.file_path} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-600">{attachment.original_name ?? "Ek görsel"}</a>)}</div>}<form action={addTeamSharedCommentAction} className="space-y-2 border-t border-border-subtle pt-3"><input type="hidden" name="taskId" value={task.id} /><textarea name="body" required maxLength={2000} rows={3} placeholder="Guest’in göreceği yorumu yaz…" className={inputClass} /><input name="images" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple className="text-xs" /><SubmitButton>Guest’e gönder</SubmitButton></form></div></section>}
-        </main>
-
-        <aside className="space-y-4 xl:sticky xl:top-20">
-          <section id="is-akisi" className="scroll-mt-24 rounded-xl border border-border-default bg-surface p-4">
+          </div>
+        }
+        workflow={
+          <section key="workflow" className="rounded-xl border border-border-default bg-surface p-4 sm:p-5">
             <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">İŞ AKIŞI</h2>
             <div className="mt-4 space-y-4">
               <label className="grid gap-1.5 text-xs font-medium text-muted">Durum<TaskStatusSelect taskId={task.id} status={task.status} locked={task.origin === "guest" && !task.due_date} />{task.origin === "guest" && !task.due_date && <span className="text-[10px] leading-4 text-amber-500">Durumu ilerletmek için önce iç teslim tarihini planlayın.</span>}</label>
@@ -227,15 +215,16 @@ export default async function TaskPage({
               />
             </div>
           </section>
-
-          <section id="hareketler" className="scroll-mt-24 overflow-hidden rounded-xl border border-border-default bg-surface">
+        }
+        activity={
+          <section key="activity" className="overflow-hidden rounded-xl border border-border-default bg-surface">
             <div className="border-b border-border-subtle px-4 py-3">
               <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">HAREKETLER</h2>
             </div>
             <ActivityFeed entries={activity} showLink={false} emptyText="Bu görevde henüz hareket yok." />
           </section>
-        </aside>
-      </div>
+        }
+      />
     </div>
   );
 }

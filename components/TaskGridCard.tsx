@@ -20,7 +20,7 @@ import type { TaskCardBadge, TaskWithContext } from "@/lib/types";
 export type { TaskCardBadge };
 
 const metaBadgeClass =
-  "rounded-md px-1.5 py-0.5 text-[9px] font-semibold tracking-wide";
+  "inline-flex min-h-5 items-center rounded-md px-2 py-0.5 text-[9px] font-semibold tracking-wide";
 
 export default function TaskGridCard({
   task,
@@ -40,8 +40,9 @@ export default function TaskGridCard({
       onContextMenu={onContextMenu}
       data-brand-accent
       style={brandAccentStyle(task.brand_accent_hue)}
-      className="brand-stripe flex min-w-0 flex-col rounded-r-xl border border-border-default bg-surface px-3 pb-3 pt-3.5 transition-colors hover:border-border-strong hover:bg-surface-hover"
+      className="relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-default bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
     >
+      <span aria-hidden="true" className="brand-accent-fill pointer-events-none absolute inset-y-0 left-0 w-[3px]" />
       <header className="flex min-w-0 items-start gap-2">
         <div className="min-w-0 flex-1">
           <Link
@@ -50,7 +51,7 @@ export default function TaskGridCard({
           >
             {task.title}
           </Link>
-          <p className="mt-1 truncate text-[11px] font-medium text-secondary">
+          <p className="mt-0.5 truncate text-[11px] font-medium text-secondary">
             {task.brand_name}
           </p>
           <p title={task.content_title} className="mt-0.5 truncate text-[10px] text-muted">
@@ -64,12 +65,9 @@ export default function TaskGridCard({
         )}
       </header>
 
-      <div role="group" aria-label="Görev ayrıntıları" className="mt-3 flex min-w-0 flex-wrap items-center gap-1">
+      <div role="group" aria-label="Görev ayrıntıları" className="mt-2.5 flex min-w-0 flex-wrap items-center gap-1.5">
         <span className={`${metaBadgeClass} bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300`}>
           {CONTENT_TYPE_LABEL[task.content_type].toLocaleUpperCase("tr-TR")}
-        </span>
-        <span title="Görev ağırlığı" className={`${metaBadgeClass} bg-surface-subtle text-secondary`}>
-          {task.weight_points} PUAN
         </span>
         {task.archived_at !== null && (
           <span className={`${metaBadgeClass} bg-surface-muted text-secondary`}>ARŞİV</span>
@@ -103,80 +101,96 @@ export default function TaskGridCard({
         )}
       </div>
 
-      <footer className="mt-3 border-t border-border-subtle pt-2.5">
-        <div role="group" aria-label="Görev zamanlaması" className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          {task.due_date ? (
-            <span
-              className={`inline-flex items-center gap-1 whitespace-nowrap text-[11px] tabular-nums ${
-                isOverdue(task.due_date) ? "font-semibold text-danger" : "text-muted"
-              }`}
-            >
-              <Icon name="calendar" className="size-3.5" />
-              {formatDateShort(task.due_date)}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-faint">
-              <Icon name="calendar" className="size-3.5" />
-              Tarih yok
-            </span>
-          )}
-
-          {task.personal_target_date !== undefined &&
-            (task.status === "Yayinlandi" ? (
-              task.personal_target_date && (
-                <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium text-brand-600 dark:text-brand-300">
-                  <Icon name="clock" className="size-3.5" />
-                  Hedef {formatDateShort(task.personal_target_date)}
-                </span>
-              )
+      <footer className="mt-2.5 border-t border-border-subtle pt-2">
+        <div
+          role="group"
+          aria-label="Görev zamanlaması ve sorumlusu"
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1"
+        >
+          <div className="min-w-0">
+            {task.due_date ? (
+              <span
+                className={`inline-flex min-h-7 items-center gap-1 whitespace-nowrap text-[11px] tabular-nums ${
+                  isOverdue(task.due_date) ? "font-semibold text-danger" : "text-muted"
+                }`}
+              >
+                <Icon name="calendar" className="size-3.5" />
+                {formatDateShort(task.due_date)}
+              </span>
             ) : (
-              <TaskTargetDateEdit taskId={task.id} targetDate={task.personal_target_date} />
-            ))}
-        </div>
-
-        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className={`${metaBadgeClass} ${TASK_PRIORITY_BADGE[task.priority]}`}>
+              <span className="inline-flex min-h-7 items-center gap-1 whitespace-nowrap text-[11px] text-faint">
+                <Icon name="calendar" className="size-3.5" />
+                Tarih yok
+              </span>
+            )}
+          </div>
+          <span className={`${metaBadgeClass} justify-self-end ${TASK_PRIORITY_BADGE[task.priority]}`}>
             {TASK_PRIORITY_LABEL[task.priority].toLocaleUpperCase("tr-TR")}
           </span>
-          {task.status === "Incelemede" && task.pending_delivery_id && task.pending_delivery_version && (
-            <TaskQuickRevisionDialog
-              taskTitle={task.title}
-              deliveryId={task.pending_delivery_id}
-              deliveryVersion={task.pending_delivery_version}
-            />
-          )}
-          {task.comment_count > 0 &&
-            (onOpenComments ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onOpenComments();
-                }}
-                title={task.last_comment_body ?? `${task.comment_count} yorum`}
-                aria-label={`${task.comment_count} yorumu aç`}
-                className="ui-press inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+          <div className="min-w-0">
+            {task.personal_target_date !== undefined &&
+              (task.status === "Yayinlandi" ? (
+                task.personal_target_date && (
+                  <span className="inline-flex min-h-7 items-center gap-1 whitespace-nowrap text-[11px] font-medium text-brand-600 dark:text-brand-300">
+                    <Icon name="clock" className="size-3.5" />
+                    Hedef {formatDateShort(task.personal_target_date)}
+                  </span>
+                )
+              ) : (
+                <TaskTargetDateEdit taskId={task.id} targetDate={task.personal_target_date} compact />
+              ))}
+          </div>
+          <span className="flex items-center justify-self-end gap-1.5">
+              <span
+                aria-label={`${task.weight_points} puan`}
+                title={`Görev ağırlığı: ${task.weight_points} puan`}
+                className="grid size-7 place-items-center rounded-full bg-brand-100 text-[10px] font-bold tabular-nums text-brand-700 dark:bg-brand-950 dark:text-brand-200"
               >
-                <CommentIcon />
-                {task.comment_count}
-              </button>
-            ) : (
-              <Link
-                href={`/tasks/${task.id}`}
-                title={task.last_comment_body ?? `${task.comment_count} yorum`}
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
-              >
-                <CommentIcon />
-                {task.comment_count}
-              </Link>
-            ))}
-          {task.assignee_name && (
-            <span className="ml-auto shrink-0">
-              <PersonAvatar name={task.assignee_name} avatarPath={task.assignee_avatar_path} size="xs" />
-            </span>
-          )}
+                {task.weight_points}
+              </span>
+              {task.assignee_name && (
+                <PersonAvatar name={task.assignee_name} avatarPath={task.assignee_avatar_path} size="xs" />
+              )}
+          </span>
         </div>
+
+        {(task.status === "Incelemede" && task.pending_delivery_id && task.pending_delivery_version || task.comment_count > 0) && (
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+            {task.status === "Incelemede" && task.pending_delivery_id && task.pending_delivery_version && (
+              <TaskQuickRevisionDialog
+                taskTitle={task.title}
+                deliveryId={task.pending_delivery_id}
+                deliveryVersion={task.pending_delivery_version}
+              />
+            )}
+            {task.comment_count > 0 &&
+              (onOpenComments ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onOpenComments();
+                  }}
+                  title={task.last_comment_body ?? `${task.comment_count} yorum`}
+                  aria-label={`${task.comment_count} yorumu aç`}
+                  className="ui-press inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+                >
+                  <CommentIcon />
+                  {task.comment_count}
+                </button>
+              ) : (
+                <Link
+                  href={`/tasks/${task.id}`}
+                  title={task.last_comment_body ?? `${task.comment_count} yorum`}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+                >
+                  <CommentIcon />
+                  {task.comment_count}
+                </Link>
+              ))}
+          </div>
+        )}
       </footer>
     </article>
   );

@@ -28,12 +28,20 @@ export default async function IdeasPage({
   return (
     <div>
       <PageHeader
+        className="lg:items-center"
         eyebrow="ORTAK YARATICI HAFIZA"
         title="Fikir Bankası"
         description="Marka içeriklerinden ofis süreçlerine kadar akla gelen fikirleri ve ilham kaynaklarını kaybetmeden yakala, geliştir ve yeniden bul."
+        descriptionClassName="max-w-none 2xl:whitespace-nowrap"
         actions={
           <>
-            <Link href={archived ? "/ideas" : "/ideas?view=archive"} className={buttonClass({ variant: "secondary" })}>
+            <Link
+              href={archived ? "/ideas" : "/ideas?view=archive"}
+              className={buttonClass({
+                variant: "secondary",
+                className: "border-brand-500/30 bg-brand-500/[0.06] text-brand-700 hover:border-brand-500/50 hover:bg-brand-500/10 dark:text-brand-300",
+              })}
+            >
               <Icon name="archive" className="size-4" />
               {archived ? "Aktif fikirler" : `Arşiv · ${archivedCount}`}
             </Link>

@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-*/
 /out/
 
 # production
@@ -47,6 +48,7 @@ next-env.d.ts
 /data/*.log
 /data/logs/
 /data/backup/
+/data/design-audit/
 /data/recovery/
 /data/runtime/
 /data/uploads/

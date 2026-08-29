@@ -293,6 +293,7 @@ export default function TaskBoard({
                 id: task.id,
                 title: task.title,
                 archived: task.archived_at !== null,
+                status: task.status,
               })}
             />
           ))}

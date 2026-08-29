@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import TaskBoard from "@/components/TaskBoard";
+import TaskBoard, { type SortKey } from "@/components/TaskBoard";
 import TaskListView, {
   DEFAULT_TASK_LIST_COLUMNS,
   TaskListColumnsControl,
   type ListColumn,
 } from "@/components/TaskListView";
 import WorkspaceViewToggle from "@/components/WorkspaceViewToggle";
+import { controlClass } from "@/components/ui/Input";
 import type { Person, TaskWithContext } from "@/lib/types";
 import {
   PANOM_VIEW_PREFERENCE,
@@ -16,6 +17,13 @@ import {
 } from "@/lib/uiPreferences";
 
 type View = WorkspaceView;
+
+const PANOM_SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: "varsayilan", label: "Varsayılan" },
+  { key: "marka", label: "Marka" },
+  { key: "oncelik", label: "Öncelik" },
+  { key: "atanan", label: "Atanan" },
+];
 
 // Panom yalnızca kişisel çalışma alanıdır. Ekip geneli riskleri Bugün ve Görevler
 // sayfalarında kalır; buradaki düğme kişinin kendi işlerinin görünümünü değiştirir.
@@ -33,6 +41,7 @@ export default function PanomViews({
   canDeleteTasks?: boolean;
 }) {
   const [view, setView] = useState<View>(initialView);
+  const [sortKey, setSortKey] = useState<SortKey>("varsayilan");
   const [taskListColumns, setTaskListColumns] = useState<ReadonlySet<ListColumn>>(
     () => new Set(DEFAULT_TASK_LIST_COLUMNS),
   );
@@ -46,27 +55,39 @@ export default function PanomViews({
     <div>
       {hasIdentity && (
         <section className="space-y-3">
-          <header className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-eyebrow text-muted">
-              Bana atanmış görevler{" "}
-              {myTasks.length > 0 && <span>({myTasks.length})</span>}
-            </h2>
-            <div
-              role="group"
-              aria-label="Bana atanmış görev görünümü araçları"
-              className="ml-auto flex items-center gap-2"
-            >
-              <WorkspaceViewToggle view={view} onChange={changeView} />
+          <div
+            role="group"
+            aria-label="Kişisel görev görünümü araçları"
+            className="flex min-h-16 min-w-0 flex-wrap items-center gap-3 rounded-xl border border-border-default bg-surface p-3"
+          >
+            <label className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="shrink-0 text-xs font-medium text-muted">Sırala</span>
+              <select
+                value={sortKey}
+                onChange={(event) => setSortKey(event.target.value as SortKey)}
+                aria-label="Kişisel görevleri sırala"
+                className={controlClass("w-36 sm:w-44")}
+              >
+                {PANOM_SORT_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="ml-auto flex shrink-0 items-center gap-3 sm:border-l sm:border-border-subtle sm:pl-3">
               {view === "liste" && (
-                <div className="hidden md:block">
+                <span className="hidden md:block">
                   <TaskListColumnsControl
                     visibleColumns={taskListColumns}
                     onChange={setTaskListColumns}
                   />
-                </div>
+                </span>
               )}
+              <WorkspaceViewToggle view={view} onChange={changeView} />
             </div>
-          </header>
+          </div>
 
           {/* Yayınlananlar da burada: “Yayınlandı” sütununda bir süre daha
               durup sonra arşive düşerler; yanlışlıkla oraya sürüklenen kart
@@ -74,16 +95,24 @@ export default function PanomViews({
           {myTasks.length === 0 ? (
             <p className="py-3 text-sm text-muted">Sana atanmış görev yok. 🎉</p>
           ) : view === "pano" ? (
-            <TaskBoard tasks={myTasks} people={people} boardId="panom" />
-          ) : (
-            <TaskListView
+            <TaskBoard
               tasks={myTasks}
               people={people}
               canDeleteTasks={canDeleteTasks}
-              visibleColumns={taskListColumns}
-              onVisibleColumnsChange={setTaskListColumns}
-              showColumnsControl={false}
+              sortKey={sortKey}
+              boardId="panom"
             />
+          ) : (
+            <>
+              <TaskListView
+                tasks={myTasks}
+                people={people}
+                canDeleteTasks={canDeleteTasks}
+                visibleColumns={taskListColumns}
+                onVisibleColumnsChange={setTaskListColumns}
+                showColumnsControl={false}
+              />
+            </>
           )}
         </section>
       )}

@@ -26,7 +26,7 @@ export default function DeliveryQualityPanel({ report }: { report: DeliveryQuali
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => (
           <div key={metric.label} className="rounded-xl border border-border-subtle bg-surface-subtle px-4 py-3">
@@ -36,7 +36,7 @@ export default function DeliveryQualityPanel({ report }: { report: DeliveryQuali
         ))}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
           <div className="flex items-center justify-between gap-3">
             <div>
