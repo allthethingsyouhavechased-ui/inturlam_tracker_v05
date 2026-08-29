@@ -167,6 +167,11 @@ html {
   min-height: 100%;
   background: var(--background);
   scroll-behavior: smooth;
+  /* Dikey kaydırma çubuğunun yeri HER ZAMAN ayrılır. Yoksa sayfa boyu
+     değiştiği anda (Panom'da pano <-> liste geçişi, filtre daraltma, bir
+     bölümün açılıp kapanması) çubuk belirip kaybolduğu için ortalanmış
+     içerik 5px yana sıçrıyordu. */
+  scrollbar-gutter: stable;
 }
 
 body {

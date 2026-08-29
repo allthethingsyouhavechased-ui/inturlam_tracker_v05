@@ -65,8 +65,9 @@ describe("marka başlığı bilgi hiyerarşisi", () => {
     // birbirinden kopmazlar.
     assert.match(targets, /compact \? "flex min-w-0 items-center gap-x-4/);
     assert.doesNotMatch(targets, /compact \? "flex min-w-0 flex-1/);
-    // Ayrı bir "AYLIK HEDEF" başlığı YOK — etiket kendi sayacının solunda.
-    assert.doesNotMatch(targets, /AYLIK HEDEF/);
+    // Ayrı bir başlık metni YOK — etiket kendi sayacının solunda. (Regex
+    // tırnakları da eşliyor: aynı ifade kod yorumunda geçebilir.)
+    assert.doesNotMatch(targets, /"AYLIK HEDEF"/);
     assert.match(targets, /compact \? "flex shrink-0 items-center gap-2 text-\[9px\]/);
     assert.match(source("components/BrandOperationsOverview.tsx"), /flex flex-wrap items-end justify-between/);
   });
