@@ -191,9 +191,17 @@ Desteklenen ayarlar: `APIFY_INSTAGRAM_ACTOR`, `SOCIAL_SILENCE_DAYS`,
 
 ## Git izolasyonu
 
-- `origin`: `inturlam_tracker_v03` private deposu
+- `origin`: `inturlam_tracker_v05` private deposu — **güncel çalışma buraya gider**
+- `v04`: `inturlam_tracker_v04`; iki dalı (`main` ve `v04`) birbirinden ıraksadığı,
+  hangisinin güncel olduğu karışabildiği için 2026-08-29'da dondurulup yerine v05
+  açıldı. Geçmişi okunabilir, yeni commit gitmez.
+- `v03`: `inturlam_tracker_v03`, v03 dönemi geçmişi (eski `origin`)
 - `upstream-v02`: v02 geçmişini okumak için fetch referansı
 - `upstream-v02` push URL’si bilinçli olarak devre dışıdır
+
+v05'in tek dalı var: `main`. Yerel `main` de onu takip eder, yani düz `git push`
+doğru yere gider. Eski dallar (`v03-main`, `safety/pre-v04-reset-*`) yalnız yerelde
+duruyor; v05'e itilmediler.
 
 Commit, push, production takvimine bağlama, deploy veya port değişikliği ayrı operasyon
 kararlarıdır; testlerin geçmesi bu işlemleri otomatik olarak yetkilendirmez.
