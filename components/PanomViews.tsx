@@ -3,6 +3,7 @@
 import { useState } from "react";
 import TaskBoard, { type SortKey } from "@/components/TaskBoard";
 import TaskListView, {
+  ALL_TASK_LIST_COLUMNS,
   DEFAULT_TASK_LIST_COLUMNS,
   TaskListColumnsControl,
 } from "@/components/TaskListView";
@@ -42,9 +43,10 @@ export default function PanomViews({
 }) {
   const [view, setView] = useState<View>(initialView);
   const [sortKey, setSortKey] = useState<SortKey>("varsayilan");
-  const [taskListColumns, setTaskListColumns] = useTaskListColumns(
+  const [taskListColumns, setTaskListColumns, taskListLayout] = useTaskListColumns(
     "panom",
     DEFAULT_TASK_LIST_COLUMNS,
+    ALL_TASK_LIST_COLUMNS,
   );
 
   function changeView(next: View) {
@@ -83,6 +85,7 @@ export default function PanomViews({
                   <TaskListColumnsControl
                     visibleColumns={taskListColumns}
                     onChange={setTaskListColumns}
+                    onResetLayout={taskListLayout.resetLayout}
                   />
                 </span>
               )}
@@ -111,6 +114,7 @@ export default function PanomViews({
                 canDeleteTasks={canDeleteTasks}
                 visibleColumns={taskListColumns}
                 onVisibleColumnsChange={setTaskListColumns}
+                layout={taskListLayout}
                 showColumnsControl={false}
               />
             </>

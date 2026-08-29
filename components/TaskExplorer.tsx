@@ -6,6 +6,7 @@ import EmptyState from "@/components/EmptyState";
 import SavedTaskViews from "@/components/SavedTaskViews";
 import TaskBoard, { type SortKey } from "@/components/TaskBoard";
 import TaskListView, {
+  ALL_TASK_LIST_COLUMNS,
   DEFAULT_TASK_LIST_COLUMNS,
   TaskListColumnsControl,
 } from "@/components/TaskListView";
@@ -120,9 +121,10 @@ export default function TaskExplorer({
   const [q, setQ] = useState(initialFilters.q);
   const [sortKey, setSortKey] = useState<SortKey>(initialFilters.sort);
   const [view, setView] = useState<WorkspaceView>(initialView);
-  const [taskListColumns, setTaskListColumns] = useTaskListColumns(
+  const [taskListColumns, setTaskListColumns, taskListLayout] = useTaskListColumns(
     "tasks",
     DEFAULT_TASK_LIST_COLUMNS,
+    ALL_TASK_LIST_COLUMNS,
   );
 
   // Filtreler istemci state'inde kalmaya devam ediyor (her tıklamada sunucu
@@ -395,6 +397,7 @@ export default function TaskExplorer({
                   <TaskListColumnsControl
                     visibleColumns={taskListColumns}
                     onChange={setTaskListColumns}
+                    onResetLayout={taskListLayout.resetLayout}
                   />
                 </span>
               )}
@@ -646,6 +649,7 @@ export default function TaskExplorer({
           canDeleteTasks={canDeleteTasks}
           visibleColumns={taskListColumns}
           onVisibleColumnsChange={setTaskListColumns}
+          layout={taskListLayout}
           showColumnsControl={false}
         />
       )}

@@ -41,6 +41,11 @@ import {
   type ListSortKey,
 } from "@/lib/taskSort";
 import type { Person, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
+import {
+  MAX_COLUMN_WIDTH,
+  MIN_COLUMN_WIDTH,
+  type TaskListLayout,
+} from "@/lib/useTaskListColumns";
 
 const UNASSIGN = "__none__";
 
@@ -76,12 +81,60 @@ const COLUMN_OPTIONS: readonly { key: ListColumn; label: string }[] = [
   { key: "yorum", label: "Yorum" },
 ];
 
+/**
+ * Sütunların VARSAYILAN ekran sırası — kullanıcı başlıkları sürükleyerek
+ * değiştirene kadar geçerli. `COLUMN_OPTIONS`'tan ayrı: orası seçim listesinin
+ * sırası (sık kullanılanlar üstte), burası tablodaki okuma sırası (iş → bağlam
+ * → planlama → sahiplik → tarih).
+ */
+export const ALL_TASK_LIST_COLUMNS: readonly ListColumn[] = [
+  "gorev",
+  "tur",
+  "marka",
+  "oncelik",
+  "zorluk",
+  "puan",
+  "revize",
+  "durum",
+  "atanan",
+  "teslim",
+  "hedef",
+  "yorum",
+];
+
+const COLUMN_LABEL: Record<ListColumn, string> = Object.fromEntries(
+  COLUMN_OPTIONS.map((option) => [option.key, option.label]),
+) as Record<ListColumn, string>;
+
+// Kullanıcı elle değiştirene kadar geçerli genişlikler (px). Tablo
+// `table-fixed` olduğu için bunlar öneri değil, gerçek sütun genişliği.
+const DEFAULT_COLUMN_WIDTH: Record<ListColumn, number> = {
+  gorev: 300,
+  tur: 96,
+  marka: 150,
+  oncelik: 128,
+  zorluk: 132,
+  puan: 76,
+  revize: 128,
+  durum: 148,
+  atanan: 184,
+  teslim: 132,
+  hedef: 132,
+  yorum: 84,
+};
+
+/** Seçim kutusu sütunu; sürüklenmez, yeniden boyutlandırılmaz. */
+const SELECT_COLUMN_WIDTH = 40;
+
 export function TaskListColumnsControl({
   visibleColumns,
   onChange,
+  onResetLayout,
 }: {
   visibleColumns: ReadonlySet<ListColumn>;
   onChange: (columns: ReadonlySet<ListColumn>) => void;
+  /** Sürükleyerek değiştirilen sıra ve elle verilen genişlikleri sıfırlar. */
+  onResetLayout?: () => void;
 }) {
   function toggleColumn(key: ListColumn) {
     const next = new Set(visibleColumns);
@@ -118,10 +171,17 @@ export function TaskListColumnsControl({
             {column.label}
           </label>
         ))}
+        <p className="mt-1 border-t border-border-subtle px-2 pt-2 text-[10px] leading-4 text-muted">
+          Başlığı sürükleyerek sütunu taşı, sağ kenarından çekerek genişliğini
+          ayarla.
+        </p>
         <button
           type="button"
-          onClick={() => onChange(new Set(DEFAULT_TASK_LIST_COLUMNS))}
-          className="mt-1 min-h-9 w-full rounded-md border-t border-border-subtle px-2 text-left text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
+          onClick={() => {
+            onChange(new Set(DEFAULT_TASK_LIST_COLUMNS));
+            onResetLayout?.();
+          }}
+          className="mt-1 min-h-9 w-full rounded-md px-2 text-left text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
         >
           Varsayılana dön
         </button>
@@ -138,29 +198,59 @@ function SortableTh({
   label,
   sort,
   onToggle,
+  onMove,
+  onResize,
+  dropTarget,
+  onDropTargetChange,
 }: {
   column: ListSortKey;
   label: string;
   sort: ListSort | null;
   onToggle: (key: ListSortKey) => void;
+  onMove: (dragged: ListSortKey, target: ListSortKey) => void;
+  onResize: (column: ListSortKey, event: React.PointerEvent<HTMLElement>) => void;
+  dropTarget: ListSortKey | null;
+  onDropTargetChange: (column: ListSortKey | null) => void;
 }) {
   const active = sort?.key === column;
   return (
     <th
-      className="px-3 py-2 font-medium"
+      // Sürükleme `<th>`'nin kendisinde: sıralama düğmesi tek tıkla hâlâ
+      // çalışır (HTML5 drag yalnız basılı tutup sürüklerken başlar).
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", column);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        onDropTargetChange(column);
+      }}
+      onDragLeave={() => onDropTargetChange(null)}
+      onDrop={(event) => {
+        event.preventDefault();
+        const dragged = event.dataTransfer.getData("text/plain") as ListSortKey;
+        onDropTargetChange(null);
+        if (dragged) onMove(dragged, column);
+      }}
+      onDragEnd={() => onDropTargetChange(null)}
+      className={`relative select-none px-3 py-2 font-medium ${
+        dropTarget === column ? "bg-brand-500/10" : ""
+      }`}
       aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
     >
       <button
         type="button"
         onClick={() => onToggle(column)}
-        title={LIST_SORT_HINT[column]}
-        className={`group inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-foreground ${
+        title={`${LIST_SORT_HINT[column]} · başlığı sürükleyerek sütunu taşıyabilirsin`}
+        className={`group inline-flex max-w-full cursor-grab items-center gap-1 uppercase tracking-wider transition-colors hover:text-foreground active:cursor-grabbing ${
           active ? "text-brand-600 dark:text-brand-400" : ""
         }`}
       >
-        {label}
+        <span className="truncate">{label}</span>
         <span
-          className={`text-[10px] leading-none ${
+          className={`shrink-0 text-[10px] leading-none ${
             active ? "" : "opacity-0 transition-opacity group-hover:opacity-40"
           }`}
           aria-hidden
@@ -168,6 +258,16 @@ function SortableTh({
           {active && sort.dir === "desc" ? "▼" : "▲"}
         </span>
       </button>
+      {/* Genişlik tutamağı. `role="separator"` + aria-orientation: ekran
+          okuyucu bunu sütun ayırıcısı olarak duyurur. */}
+      <span
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={`${label} sütun genişliği`}
+        onPointerDown={(event) => onResize(column, event)}
+        onDragStart={(event) => event.preventDefault()}
+        className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-brand-500/40"
+      />
     </th>
   );
 }
@@ -178,11 +278,15 @@ export default function TaskListView({
   canDeleteTasks = false,
   visibleColumns: controlledVisibleColumns,
   onVisibleColumnsChange,
+  layout,
   showColumnsControl = true,
 }: {
   tasks: TaskWithContext[];
   people: Person[];
   canDeleteTasks?: boolean;
+  /** Sütun sırası + genişlikleri (bkz. `useTaskListColumns`). Verilmezse
+      varsayılan sırada ve genişlikte, kalıcılık olmadan çalışır. */
+  layout?: TaskListLayout;
   visibleColumns?: ReadonlySet<ListColumn>;
   onVisibleColumnsChange?: (columns: ReadonlySet<ListColumn>) => void;
   showColumnsControl?: boolean;
@@ -201,6 +305,160 @@ export default function TaskListView({
   );
   const visibleColumns = controlledVisibleColumns ?? localVisibleColumns;
   const setVisibleColumns = onVisibleColumnsChange ?? setLocalVisibleColumns;
+  // Sürüklenen sütunun bırakılacağı hedef (yalnız vurgu için) ve boyutlandırma
+  // sırasındaki geçici genişlik. Geçici tutulmasının sebebi: her pointermove'da
+  // depoya yazmak yerine yalnız bırakıldığında bir kez yazmak.
+  const [dropTarget, setDropTarget] = useState<ListColumn | null>(null);
+  const [draftWidth, setDraftWidth] = useState<{ column: ListColumn; width: number } | null>(null);
+  const columnOrder = layout?.order ?? ALL_TASK_LIST_COLUMNS;
+  const orderedColumns = useMemo(
+    () => columnOrder.filter((column) => visibleColumns.has(column)),
+    [columnOrder, visibleColumns],
+  );
+  const widthOf = (column: ListColumn): number =>
+    draftWidth?.column === column
+      ? draftWidth.width
+      : layout?.widths[column] ?? DEFAULT_COLUMN_WIDTH[column];
+  const tableWidth =
+    SELECT_COLUMN_WIDTH + orderedColumns.reduce((total, column) => total + widthOf(column), 0);
+
+
+  // Hücre içerikleri sütun ANAHTARINA göre üretiliyor: sıra kullanıcıdan
+  // geldiği için başlıklar ve hücreler artık elle yazılmış sabit bir dizilim
+  // paylaşamıyor, ikisi de aynı `orderedColumns` listesini geziyor.
+  function renderCell(column: ListColumn, t: TaskWithContext) {
+    switch (column) {
+      case "gorev":
+        return (
+          <>
+            <Link
+              href={`/tasks/${t.id}`}
+              className="line-clamp-2 font-medium hover:text-brand-600 dark:hover:text-brand-400"
+            >
+              {t.title}
+            </Link>
+            <div className="truncate text-xs text-muted">{t.content_title}</div>
+          </>
+        );
+      case "tur":
+        return (
+          <span className="inline-block max-w-full truncate rounded-md bg-surface-muted px-2 py-1 text-xs font-medium text-secondary">
+            {CONTENT_TYPE_LABEL[t.content_type]}
+          </span>
+        );
+      case "marka":
+        return <span className="block truncate font-display font-medium text-secondary">{t.brand_name}</span>;
+      case "oncelik":
+        return <TaskPrioritySelect taskId={t.id} priority={t.priority} />;
+      // Puan kendi sütununda; zorluk hücresine gömülü rozet olarak DA
+      // göstermek aynı sayıyı iki kez yazmak olurdu (üstelik başlıksız,
+      // sıralanamaz halde).
+      case "zorluk":
+        return <TaskDifficultySelect taskId={t.id} difficulty={t.difficulty} />;
+      case "puan":
+        return (
+          <span className={`inline-block whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${taskWeightBadgeClass(t.weight_points)}`}>
+            {t.weight_points}
+          </span>
+        );
+      case "revize":
+        return (
+          <div className="flex min-w-0 flex-col items-start gap-1">
+            {t.status === "Incelemede" && t.pending_delivery_id && t.pending_delivery_version && (
+              <TaskQuickRevisionDialog
+                taskTitle={t.title}
+                deliveryId={t.pending_delivery_id}
+                deliveryVersion={t.pending_delivery_version}
+              />
+            )}
+            {t.revision_count > 0 ? (
+              <Link href={`/tasks/${t.id}`} className={`inline-flex max-w-full items-center gap-1 truncate text-xs font-semibold ${isRevisionOverTarget(t.active_revision_elapsed_minutes, t.active_revision_target_minutes) ? "text-danger" : t.active_revision_id ? "text-violet-700 dark:text-violet-300" : "text-secondary"}`}>
+                R{t.revision_count}
+                <span className="font-normal text-muted">· {formatRevisionDuration(t.active_revision_elapsed_minutes ?? t.total_revision_minutes)}</span>
+              </Link>
+            ) : !t.pending_delivery_id ? <span className="text-muted">—</span> : null}
+          </div>
+        );
+      case "durum":
+        return <TaskStatusSelect taskId={t.id} status={t.status} />;
+      case "atanan":
+        return (
+          <div className="flex min-w-0 items-center gap-2">
+            {t.assignee_name && (
+              <PersonAvatar
+                name={t.assignee_name}
+                avatarPath={t.assignee_avatar_path}
+                size="xs"
+              />
+            )}
+            <AssigneeSelect taskId={t.id} assigneeId={t.assignee_id} people={people} />
+          </div>
+        );
+      case "teslim":
+        return <TaskDueDateEdit taskId={t.id} dueDate={t.due_date} />;
+      // Kişisel hedef yalnızca görev SANA atanmışsa taşınır (alan undefined
+      // ise başkasının işi) — o zaman düzenleme değil düz bir tire gösterilir.
+      // Yayınlanmış görevde de düzenleme kapalı: sunucu yeni hedef yazmayı
+      // reddediyor.
+      case "hedef":
+        return t.personal_target_date !== undefined && t.status !== "Yayinlandi" ? (
+          <TaskTargetDateEdit taskId={t.id} targetDate={t.personal_target_date} />
+        ) : t.personal_target_date ? (
+          <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-brand-600 dark:text-brand-300">
+            <Icon name="clock" className="size-3.5" /> {formatDateShort(t.personal_target_date)}
+          </span>
+        ) : (
+          <span className="text-faint">—</span>
+        );
+      // Yorum sütunu: sayı + son yorumun metni `title` içinde, üstüne gelince
+      // tam metin okunur. Tıklayınca sağda panel açılır.
+      case "yorum":
+        return t.comment_count > 0 ? (
+          <button
+            type="button"
+            onClick={() => setOpenComments({ id: t.id, title: t.title })}
+            title={
+              t.last_comment_body
+                ? `${t.last_comment_author ?? "?"}: ${t.last_comment_body}`
+                : undefined
+            }
+            className="inline-flex items-center gap-1 text-xs text-secondary hover:text-brand-600 dark:hover:text-brand-300"
+          >
+            <CommentIcon />
+            <span className="tabular-nums">{t.comment_count}</span>
+          </button>
+        ) : (
+          <span className="text-muted">—</span>
+        );
+    }
+  }
+  function beginResize(column: ListColumn, event: React.PointerEvent<HTMLElement>) {
+    if (!layout) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    const startX = event.clientX;
+    const startWidth = widthOf(column);
+    const clamp = (value: number) =>
+      Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(value)));
+    handle.setPointerCapture(event.pointerId);
+
+    const onMove = (moveEvent: PointerEvent) => {
+      setDraftWidth({ column, width: clamp(startWidth + moveEvent.clientX - startX) });
+    };
+    const onUp = (upEvent: PointerEvent) => {
+      handle.releasePointerCapture(upEvent.pointerId);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      setDraftWidth(null);
+      layout.setWidth(column, clamp(startWidth + upEvent.clientX - startX));
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  }
   // Yorum sütununa tıklayınca açılan sağ panel — hangi görevin yorumları
   // gösteriliyor. null = kapalı.
   const [openComments, setOpenComments] = useState<{ id: string; title: string } | null>(null);
@@ -492,11 +750,21 @@ export default function TaskListView({
         </div>
       )}
 
+      {/* `table-fixed`: sütun genişlikleri gerçekten uygulansın (auto layout'ta
+          içerik genişliği kazanır, kullanıcının elle verdiği ölçü tutmaz).
+          Genişlik toplamı tablo genişliğini belirliyor; taşarsa kapsayıcı
+          yatay kaydırıyor. */}
       <div className="hidden overflow-x-auto rounded-xl border border-border-default bg-surface md:block">
-        <table className="w-full min-w-[900px] text-sm">
+        <table className="w-full table-fixed text-sm" style={{ minWidth: tableWidth }}>
+          <colgroup>
+            <col style={{ width: SELECT_COLUMN_WIDTH }} />
+            {orderedColumns.map((column) => (
+              <col key={column} style={{ width: widthOf(column) }} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="border-b border-border-default text-left text-xs uppercase tracking-wider text-muted">
-              <th className="w-10 px-3 py-2">
+              <th className="px-3 py-2">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -508,18 +776,19 @@ export default function TaskListView({
                   className="cursor-pointer accent-brand-600"
                 />
               </th>
-              {visibleColumns.has("gorev") && <SortableTh column="gorev" label="Görev" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("tur") && <SortableTh column="tur" label="Tür" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("marka") && <SortableTh column="marka" label="Marka" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("oncelik") && <SortableTh column="oncelik" label="Öncelik" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("zorluk") && <SortableTh column="zorluk" label="Zorluk" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("puan") && <SortableTh column="puan" label="Puan" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("revize") && <SortableTh column="revize" label="Revize" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("durum") && <SortableTh column="durum" label="Durum" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("atanan") && <SortableTh column="atanan" label="Atanan" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("teslim") && <SortableTh column="teslim" label="Teslim" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("hedef") && <SortableTh column="hedef" label="Hedef teslim" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("yorum") && <SortableTh column="yorum" label="Yorum" sort={sort} onToggle={toggleSort} />}
+              {orderedColumns.map((column) => (
+                <SortableTh
+                  key={column}
+                  column={column}
+                  label={COLUMN_LABEL[column]}
+                  sort={sort}
+                  onToggle={toggleSort}
+                  onMove={(dragged, target) => layout?.moveColumn(dragged, target)}
+                  onResize={beginResize}
+                  dropTarget={dropTarget}
+                  onDropTargetChange={setDropTarget}
+                />
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -549,113 +818,11 @@ export default function TaskListView({
                       className="mt-0.5 cursor-pointer accent-brand-600"
                     />
                   </td>
-                  {visibleColumns.has("gorev") && <td className="px-3 py-2">
-                    <Link
-                      href={`/tasks/${t.id}`}
-                      className="font-medium hover:text-brand-600 dark:hover:text-brand-400 dark:hover:text-brand-400"
-                    >
-                      {t.title}
-                    </Link>
-                    <div className="text-xs text-muted">{t.content_title}</div>
-                  </td>}
-                  {visibleColumns.has("tur") && <td className="px-3 py-2">
-                    <span className="whitespace-nowrap rounded-md bg-surface-muted px-2 py-1 text-xs font-medium text-secondary">
-                      {CONTENT_TYPE_LABEL[t.content_type]}
-                    </span>
-                  </td>}
-                  {visibleColumns.has("marka") && <td className="px-3 py-2 font-display font-medium text-secondary">{t.brand_name}</td>}
-                  {visibleColumns.has("oncelik") && <td className="px-3 py-2">
-                    <TaskPrioritySelect taskId={t.id} priority={t.priority} />
-                  </td>}
-                  {/* Puan artık kendi sütununda; zorluk hücresine gömülü rozet
-                      olarak DA göstermek aynı sayıyı iki kez yazmak olurdu
-                      (üstelik başlıksız, sıralanamaz halde). */}
-                  {visibleColumns.has("zorluk") && <td className="px-3 py-2">
-                    <div className="min-w-[7.5rem]">
-                      <TaskDifficultySelect taskId={t.id} difficulty={t.difficulty} />
-                    </div>
-                  </td>}
-                  {visibleColumns.has("puan") && <td className="px-3 py-2">
-                    <span className={`inline-block whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${taskWeightBadgeClass(t.weight_points)}`}>
-                      {t.weight_points}
-                    </span>
-                  </td>}
-                  {visibleColumns.has("revize") && <td className="px-3 py-2">
-                    <div className="flex min-w-[7rem] flex-col items-start gap-1">
-                      {t.status === "Incelemede" && t.pending_delivery_id && t.pending_delivery_version && (
-                        <TaskQuickRevisionDialog
-                          taskTitle={t.title}
-                          deliveryId={t.pending_delivery_id}
-                          deliveryVersion={t.pending_delivery_version}
-                        />
-                      )}
-                      {t.revision_count > 0 ? (
-                        <Link href={`/tasks/${t.id}`} className={`inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold ${isRevisionOverTarget(t.active_revision_elapsed_minutes, t.active_revision_target_minutes) ? "text-danger" : t.active_revision_id ? "text-violet-700 dark:text-violet-300" : "text-secondary"}`}>
-                          R{t.revision_count}
-                          <span className="font-normal text-muted">· {formatRevisionDuration(t.active_revision_elapsed_minutes ?? t.total_revision_minutes)}</span>
-                        </Link>
-                      ) : !t.pending_delivery_id ? <span className="text-muted">—</span> : null}
-                    </div>
-                  </td>}
-                  {visibleColumns.has("durum") && <td className="px-3 py-2">
-                    <TaskStatusSelect taskId={t.id} status={t.status} />
-                  </td>}
-                  {visibleColumns.has("atanan") && <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      {t.assignee_name && (
-                        <PersonAvatar
-                          name={t.assignee_name}
-                          avatarPath={t.assignee_avatar_path}
-                          size="xs"
-                        />
-                      )}
-                      <AssigneeSelect
-                        taskId={t.id}
-                        assigneeId={t.assignee_id}
-                        people={people}
-                      />
-                    </div>
-                  </td>}
-                  {visibleColumns.has("teslim") && <td className="px-3 py-2">
-                    <TaskDueDateEdit taskId={t.id} dueDate={t.due_date} />
-                  </td>}
-                  {/* Kişisel hedef yalnızca görev SANA atanmışsa taşınır
-                      (alan undefined ise başkasının işi) — o zaman düzenleme
-                      değil düz bir tire gösterilir. Yayınlanmış görevde de
-                      düzenleme kapalı: sunucu yeni hedef yazmayı reddediyor. */}
-                  {visibleColumns.has("hedef") && <td className="px-3 py-2">
-                    {t.personal_target_date !== undefined && t.status !== "Yayinlandi" ? (
-                      <TaskTargetDateEdit taskId={t.id} targetDate={t.personal_target_date} />
-                    ) : t.personal_target_date ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-brand-600 dark:text-brand-300">
-                        <Icon name="clock" className="size-3.5" /> {formatDateShort(t.personal_target_date)}
-                      </span>
-                    ) : (
-                      <span className="text-faint">—</span>
-                    )}
-                  </td>}
-                  {/* Yorum sütunu: sayı + son yorumun metni `title` içinde,
-                      üstüne gelince tam metin okunur. Tıklayınca sağda panel
-                      açılır (görev sayfasına gitmeye gerek kalmadan). */}
-                  {visibleColumns.has("yorum") && <td className="px-3 py-2">
-                    {t.comment_count > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setOpenComments({ id: t.id, title: t.title })}
-                        title={
-                          t.last_comment_body
-                            ? `${t.last_comment_author ?? "?"}: ${t.last_comment_body}`
-                            : undefined
-                        }
-                        className="inline-flex items-center gap-1 text-xs text-secondary hover:text-brand-600 dark:hover:text-brand-300"
-                      >
-                        <CommentIcon />
-                        <span className="tabular-nums">{t.comment_count}</span>
-                      </button>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>}
+                  {orderedColumns.map((column) => (
+                    <td key={column} className="px-3 py-2 align-middle">
+                      {renderCell(column, t)}
+                    </td>
+                  ))}
                 </tr>
               );
             })}

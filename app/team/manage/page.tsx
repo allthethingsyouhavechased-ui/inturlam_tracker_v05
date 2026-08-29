@@ -7,6 +7,7 @@ import NewPersonPopover from "@/components/NewPersonPopover";
 import PersonAvatar from "@/components/PersonAvatar";
 import ResetPersonPasswordPopover from "@/components/ResetPersonPasswordPopover";
 import SubmitButton from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import { canManageRoles, ROLE_ADMIN_PERSON_ID } from "@/lib/auth/authorization";
@@ -38,7 +39,22 @@ export default async function TeamManagementPage() {
         title="Hesap yönetimi"
         description="Ekip hesaplarını aç, erişim rollerini yönet veya ayrılan çalışanları pasife al."
         breadcrumb={[{ label: "Ekip", href: "/team" }, { label: "Hesap yönetimi" }]}
-        actions={<NewPersonPopover />}
+        actions={
+          <>
+            {/* Guest bölümü sayfanın en altında, aktif + pasif hesap
+                listelerinin arkasında kalıyordu; başlıktan doğrudan bir giriş
+                olmadan varlığı fark edilmiyordu. */}
+            <a
+              href="#guest-accounts-title"
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              <Icon name="user" className="size-3.5" />
+              Guest hesapları
+              <span className="tabular-nums text-muted">{guestAccounts.length}</span>
+            </a>
+            <NewPersonPopover />
+          </>
+        }
       />
 
       <section aria-labelledby="active-accounts-title">
@@ -121,8 +137,9 @@ export default async function TeamManagementPage() {
         </div>
       </section>
 
-      <section className="mt-8" aria-labelledby="guest-accounts-title">
-        <h2 id="guest-accounts-title" className="mb-1 text-sm font-semibold text-foreground">Guest hesapları</h2>
+      {/* `scroll-mt`: sticky üst çubuk, çapaya atlayınca başlığı örtmesin. */}
+      <section className="mt-8 scroll-mt-[calc(var(--header-h)+1.5rem)]" aria-labelledby="guest-accounts-title">
+        <h2 id="guest-accounts-title" className="mb-1 scroll-mt-[calc(var(--header-h)+1.5rem)] text-sm font-semibold text-foreground">Guest hesapları</h2>
         <p className="mb-3 text-xs text-muted">Her marka için en fazla bir ortak guest hesabı bulunur. Aynı marka yeniden kaydedilirse kullanıcı adı ve şifresi yenilenir.</p>
         <ActionForm action={saveGuestAccountAction} successMessage="Guest hesabı kaydedildi." resetOnSuccess feedbackClassName="sm:col-span-2 lg:col-span-5" className="grid gap-3 rounded-xl border border-border-default bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
           <label className="grid gap-1 text-xs font-medium text-secondary">Marka<select name="brandId" required className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm"><option value="">Seç</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
