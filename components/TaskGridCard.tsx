@@ -127,7 +127,10 @@ export default function TaskGridCard({
           <span className={`${metaBadgeClass} justify-self-end ${TASK_PRIORITY_BADGE[task.priority]}`}>
             {TASK_PRIORITY_LABEL[task.priority].toLocaleUpperCase("tr-TR")}
           </span>
-          <div className="min-w-0">
+          {/* Hedef tarih + revize/yorum düğmeleri AYNI hücrede: düğmeler kendi
+              satırına inince kart bir satır uzuyor ve düğmenin sağında koca bir
+              boşluk kalıyordu. Puan ve avatar bu satırda, karşılarında. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {task.personal_target_date !== undefined &&
               (task.status === "Yayinlandi" ? (
                 task.personal_target_date && (
@@ -139,12 +142,6 @@ export default function TaskGridCard({
               ) : (
                 <TaskTargetDateEdit taskId={task.id} targetDate={task.personal_target_date} compact />
               ))}
-          </div>
-          <span aria-hidden="true" />
-          {/* Revize/yorum düğmeleri kendi satırında değil, puan ve avatarın
-              KARŞISINDA duruyor: alt sırada tek başına bir düğme sağında
-              koca bir boşluk bırakıyordu. */}
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {task.status === "Incelemede" && task.pending_delivery_id && task.pending_delivery_version && (
               <TaskQuickRevisionDialog
                 taskTitle={task.title}

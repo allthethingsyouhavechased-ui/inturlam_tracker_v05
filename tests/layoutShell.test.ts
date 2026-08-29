@@ -61,9 +61,9 @@ describe("marka başlığı bilgi hiyerarşisi", () => {
   it("kompakt hedefleri başlık solda, kontroller sağda tek satırda sunar", () => {
     const targets = source("components/BrandContentTargetsSection.tsx");
     assert.match(targets, /compact && completionControl/);
-    // Şeritte kendi hücresinde ortalanmak yerine kalan genişliği kaplar; üç blok
-    // (başlık · sayaçlar · ay gezgini) tek taban çizgisinde hizalanır.
-    assert.match(targets, /compact \? "flex min-w-0 flex-1 items-end/);
+    // Şeritte kalan genişliği kaplar ve "AYLIK HEDEF" başlığı sayaçlarla aynı
+    // dikey hizada durur — başlık kendi başına yukarıda asılı kalmasın.
+    assert.match(targets, /compact \? "flex min-w-0 flex-1 items-center/);
     assert.ok(targets.indexOf('compact \? "AYLIK HEDEF"') < targets.indexOf("data-compact-target-grid"));
     assert.match(targets, /flex-nowrap/);
     assert.match(targets, /grid shrink-0 gap-1 text-center text-\[9px\]/);

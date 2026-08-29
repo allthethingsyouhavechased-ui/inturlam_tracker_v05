@@ -53,8 +53,8 @@ export default function BrandContentTargetsSection({
   // (`flex-1`), sayaçlar da o genişliğe eşit dağılıyor. "AYLIK HEDEF" başlığı
   // `self-start` ile POST/STORY/REELS etiketleriyle aynı satırda.
   return (
-    <section className={compact ? "flex min-w-0 flex-1 items-end justify-between gap-x-4 gap-y-2 overflow-x-auto pb-1" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
-      <div className={compact ? "shrink-0 self-start" : undefined}>
+    <section className={compact ? "flex min-w-0 flex-1 items-center justify-center gap-x-4 gap-y-2 overflow-x-auto pb-1" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
+      <div className={compact ? "shrink-0" : undefined}>
         <h2 className={compact ? "text-eyebrow text-brand-600 dark:text-brand-300" : "text-sm font-semibold text-foreground"}>
           {compact ? "AYLIK HEDEF" : "Aylık içerik hedefleri"}
         </h2>
@@ -71,7 +71,7 @@ export default function BrandContentTargetsSection({
       </div>
       <div
         data-compact-target-grid={compact || undefined}
-        className={compact ? "flex min-w-0 flex-1 flex-nowrap items-end justify-evenly gap-3" : "flex flex-wrap gap-x-6 gap-y-3"}
+        className={compact ? "flex min-w-0 flex-nowrap items-end gap-3" : "flex flex-wrap gap-x-6 gap-y-3"}
       >
         {CONTENT_KINDS.map((kind) => (
           <label

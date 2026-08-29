@@ -102,7 +102,9 @@ export default function BrandOperationsOverview({
           kalıyor, üç blok birbiriyle hizasız görünüyordu. */}
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-border-subtle px-4 py-3 sm:px-5">
         <div className="shrink-0">
-          <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">OPERASYON ÖZETİ · {brand.name}</p>
+          {/* Marka adı başlıkta, breadcrumb'da ve künyede zaten yazıyor —
+              kartın kendi eyebrow'unda dördüncü kez tekrarlanmasına gerek yok. */}
+          <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">OPERASYON ÖZETİ</p>
           <h2 id="brand-operations-title" className="mt-0.5 text-sm font-semibold text-foreground">{monthLabel}</h2>
         </div>
         {targets}
