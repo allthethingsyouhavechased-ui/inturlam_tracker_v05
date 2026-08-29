@@ -58,17 +58,14 @@ describe("marka başlığı bilgi hiyerarşisi", () => {
     assert.doesNotMatch(page, /brand\.key_finding|staleStats/);
   });
 
-  it("kompakt hedefleri başlık solda, kontroller sağda tek satırda sunar", () => {
+  it("kompakt hedefleri başlıksız, etiket-sayaç çiftleri hâlinde tek satırda sunar", () => {
     const targets = source("components/BrandContentTargetsSection.tsx");
     assert.match(targets, /compact && completionControl/);
-    // Şeritte kalan genişliği kaplar; `items-end` sayesinde "AYLIK HEDEF"
-    // başlığı sayaç kontrolleriyle aynı alt hizada durur, etiket satırında
-    // yukarıda asılı kalmaz.
-    assert.match(targets, /compact \? "flex min-w-0 flex-1 items-end/);
-    assert.doesNotMatch(targets, /compact \? "shrink-0 self-start"/);
-    assert.ok(targets.indexOf('compact \? "AYLIK HEDEF"') < targets.indexOf("data-compact-target-grid"));
-    assert.match(targets, /flex-nowrap/);
-    assert.match(targets, /grid shrink-0 gap-1 text-center text-\[9px\]/);
+    // Şeritte kalan genişliği kaplar ve sayaçlar eşit aralıklarla yayılır.
+    assert.match(targets, /compact \? "flex min-w-0 flex-1 items-center justify-between/);
+    // Ayrı bir "AYLIK HEDEF" başlığı YOK — etiket kendi sayacının solunda.
+    assert.doesNotMatch(targets, /AYLIK HEDEF/);
+    assert.match(targets, /compact \? "flex shrink-0 items-center gap-2 text-\[9px\]/);
     assert.match(source("components/BrandOperationsOverview.tsx"), /flex flex-wrap items-end justify-between/);
   });
 });

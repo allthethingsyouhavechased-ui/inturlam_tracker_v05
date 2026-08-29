@@ -30,7 +30,7 @@ export default function BrandContentTargetsSection({
         month,
         !monthlyContentCompleted,
       )}
-      className={compact ? "shrink-0 self-end" : "mt-3"}
+      className={compact ? "shrink-0" : "mt-3"}
     >
       <button
         type="submit"
@@ -49,37 +49,35 @@ export default function BrandContentTargetsSection({
   );
 
   // Compact hâl marka sayfasının üst şeridinde, sol başlık ile ay gezgininin
-  // ARASINDA duruyor: kendi içinde ortalanmak yerine kalan genişliği kaplıyor
-  // (`flex-1`), sayaçlar da o genişliğe eşit dağılıyor. "AYLIK HEDEF" başlığı
-  // `self-start` ile POST/STORY/REELS etiketleriyle aynı satırda.
+  // ARASINDA duruyor ve kalan genişliği kaplıyor (`flex-1`). Ayrı bir "AYLIK
+  // HEDEF" başlığı YOK: POST/STORY/REELS etiketleri kendi sayaçlarının SOLUNDA
+  // durduğu için satır zaten kendini anlatıyor, üstelik başlık nereye
+  // hizalanırsa hizalansın diğer bloklarla aynı çizgiye oturmuyordu.
   return (
-    <section className={compact ? "flex min-w-0 flex-1 items-end justify-between gap-x-4 gap-y-2 overflow-x-auto pb-1" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
-      {/* `self-start` YOK: container `items-end` olduğu için başlık, sayaç
-          kontrollerinin (−/0/+) alt hizasına oturur. Etiket satırına (POST /
-          STORY / REELS) hizalanınca yukarıda asılı kalıyordu. */}
-      <div className={compact ? "shrink-0" : undefined}>
-        <h2 className={compact ? "text-eyebrow text-brand-600 dark:text-brand-300" : "text-sm font-semibold text-foreground"}>
-          {compact ? "AYLIK HEDEF" : "Aylık içerik hedefleri"}
-        </h2>
-        {!compact && <p className="mt-0.5 text-xs text-muted">
-          Ay fark etmeksizin geçerli sabit hedef —{" "}
-          <Link
-            href="/social/varlik"
-            className="font-medium text-brand-600 hover:underline dark:text-brand-400"
-          >
-            Varlık
-          </Link>{" "}
-          sayfasında bu markanın elindeki hazır sayı bununla karşılaştırılır.
-        </p>}
-      </div>
+    <section className={compact ? "flex min-w-0 flex-1 items-center justify-between gap-x-4 gap-y-2 overflow-x-auto pb-1" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
+      {!compact && (
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Aylık içerik hedefleri</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            Ay fark etmeksizin geçerli sabit hedef —{" "}
+            <Link
+              href="/social/varlik"
+              className="font-medium text-brand-600 hover:underline dark:text-brand-400"
+            >
+              Varlık
+            </Link>{" "}
+            sayfasında bu markanın elindeki hazır sayı bununla karşılaştırılır.
+          </p>
+        </div>
+      )}
       <div
         data-compact-target-grid={compact || undefined}
-        className={compact ? "flex min-w-0 flex-1 flex-nowrap items-end justify-evenly gap-3" : "flex flex-wrap gap-x-6 gap-y-3"}
+        className={compact ? "flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-3" : "flex flex-wrap gap-x-6 gap-y-3"}
       >
         {CONTENT_KINDS.map((kind) => (
           <label
             key={kind}
-            className={compact ? "grid shrink-0 gap-1 text-center text-[9px] font-medium uppercase tracking-wide text-muted" : "grid gap-1 text-xs font-medium text-muted"}
+            className={compact ? "flex shrink-0 items-center gap-2 text-[9px] font-medium uppercase tracking-wide text-muted" : "grid gap-1 text-xs font-medium text-muted"}
           >
             {CONTENT_KIND_LABEL[kind]}
             <CountStepper
