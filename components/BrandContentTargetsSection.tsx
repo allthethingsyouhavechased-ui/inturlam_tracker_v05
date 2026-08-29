@@ -49,12 +49,16 @@ export default function BrandContentTargetsSection({
   );
 
   // Compact hâl marka sayfasının üst şeridinde, sol başlık ile ay gezgininin
-  // ARASINDA duruyor ve kalan genişliği kaplıyor (`flex-1`). Ayrı bir "AYLIK
-  // HEDEF" başlığı YOK: POST/STORY/REELS etiketleri kendi sayaçlarının SOLUNDA
-  // durduğu için satır zaten kendini anlatıyor, üstelik başlık nereye
-  // hizalanırsa hizalansın diğer bloklarla aynı çizgiye oturmuyordu.
+  // ARASINDA duruyor. Ayrı bir "AYLIK HEDEF" başlığı YOK: POST/STORY/REELS
+  // etiketleri kendi sayaçlarının SOLUNDA durduğu için satır zaten kendini
+  // anlatıyor.
+  //
+  // `flex-1` + `justify-between` DEĞİL: kalan genişliği kaplayıp sayaçları
+  // uçlara yaymak üç sayacı birbirinden kopardığı için tek bir "aylık hedef"
+  // kontrolü gibi okunmuyorlardı. Şimdi içerikleri kadar yer kaplayan sıkı bir
+  // grup — "Tamamlandı" da aynı grubun parçası.
   return (
-    <section className={compact ? "flex min-w-0 flex-1 items-center justify-between gap-x-4 gap-y-2 overflow-x-auto pb-1" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
+    <section className={compact ? "flex min-w-0 items-center gap-x-4 gap-y-2 overflow-x-auto pb-1" : "space-y-3 rounded-xl border border-border-default bg-surface p-4"}>
       {!compact && (
         <div>
           <h2 className="text-sm font-semibold text-foreground">Aylık içerik hedefleri</h2>
@@ -72,7 +76,7 @@ export default function BrandContentTargetsSection({
       )}
       <div
         data-compact-target-grid={compact || undefined}
-        className={compact ? "flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-3" : "flex flex-wrap gap-x-6 gap-y-3"}
+        className={compact ? "flex min-w-0 flex-nowrap items-center gap-4" : "flex flex-wrap gap-x-6 gap-y-3"}
       >
         {CONTENT_KINDS.map((kind) => (
           <label

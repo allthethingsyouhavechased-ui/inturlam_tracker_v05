@@ -61,8 +61,10 @@ describe("marka başlığı bilgi hiyerarşisi", () => {
   it("kompakt hedefleri başlıksız, etiket-sayaç çiftleri hâlinde tek satırda sunar", () => {
     const targets = source("components/BrandContentTargetsSection.tsx");
     assert.match(targets, /compact && completionControl/);
-    // Şeritte kalan genişliği kaplar ve sayaçlar eşit aralıklarla yayılır.
-    assert.match(targets, /compact \? "flex min-w-0 flex-1 items-center justify-between/);
+    // Sayaçlar tek bir kontrol grubu gibi bitişik durur — şeridi kaplayıp
+    // birbirinden kopmazlar.
+    assert.match(targets, /compact \? "flex min-w-0 items-center gap-x-4/);
+    assert.doesNotMatch(targets, /compact \? "flex min-w-0 flex-1/);
     // Ayrı bir "AYLIK HEDEF" başlığı YOK — etiket kendi sayacının solunda.
     assert.doesNotMatch(targets, /AYLIK HEDEF/);
     assert.match(targets, /compact \? "flex shrink-0 items-center gap-2 text-\[9px\]/);

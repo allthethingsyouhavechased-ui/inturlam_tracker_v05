@@ -88,17 +88,21 @@ export const TASK_STATUS_BADGE: Record<TaskStatus, string> = {
   Incelemede:
     "bg-violet-100 text-violet-800 ring-1 ring-inset ring-violet-300 dark:bg-violet-950 dark:text-violet-200 dark:ring-violet-800",
   Onaylandi:
-    "bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800",
-  Yayinlandi:
     "bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800",
+  Yayinlandi:
+    "bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800",
 };
 
+// Onaylandı yeşil, Yayınlandı amber (2026-08-29'da yer değiştirdiler).
+// Aşağıdaki DOT / TEXT / BORDER_TOP / PROGRESS listeleri aynı eşleşmeyi
+// TEKRARLIYOR — biri değişirse hepsi değişmeli, yoksa aynı durum pano
+// sütununda başka, rapor çubuğunda başka renkte görünür.
 export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
   Beklemede: "bg-zinc-400",
   DevamEdiyor: "bg-sky-600",
   Incelemede: "bg-violet-600",
-  Onaylandi: "bg-amber-500",
-  Yayinlandi: "bg-emerald-600",
+  Onaylandi: "bg-emerald-600",
+  Yayinlandi: "bg-amber-500",
 };
 
 // Kanban sütunlarının semantik renklerini metin üzerinde kullanan yüzeyler.
@@ -110,8 +114,8 @@ export const TASK_STATUS_TEXT: Record<TaskStatus, string> = {
   Beklemede: "text-zinc-400",
   DevamEdiyor: "text-sky-600",
   Incelemede: "text-violet-600",
-  Onaylandi: "text-amber-500",
-  Yayinlandi: "text-emerald-600",
+  Onaylandi: "text-emerald-600",
+  Yayinlandi: "text-amber-500",
 };
 
 // Kanban kolon başlıklarının üst çizgisi — TASK_STATUS_DOT ile aynı renk
@@ -122,8 +126,8 @@ export const TASK_STATUS_BORDER_TOP: Record<TaskStatus, string> = {
   Beklemede: "border-t-zinc-400",
   DevamEdiyor: "border-t-sky-600",
   Incelemede: "border-t-violet-600",
-  Onaylandi: "border-t-amber-500",
-  Yayinlandi: "border-t-emerald-600",
+  Onaylandi: "border-t-emerald-600",
+  Yayinlandi: "border-t-amber-500",
 };
 
 // Rapor çubukları ve diğer dolu durum göstergeleri de yukarıdaki semantik
@@ -132,8 +136,8 @@ export const TASK_STATUS_PROGRESS: Record<TaskStatus, string> = {
   Beklemede: "bg-zinc-400 dark:bg-zinc-500",
   DevamEdiyor: "bg-sky-600",
   Incelemede: "bg-violet-600",
-  Onaylandi: "bg-amber-500",
-  Yayinlandi: "bg-emerald-600",
+  Onaylandi: "bg-emerald-600",
+  Yayinlandi: "bg-amber-500",
 };
 
 // Ağırlık puanı rozetinin rengi: sayıya bakmadan da işin ne kadar ağır
