@@ -67,7 +67,9 @@ const COLUMN_OPTIONS: readonly { key: ListColumn; label: string }[] = [
   { key: "teslim", label: "Teslim" },
   { key: "tur", label: "Tür" },
   { key: "puan", label: "Puan" },
-  { key: "zorluk", label: "İş yükü" },
+  // Filtre paneli, görev detayı ve kart rozeti hep "Zorluk" diyor; sütun
+  // başlığının tek başına "İş yükü" demesi aynı alanı iki isimle anlatıyordu.
+  { key: "zorluk", label: "Zorluk" },
   { key: "revize", label: "Revize" },
   { key: "hedef", label: "Hedef teslim" },
   { key: "yorum", label: "Yorum" },
@@ -509,7 +511,7 @@ export default function TaskListView({
               {visibleColumns.has("tur") && <SortableTh column="tur" label="Tür" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("marka") && <SortableTh column="marka" label="Marka" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("oncelik") && <SortableTh column="oncelik" label="Öncelik" sort={sort} onToggle={toggleSort} />}
-              {visibleColumns.has("zorluk") && <SortableTh column="zorluk" label="İş yükü" sort={sort} onToggle={toggleSort} />}
+              {visibleColumns.has("zorluk") && <SortableTh column="zorluk" label="Zorluk" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("puan") && <SortableTh column="puan" label="Puan" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("revize") && <SortableTh column="revize" label="Revize" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("durum") && <SortableTh column="durum" label="Durum" sort={sort} onToggle={toggleSort} />}

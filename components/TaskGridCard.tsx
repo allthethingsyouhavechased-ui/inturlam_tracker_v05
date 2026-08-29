@@ -140,22 +140,11 @@ export default function TaskGridCard({
                 <TaskTargetDateEdit taskId={task.id} targetDate={task.personal_target_date} compact />
               ))}
           </div>
-          <span className="flex items-center justify-self-end gap-1.5">
-              <span
-                aria-label={`${task.weight_points} puan`}
-                title={`Görev ağırlığı: ${task.weight_points} puan`}
-                className="grid size-7 place-items-center rounded-full bg-brand-100 text-[10px] font-bold tabular-nums text-brand-700 dark:bg-brand-950 dark:text-brand-200"
-              >
-                {task.weight_points}
-              </span>
-              {task.assignee_name && (
-                <PersonAvatar name={task.assignee_name} avatarPath={task.assignee_avatar_path} size="xs" />
-              )}
-          </span>
-        </div>
-
-        {(task.status === "Incelemede" && task.pending_delivery_id && task.pending_delivery_version || task.comment_count > 0) && (
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+          <span aria-hidden="true" />
+          {/* Revize/yorum düğmeleri kendi satırında değil, puan ve avatarın
+              KARŞISINDA duruyor: alt sırada tek başına bir düğme sağında
+              koca bir boşluk bırakıyordu. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {task.status === "Incelemede" && task.pending_delivery_id && task.pending_delivery_version && (
               <TaskQuickRevisionDialog
                 taskTitle={task.title}
@@ -174,7 +163,7 @@ export default function TaskGridCard({
                   }}
                   title={task.last_comment_body ?? `${task.comment_count} yorum`}
                   aria-label={`${task.comment_count} yorumu aç`}
-                  className="ui-press inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+                  className="ui-press inline-flex min-h-7 items-center gap-1 rounded-md px-1.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
                 >
                   <CommentIcon />
                   {task.comment_count}
@@ -183,14 +172,26 @@ export default function TaskGridCard({
                 <Link
                   href={`/tasks/${task.id}`}
                   title={task.last_comment_body ?? `${task.comment_count} yorum`}
-                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+                  className="inline-flex min-h-7 items-center gap-1 rounded-md px-1.5 text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground"
                 >
                   <CommentIcon />
                   {task.comment_count}
                 </Link>
               ))}
           </div>
-        )}
+          <span className="flex items-center justify-self-end gap-1.5">
+              <span
+                aria-label={`${task.weight_points} puan`}
+                title={`Görev ağırlığı: ${task.weight_points} puan`}
+                className="grid size-7 place-items-center rounded-full bg-brand-100 text-[10px] font-bold tabular-nums text-brand-700 dark:bg-brand-950 dark:text-brand-200"
+              >
+                {task.weight_points}
+              </span>
+              {task.assignee_name && (
+                <PersonAvatar name={task.assignee_name} avatarPath={task.assignee_avatar_path} size="xs" />
+              )}
+          </span>
+        </div>
       </footer>
     </article>
   );

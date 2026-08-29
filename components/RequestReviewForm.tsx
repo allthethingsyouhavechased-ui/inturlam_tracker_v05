@@ -49,7 +49,7 @@ function RejectButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="danger" className="w-full" disabled={pending}>
-      {pending ? "Reddediliyor…" : "Talebi reddet"}
+      {pending ? "Reddediliyor…" : "Reddi gönder"}
     </Button>
   );
 }
@@ -180,13 +180,27 @@ export default function RequestReviewForm({
               ))}
             </Select>
           </label>
+          {/* Puan zorluktan ayrı: zorluk üç kaba kategori, puan aylık ilerleme
+              hesabına giren ağırlık. Talep kaydında saklanmıyor, onaydan doğan
+              göreve yazılıyor. */}
+          <label className="grid gap-1.5 text-xs font-medium text-secondary">
+            Ağırlık puanı
+            <Input name="weightPoints" type="number" min={1} max={100} step={1} defaultValue={3} required />
+            <span className="font-normal leading-4 text-muted">
+              Aylık ilerlemede bu görevin ağırlığı. 1–100.
+            </span>
+          </label>
         </div>
         <ReviewButtons assigneeName={selectedAssigneeName} />
       </form>
 
-      <details className="border-t border-border-subtle pt-4">
-        <summary className="cursor-pointer text-xs font-semibold text-danger hover:underline">
-          Uygun değilse reddet
+      {/* Reddetme, onay kadar gerçek bir karar: soluk bir metin bağlantısı
+          değil "Onayla ve görevi ata" ile aynı ağırlıkta bir düğme — yalnızca
+          rengi negatif. Gerekçe zorunlu olduğu için düğme formu açar, doğrudan
+          göndermez. */}
+      <details className="group border-t border-border-subtle pt-4">
+        <summary className={buttonClass({ variant: "danger", className: "w-full list-none [&::-webkit-details-marker]:hidden" })}>
+          Talebi reddet
         </summary>
         <form action={rejectClientRequestAction} className="mt-3 space-y-3">
           <input type="hidden" name="requestId" value={requestId} />

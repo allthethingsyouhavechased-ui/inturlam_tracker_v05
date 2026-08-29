@@ -217,12 +217,12 @@ export default async function BrandPage({
   return (
     <div>
       <AutoRefresh />
-      {/* Başlık ve künye AYNI satırda: ayrı bir `description` satırı başlık
-          bloğunu dördüncü kez aşağı uzatıyor, sağdaki tek sıra düğmenin altında
-          da o kadar boşluk bırakıyordu. Düğmeler dikeyde ortalı (`items-center`)
-          olduğu için satır tek yükseklikte kapanıyor. */}
+      {/* `layout="brand"`: logo + breadcrumb + eyebrow tek sütun, başlık ve
+          künye onun SAĞINDA, düğmeler en sağda — hepsi tek satırda. Başlık
+          bloğu alt alta dizilince sağdaki düğme sırasının altında koca bir
+          boşluk kalıyordu. */}
       <PageHeader
-        className="!mb-4 !pb-3 lg:!items-center"
+        layout="brand"
         eyebrow="MARKA ÇALIŞMA ALANI"
         title={
           <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">

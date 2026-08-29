@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
+import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
 import { brandAccentStyle } from "@/lib/brandAccent";
 import { TASK_STATUS_LABEL, TASK_STATUS_TEXT } from "@/lib/constants";
@@ -71,7 +72,12 @@ export default function HomeBrandProgress({
               <p className="font-display text-2xl font-semibold tabular-nums text-foreground">{formatPoints(personalProgress.weighted_earned)}</p>
               <p className="mt-0.5 text-[11px] tabular-nums text-muted">{formatPoints(personalProgress.weighted_total)} puanlık plandan</p>
             </div>
-            <Link href={`/panom/katkim?month=${month}`} className="text-[11px] font-semibold text-brand-600 hover:underline dark:text-brand-300">Katkı dökümü</Link>
+            {/* Düz metin bağlantıyken tıklanabilir olduğu anlaşılmıyordu —
+                komşusu bir sayı bloğu, altı çizgisi yalnız hover'da çıkıyordu. */}
+            <Link href={`/panom/katkim?month=${month}`} className={buttonClass({ variant: "secondary", size: "sm", className: "text-[11px]" })}>
+              Katkı dökümü
+              <Icon name="arrow-right" className="size-3.5" />
+            </Link>
           </div>
         </div>
         <div className="bg-surface px-4 py-4 sm:px-5">

@@ -77,6 +77,10 @@ function reviewInput(formData: FormData, reviewerId: string): ClientRequestRevie
   if (!assigneeId) throw new Error("Onay öncesinde görev sahibi seçilmeli.");
   if (!TASK_PRIORITIES.includes(priority)) throw new Error("Geçersiz öncelik.");
   if (!TASK_DIFFICULTIES.includes(difficulty)) throw new Error("Geçersiz zorluk derecesi.");
+  const weightPoints = Number(formData.get("weightPoints") ?? 1);
+  if (!Number.isInteger(weightPoints) || weightPoints < 1 || weightPoints > 100) {
+    throw new Error("Ağırlık puanı 1 ile 100 arasında bir tam sayı olmalı.");
+  }
   const dueDate = cleanDate(formData.get("dueDate"));
   if (!dueDate) throw new Error("Onay ve planlama için teslim tarihi zorunlu.");
   return {
@@ -86,6 +90,7 @@ function reviewInput(formData: FormData, reviewerId: string): ClientRequestRevie
     assigneeId,
     priority,
     difficulty,
+    weightPoints,
     dueDate,
   };
 }

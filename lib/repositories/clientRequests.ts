@@ -316,6 +316,9 @@ export interface ClientRequestReviewInput {
   assigneeId: string;
   priority: TaskPriority;
   difficulty?: TaskDifficulty;
+  /** Onaydan doğan görevin ağırlık puanı. `client_requests`'te sütunu YOK —
+      talep kaydına yazılmaz, yalnızca oluşan göreve geçer. */
+  weightPoints?: number;
   dueDate: string | null;
 }
 
@@ -388,8 +391,8 @@ export function approveClientRequest(
     );
     db.prepare(
       `INSERT INTO tasks
-         (id, content_item_id, title, type_override, priority, difficulty, assignee_id, due_date, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, content_item_id, title, type_override, priority, difficulty, weight_points, assignee_id, due_date, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       taskId,
       contentItemId,
@@ -397,6 +400,7 @@ export function approveClientRequest(
       request.content_type,
       input.priority,
       input.difficulty ?? "Orta",
+      input.weightPoints ?? 1,
       input.assigneeId,
       input.dueDate,
       taskNotes(request),
