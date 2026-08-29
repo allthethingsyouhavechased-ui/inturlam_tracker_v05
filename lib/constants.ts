@@ -102,14 +102,16 @@ export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 };
 
 // Kanban sütunlarının semantik renklerini metin üzerinde kullanan yüzeyler.
-// Durum özeti gibi arka plansız alanlarda BADGE sınıflarını parçalamak yerine
-// aynı renk ailesini tek kaynaktan korur.
+// Tonlar TASK_STATUS_DOT / TASK_STATUS_BORDER_TOP ile BİREBİR aynı ve tema
+// başına ayrışmıyor: durum özetindeki "Beklemede / Devam Ediyor / …" etiketi
+// panodaki sütun başlığıyla TAM aynı rengi göstermeli. Ayrı `dark:` tonu
+// verilirse iki yüzey yan yana konduğunda gözle farklı renk okunuyor.
 export const TASK_STATUS_TEXT: Record<TaskStatus, string> = {
-  Beklemede: "text-zinc-800 dark:text-zinc-200",
-  DevamEdiyor: "text-sky-900 dark:text-sky-200",
-  Incelemede: "text-violet-800 dark:text-violet-200",
-  Onaylandi: "text-amber-900 dark:text-amber-200",
-  Yayinlandi: "text-emerald-800 dark:text-emerald-200",
+  Beklemede: "text-zinc-400",
+  DevamEdiyor: "text-sky-600",
+  Incelemede: "text-violet-600",
+  Onaylandi: "text-amber-500",
+  Yayinlandi: "text-emerald-600",
 };
 
 // Kanban kolon başlıklarının üst çizgisi — TASK_STATUS_DOT ile aynı renk

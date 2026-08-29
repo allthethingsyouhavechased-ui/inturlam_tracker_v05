@@ -18,6 +18,9 @@ export interface TaskFilterState {
   status: TaskStatus | "";
   priority: TaskPriority | "";
   difficulty: TaskDifficulty | "" | "unset";
+  /** Ağırlık puanı alt/üst sınırı; "" = sınır yok. */
+  pointsMin: string;
+  pointsMax: string;
   due: TaskDueFilter;
   from: string;
   to: string;
@@ -33,6 +36,8 @@ export const EMPTY_TASK_FILTERS: TaskFilterState = {
   status: "",
   priority: "",
   difficulty: "",
+  pointsMin: "",
+  pointsMax: "",
   due: "",
   from: "",
   to: "",
@@ -51,6 +56,15 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** `tasks.weight_points` CHECK'i 1-100; sınır dışı/sayı olmayan değer filtre yok
+    sayılır — adres çubuğuna elle yazılan çöp listeyi boşaltmasın. */
+function weightBound(value: string | undefined): string {
+  if (!value) return "";
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) return "";
+  return String(parsed);
+}
+
 /**
  * URL'den gelen ham `searchParams`'ı doğrulanmış filtre durumuna çevirir.
  * Tanınmayan her değer sessizce "filtre yok"a düşer — kullanıcı adres çubuğunda
@@ -67,6 +81,8 @@ export function parseTaskFilterParams(sp: TaskFilterSearchParams): TaskFilterSta
     difficulty: sp.difficulty === "unset"
       ? "unset"
       : oneOf<TaskDifficulty>(sp.difficulty, TASK_DIFFICULTIES),
+    pointsMin: weightBound(sp.pointsMin),
+    pointsMax: weightBound(sp.pointsMax),
     due: oneOf<TaskDueFilter>(sp.due, DUE_FILTERS) as TaskDueFilter,
     from: sp.from && ISO_DATE.test(sp.from) ? sp.from : "",
     to: sp.to && ISO_DATE.test(sp.to) ? sp.to : "",

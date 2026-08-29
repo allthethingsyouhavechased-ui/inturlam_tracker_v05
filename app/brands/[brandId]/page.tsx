@@ -107,6 +107,34 @@ export default async function BrandPage({
 
   const workspaceSummary = (
     <BrandWorkspaceSummary
+      action={
+        canManageBrand ? (
+          <EditBrandForm
+            brand={brand}
+            clusters={clusters}
+            people={people}
+            assignments={assignments}
+            triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}
+          />
+        ) : null
+      }
+      responsibles={
+        <div
+          aria-label="Marka sorumluları"
+          className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5"
+        >
+          {assignments.length > 0 ? assignments.map((assignment) => (
+            <Link
+              key={assignment.person_id}
+              href={`/team/${assignment.person_id}`}
+              className="flex min-w-0 items-center gap-1.5 rounded-md hover:text-brand-600 dark:hover:text-brand-300"
+            >
+              <PersonAvatar name={assignment.person_name} avatarPath={assignment.person_avatar_path} size="xs" />
+              <span className="min-w-0 truncate text-xs font-semibold text-foreground">{assignment.person_name}</span>
+            </Link>
+          )) : <p className="text-xs text-muted">Henüz sorumlu atanmadı.</p>}
+        </div>
+      }
       overview={
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-xs font-semibold tabular-nums text-foreground">
@@ -141,28 +169,36 @@ export default async function BrandPage({
         </div>
       }
       shoots={
-        <div className="mt-1.5 flex items-center gap-4">
-          <div className="shrink-0">
-            <p className="text-caption text-muted">Aylık</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="shrink-0 text-xs text-muted">
+            Aylık{" "}
+            <span className="font-semibold tabular-nums text-foreground">
               {monthlyEvents.filter((event) => event.type === "Cekim").length}
-              {brand.monthly_shoot_allowance !== null && <span className="text-xs font-medium text-muted"> / {brand.monthly_shoot_allowance}</span>}
-            </p>
-          </div>
-          <div className="shrink-0">
-            <p className="text-caption text-muted">Yıllık</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+              {brand.monthly_shoot_allowance !== null && <span className="font-medium text-muted"> / {brand.monthly_shoot_allowance}</span>}
+            </span>
+          </span>
+          <span className="shrink-0 text-xs text-muted">
+            Yıllık{" "}
+            <span className="font-semibold tabular-nums text-foreground">
               {annualEvents.filter((event) => event.type === "Cekim").length}
-              {brand.annual_shoot_allowance !== null && <span className="text-xs font-medium text-muted"> / {brand.annual_shoot_allowance}</span>}
-            </p>
-          </div>
+              {brand.annual_shoot_allowance !== null && <span className="font-medium text-muted"> / {brand.annual_shoot_allowance}</span>}
+            </span>
+          </span>
         </div>
       }
     />
   );
 
+  // Markanın TÜM giriş noktaları tek sırada: fikir bankası, takvim kısayolları,
+  // etkinlik raporu ve asıl eylem olan "Görev oluştur" en sağda. Takvim/rapor
+  // bağlantıları daha önce sayfanın ortasındaki ayrı bir şeritteydi; aynı
+  // türden düğmeleri iki farklı yükseklikte aramak gerekiyordu.
   const headerActions = (
-    <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+    <div className="flex w-full flex-wrap items-center justify-end gap-2 lg:w-auto lg:flex-nowrap">
+      <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}>
+        <Icon name="ideas" className="size-3.5" /> Fikirler · {brandIdeaCount}
+      </Link>
+      <BrandOperationLinks brand={brand} month={month} />
       <QuickAddModal
         options={{
           brands: [{ id: brand.id, name: brand.name }],
@@ -175,78 +211,49 @@ export default async function BrandPage({
         triggerLabel="Görev oluştur"
         triggerClassName={buttonClass({ size: "sm" })}
       />
-      <Link href={`/ideas?brand=${encodeURIComponent(brand.id)}#fikir-akisi`} className={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}>
-        <Icon name="ideas" className="size-3.5" /> Fikirler · {brandIdeaCount}
-      </Link>
-      {canManageBrand ? (
-        <EditBrandForm
-          brand={brand}
-          clusters={clusters}
-          people={people}
-          assignments={assignments}
-          triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}
-        />
-      ) : null}
     </div>
   );
 
   return (
     <div>
       <AutoRefresh />
+      {/* Başlık ve künye AYNI satırda: ayrı bir `description` satırı başlık
+          bloğunu dördüncü kez aşağı uzatıyor, sağdaki tek sıra düğmenin altında
+          da o kadar boşluk bırakıyordu. Düğmeler dikeyde ortalı (`items-center`)
+          olduğu için satır tek yükseklikte kapanıyor. */}
       <PageHeader
-        className="!mb-0"
-        layout="workspace"
+        className="!mb-4 !pb-3 lg:!items-center"
         eyebrow="MARKA ÇALIŞMA ALANI"
-        title={brand.name}
-        description={
-          <span className="flex flex-wrap items-center gap-x-1.5">
-            <span>{clusterLabels[brand.cluster] ?? UNKNOWN_CLUSTER_LABEL}</span>
-            {instagramUrl && instagramHandle && (
-              <>
-                <span aria-hidden="true">·</span>
-                <a
-                  href={instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-secondary underline decoration-border-strong underline-offset-4 hover:text-brand-600 dark:hover:text-brand-300"
-                >
-                  @{instagramHandle}
-                </a>
-              </>
-            )}
-            {brand.tier && <><span aria-hidden="true">·</span><span>Tier {brand.tier}</span></>}
+        title={
+          <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <span>{brand.name}</span>
+            <span className="text-[13px] font-medium leading-5 text-muted">
+              {clusterLabels[brand.cluster] ?? UNKNOWN_CLUSTER_LABEL}
+              {instagramUrl && instagramHandle && (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-secondary underline decoration-border-strong underline-offset-4 hover:text-brand-600 dark:hover:text-brand-300"
+                  >
+                    @{instagramHandle}
+                  </a>
+                </>
+              )}
+              {brand.tier && <><span aria-hidden="true"> · </span>Tier {brand.tier}</>}
+            </span>
           </span>
         }
         breadcrumb={[{ label: "Markalar", href: "/brands" }, { label: brand.name }]}
         media={<BrandLogo name={brand.name} logoPath={brand.logo_path} accentHue={brand.accent_hue} size="lg" />}
-        summary={workspaceSummary}
-        summaryClassName="lg:max-w-none xl:min-w-0"
         actions={headerActions}
       />
 
-      <section
-        aria-label="Marka sorumluları"
-        className="mb-5 flex min-h-12 min-w-0 flex-wrap items-center justify-between gap-3 border-b border-border-subtle py-3"
-      >
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-          <p className="shrink-0 text-eyebrow text-brand-600 dark:text-brand-300">MARKA SORUMLULARI</p>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-            {assignments.length > 0 ? assignments.map((assignment) => (
-              <Link
-                key={assignment.person_id}
-                href={`/team/${assignment.person_id}`}
-                className="flex min-w-0 items-center gap-1.5 rounded-md py-0.5 hover:text-brand-600 dark:hover:text-brand-300"
-              >
-                <PersonAvatar name={assignment.person_name} avatarPath={assignment.person_avatar_path} size="xs" />
-                <span className="min-w-0 truncate text-xs font-semibold text-foreground">{assignment.person_name}</span>
-              </Link>
-            )) : <p className="text-xs leading-5 text-muted">Henüz sorumlu atanmadı.</p>}
-          </div>
-        </div>
-        <BrandOperationLinks brand={brand} month={month} />
-      </section>
+      {workspaceSummary}
 
-      <div className="space-y-5">
+      <div className="space-y-4">
       <BrandOperationsOverview
         brand={brand}
         month={month}

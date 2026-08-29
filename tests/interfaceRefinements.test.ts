@@ -160,10 +160,22 @@ describe("Görev durum renkleri", () => {
     const homeProgress = source("components/HomeBrandProgress.tsx");
     const brandOperations = source("components/BrandOperationsOverview.tsx");
 
-    assert.match(constants, /DevamEdiyor: "text-sky-900 dark:text-sky-200"/);
-    assert.match(constants, /Incelemede: "text-violet-800 dark:text-violet-200"/);
-    assert.match(constants, /Onaylandi: "text-amber-900 dark:text-amber-200"/);
-    assert.match(constants, /Yayinlandi: "text-emerald-800 dark:text-emerald-200"/);
+    // Renk DEĞERİNİ değil KURALI doğruluyoruz (bkz. CLAUDE.md test felsefesi):
+    // durum metninin tonu, o durumun kanban sütunundaki noktasıyla aynı olmalı.
+    // Palet değişirse test kırılmaz; iki liste ayrışırsa kırılır.
+    const paletteOf = (name: string): Record<string, string> => {
+      const block = constants.match(new RegExp(`${name}: Record<TaskStatus, string> = \\{([^}]*)\\}`))?.[1];
+      assert.ok(block, `${name} bulunamadı`);
+      return Object.fromEntries(
+        [...block.matchAll(/(\w+): "([^"]+)"/g)].map(([, status, value]) => [status, value]),
+      );
+    };
+    const dots = paletteOf("TASK_STATUS_DOT");
+    const texts = paletteOf("TASK_STATUS_TEXT");
+    assert.deepEqual(Object.keys(texts), Object.keys(dots));
+    for (const [status, dot] of Object.entries(dots)) {
+      assert.equal(texts[status], dot.replace(/(?:^|\s)bg-/g, "text-"), `${status} tonu sütunla aynı değil`);
+    }
     assert.match(homeProgress, /TASK_STATUS_TEXT\[status\]/);
     assert.match(brandOperations, /TASK_STATUS_TEXT\[status\]/);
   });

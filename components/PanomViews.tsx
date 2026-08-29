@@ -5,7 +5,6 @@ import TaskBoard, { type SortKey } from "@/components/TaskBoard";
 import TaskListView, {
   DEFAULT_TASK_LIST_COLUMNS,
   TaskListColumnsControl,
-  type ListColumn,
 } from "@/components/TaskListView";
 import WorkspaceViewToggle from "@/components/WorkspaceViewToggle";
 import { controlClass } from "@/components/ui/Input";
@@ -15,6 +14,7 @@ import {
   rememberWorkspaceView,
   type WorkspaceView,
 } from "@/lib/uiPreferences";
+import { useTaskListColumns } from "@/lib/useTaskListColumns";
 
 type View = WorkspaceView;
 
@@ -42,8 +42,9 @@ export default function PanomViews({
 }) {
   const [view, setView] = useState<View>(initialView);
   const [sortKey, setSortKey] = useState<SortKey>("varsayilan");
-  const [taskListColumns, setTaskListColumns] = useState<ReadonlySet<ListColumn>>(
-    () => new Set(DEFAULT_TASK_LIST_COLUMNS),
+  const [taskListColumns, setTaskListColumns] = useTaskListColumns(
+    "panom",
+    DEFAULT_TASK_LIST_COLUMNS,
   );
 
   function changeView(next: View) {

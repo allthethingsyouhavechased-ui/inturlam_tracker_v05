@@ -8,7 +8,6 @@ import TaskBoard, { type SortKey } from "@/components/TaskBoard";
 import TaskListView, {
   DEFAULT_TASK_LIST_COLUMNS,
   TaskListColumnsControl,
-  type ListColumn,
 } from "@/components/TaskListView";
 import WorkspaceViewToggle from "@/components/WorkspaceViewToggle";
 import Button from "@/components/ui/Button";
@@ -48,6 +47,7 @@ import {
   rememberWorkspaceView,
   type WorkspaceView,
 } from "@/lib/uiPreferences";
+import { useTaskListColumns } from "@/lib/useTaskListColumns";
 
 const UNASSIGNED = "__unassigned__";
 
@@ -109,6 +109,8 @@ export default function TaskExplorer({
   const [statusFilter, setStatusFilter] = useState<string>(initialFilters.status);
   const [priority, setPriority] = useState<string>(initialFilters.priority);
   const [difficulty, setDifficulty] = useState<TaskDifficulty | "" | "unset">(initialFilters.difficulty);
+  const [pointsMin, setPointsMin] = useState(initialFilters.pointsMin);
+  const [pointsMax, setPointsMax] = useState(initialFilters.pointsMax);
   const [due, setDue] = useState<TaskDueFilter>(initialFilters.due);
   const [dateFrom, setDateFrom] = useState(initialFilters.from);
   const [dateTo, setDateTo] = useState(initialFilters.to);
@@ -118,8 +120,9 @@ export default function TaskExplorer({
   const [q, setQ] = useState(initialFilters.q);
   const [sortKey, setSortKey] = useState<SortKey>(initialFilters.sort);
   const [view, setView] = useState<WorkspaceView>(initialView);
-  const [taskListColumns, setTaskListColumns] = useState<ReadonlySet<ListColumn>>(
-    () => new Set(DEFAULT_TASK_LIST_COLUMNS),
+  const [taskListColumns, setTaskListColumns] = useTaskListColumns(
+    "tasks",
+    DEFAULT_TASK_LIST_COLUMNS,
   );
 
   // Filtreler istemci state'inde kalmaya devam ediyor (her tıklamada sunucu
@@ -136,6 +139,8 @@ export default function TaskExplorer({
       status: statusFilter as TaskFilterState["status"],
       priority: priority as TaskFilterState["priority"],
       difficulty,
+      pointsMin,
+      pointsMax,
       due,
       from: dateFrom,
       to: dateTo,
@@ -145,7 +150,7 @@ export default function TaskExplorer({
       q,
       sort: sortKey,
     }),
-    [brandId, statusFilter, priority, difficulty, due, dateFrom, dateTo, department, assigneeId, focus, q, sortKey],
+    [brandId, statusFilter, priority, difficulty, pointsMin, pointsMax, due, dateFrom, dateTo, department, assigneeId, focus, q, sortKey],
   );
 
   // Kayıtlı bir görünüm uygulanınca TÜM filtreler tek seferde değişir.
@@ -154,6 +159,8 @@ export default function TaskExplorer({
     setStatusFilter(next.status);
     setPriority(next.priority);
     setDifficulty(next.difficulty);
+    setPointsMin(next.pointsMin);
+    setPointsMax(next.pointsMax);
     setDue(next.due);
     setDateFrom(next.from);
     setDateTo(next.to);
@@ -205,6 +212,8 @@ export default function TaskExplorer({
       if (!matchesTaskMetadataFilters(task, {
         due,
         difficulty,
+        pointsMin,
+        pointsMax,
         today: focusToday,
         weekEnd: focusWeekEnd,
         dateFrom,
@@ -227,7 +236,7 @@ export default function TaskExplorer({
       }
       return true;
     });
-  }, [tasks, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, difficulty, due, dateFrom, dateTo, assigneeId, q]);
+  }, [tasks, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, difficulty, pointsMin, pointsMax, due, dateFrom, dateTo, assigneeId, q]);
 
   const departmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -250,9 +259,9 @@ export default function TaskExplorer({
   }, [withoutDepartment, department, departmentByPerson]);
 
   const hasFilter = Boolean(
-    brandId || statusFilter || priority || difficulty || due || dateFrom || dateTo || department || assigneeId || focus || q,
+    brandId || statusFilter || priority || difficulty || pointsMin || pointsMax || due || dateFrom || dateTo || department || assigneeId || focus || q,
   );
-  const filterCount = [brandId, statusFilter, priority, difficulty, due, dateFrom || dateTo, department, assigneeId].filter(Boolean).length;
+  const filterCount = [brandId, statusFilter, priority, difficulty, pointsMin || pointsMax, due, dateFrom || dateTo, department, assigneeId].filter(Boolean).length;
   const selectedBrand = brands.find((brand) => brand.id === brandId);
   const selectedPerson = people.find((person) => person.id === assigneeId);
 
@@ -276,6 +285,8 @@ export default function TaskExplorer({
     setStatusFilter("");
     setPriority("");
     setDifficulty("");
+    setPointsMin("");
+    setPointsMax("");
     setDue("");
     setDateFrom("");
     setDateTo("");
@@ -376,7 +387,6 @@ export default function TaskExplorer({
               {view === "pano" && sortKey !== "varsayilan" && (
                 <span> · {SORT_LABEL[sortKey]} sıralaması</span>
               )}
-              {view === "liste" && <span> · sütun başlıklarından sıralanabilir</span>}
             </p>
 
             <div className="flex items-center gap-3 sm:border-l sm:border-border-subtle sm:pl-3">
@@ -423,6 +433,37 @@ export default function TaskExplorer({
                 <option value="unset">Belirlenmemiş</option>
               </select>
             </label>
+            {/* Puan zorluktan AYRI bir filtre: zorluk üç kaba kategori, puan
+                1-100 arası serbest sayı — "5 puandan ağır işler" sorusunun
+                zorlukla karşılığı yok. */}
+            <div className="grid min-w-0 gap-1 text-xs font-medium text-muted">
+              <span>Puan aralığı</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100}
+                  value={pointsMin}
+                  onChange={(event) => setPointsMin(event.target.value)}
+                  placeholder="En az"
+                  aria-label="En az puan"
+                  className={`${selectClass} min-w-0 flex-1`}
+                />
+                <span aria-hidden="true" className="text-faint">–</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100}
+                  value={pointsMax}
+                  onChange={(event) => setPointsMax(event.target.value)}
+                  placeholder="En çok"
+                  aria-label="En çok puan"
+                  className={`${selectClass} min-w-0 flex-1`}
+                />
+              </div>
+            </div>
             <label className="grid min-w-0 gap-1 text-xs font-medium text-muted">
               Teslim zamanı
               <select value={due} onChange={(event) => setDue(event.target.value as TaskDueFilter)} className={selectClass}>
@@ -540,6 +581,12 @@ export default function TaskExplorer({
               />
             )}
             {difficulty && <FilterChip label={difficulty === "unset" ? "Zorluk: Belirlenmemiş" : `Zorluk: ${TASK_DIFFICULTY_LABEL[difficulty]}`} onRemove={() => setDifficulty("")} />}
+            {(pointsMin || pointsMax) && (
+              <FilterChip
+                label={`Puan: ${pointsMin || "…"} – ${pointsMax || "…"}`}
+                onRemove={() => { setPointsMin(""); setPointsMax(""); }}
+              />
+            )}
             {due && <FilterChip label={{ overdue: "Gecikmiş", today: "Bugün", week: "Bu hafta", undated: "Tarih bekleyen" }[due]} onRemove={() => setDue("")} />}
             {(dateFrom || dateTo) && <FilterChip label={`Teslim: ${dateFrom || "…"} – ${dateTo || "…"}`} onRemove={() => { setDateFrom(""); setDateTo(""); }} />}
             {focus && (

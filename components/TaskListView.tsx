@@ -52,6 +52,7 @@ export const DEFAULT_TASK_LIST_COLUMNS: readonly ListColumn[] = [
   "gorev",
   "marka",
   "oncelik",
+  "puan",
   "durum",
   "atanan",
   "teslim",
@@ -65,6 +66,7 @@ const COLUMN_OPTIONS: readonly { key: ListColumn; label: string }[] = [
   { key: "atanan", label: "Atanan" },
   { key: "teslim", label: "Teslim" },
   { key: "tur", label: "Tür" },
+  { key: "puan", label: "Puan" },
   { key: "zorluk", label: "İş yükü" },
   { key: "revize", label: "Revize" },
   { key: "hedef", label: "Hedef teslim" },
@@ -508,6 +510,7 @@ export default function TaskListView({
               {visibleColumns.has("marka") && <SortableTh column="marka" label="Marka" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("oncelik") && <SortableTh column="oncelik" label="Öncelik" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("zorluk") && <SortableTh column="zorluk" label="İş yükü" sort={sort} onToggle={toggleSort} />}
+              {visibleColumns.has("puan") && <SortableTh column="puan" label="Puan" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("revize") && <SortableTh column="revize" label="Revize" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("durum") && <SortableTh column="durum" label="Durum" sort={sort} onToggle={toggleSort} />}
               {visibleColumns.has("atanan") && <SortableTh column="atanan" label="Atanan" sort={sort} onToggle={toggleSort} />}
@@ -561,11 +564,18 @@ export default function TaskListView({
                   {visibleColumns.has("oncelik") && <td className="px-3 py-2">
                     <TaskPrioritySelect taskId={t.id} priority={t.priority} />
                   </td>}
+                  {/* Puan artık kendi sütununda; zorluk hücresine gömülü rozet
+                      olarak DA göstermek aynı sayıyı iki kez yazmak olurdu
+                      (üstelik başlıksız, sıralanamaz halde). */}
                   {visibleColumns.has("zorluk") && <td className="px-3 py-2">
-                    <div className="flex min-w-[7.5rem] items-center gap-1.5">
+                    <div className="min-w-[7.5rem]">
                       <TaskDifficultySelect taskId={t.id} difficulty={t.difficulty} />
-                      <span className="whitespace-nowrap rounded-md bg-surface-subtle px-2 py-1 text-xs font-semibold tabular-nums text-secondary">{t.weight_points} puan</span>
                     </div>
+                  </td>}
+                  {visibleColumns.has("puan") && <td className="px-3 py-2">
+                    <span className="inline-block whitespace-nowrap rounded-md bg-surface-subtle px-2 py-1 text-xs font-semibold tabular-nums text-secondary">
+                      {t.weight_points}
+                    </span>
                   </td>}
                   {visibleColumns.has("revize") && <td className="px-3 py-2">
                     <div className="flex min-w-[7rem] flex-col items-start gap-1">

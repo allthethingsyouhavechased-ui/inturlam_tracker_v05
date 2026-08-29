@@ -194,9 +194,9 @@ export default async function TaskPage({
           </div>
         }
         workflow={
-          <section key="workflow" className="rounded-xl border border-border-default bg-surface p-4 sm:p-5">
-            <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">İŞ AKIŞI</h2>
-            <div className="mt-4 space-y-4">
+          <section key="workflow" className="rounded-xl border border-border-default bg-surface p-4">
+            <h2 className="text-eyebrow text-muted">İŞ AKIŞI</h2>
+            <div className="mt-3 space-y-2.5">
               <label className="grid gap-1.5 text-xs font-medium text-muted">Durum<TaskStatusSelect taskId={task.id} status={task.status} locked={task.origin === "guest" && !task.due_date} />{task.origin === "guest" && !task.due_date && <span className="text-[10px] leading-4 text-amber-500">Durumu ilerletmek için önce iç teslim tarihini planlayın.</span>}</label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Atanan<AssigneeSelect taskId={task.id} assigneeId={task.assignee_id} people={people} /></label>
               <label className="grid gap-1.5 text-xs font-medium text-muted">Öncelik<TaskPrioritySelect taskId={task.id} priority={task.priority} /></label>
@@ -205,9 +205,9 @@ export default async function TaskPage({
               <div className="grid gap-1.5 text-xs font-medium text-muted"><span>Tekrar</span><TaskRepeatSelect taskId={task.id} repeatDays={task.repeat_days} /></div>
             </div>
             {(task.repeat_days ?? 0) > 0 && (
-              <p className="mt-4 border-t border-border-subtle pt-3 text-[11px] leading-5 text-muted">Yayınlandığında {task.repeat_days} gün ileri tarihli yeni görev açılır.</p>
+              <p className="mt-3 border-t border-border-subtle pt-3 text-[11px] leading-5 text-muted">Yayınlandığında {task.repeat_days} gün ileri tarihli yeni görev açılır.</p>
             )}
-            <div className="mt-4 border-t border-border-subtle pt-4">
+            <div className="mt-3 border-t border-border-subtle pt-3">
               <ArchiveTaskButton
                 taskId={task.id}
                 archived={task.archived_at !== null}
@@ -218,10 +218,14 @@ export default async function TaskPage({
         }
         activity={
           <section key="activity" className="overflow-hidden rounded-xl border border-border-default bg-surface">
-            <div className="border-b border-border-subtle px-4 py-3">
-              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">HAREKETLER</h2>
+            <div className="border-b border-border-subtle px-4 py-2.5">
+              <h2 className="text-eyebrow text-muted">HAREKETLER</h2>
             </div>
-            <ActivityFeed entries={activity} showLink={false} emptyText="Bu görevde henüz hareket yok." />
+            {/* Yan sütunda duruyor: uzun bir geçmiş sayfayı aşağı doğru
+                uzatmasın, kendi içinde kaysın. */}
+            <div className="max-h-[24rem] overflow-y-auto overscroll-contain">
+              <ActivityFeed entries={activity} showLink={false} emptyText="Bu görevde henüz hareket yok." />
+            </div>
           </section>
         }
       />

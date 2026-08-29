@@ -4,16 +4,24 @@ import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
+// Görev detayı 2026-08-29'a kadar ALTI sekmeydi (ayrıntılar / iş akışı / teslim
+// / revize / yorumlar / hareketler). İş akışını görmek için sekme değiştirmek,
+// yorumu okumak için bir daha değiştirmek gerekiyordu — üstelik her sekme tek
+// başına ekranın yarısını boş bırakıyordu.
+//
+// Yeni düzen: SEKME olan yalnızca iş akışının "birbirini dışlayan" üç adımı
+// (görev ayrıntıları / teslim / revize). İş akışı kontrolleri, yorumlar ve
+// hareketler hangi sekme açık olursa olsun YANDA duruyor — teslim veya revize
+// ekranındayken de görev durumunu değiştirebil, son yorumu okuyabil diye.
 const TABS = [
-  { id: "details", hash: "gorev-ayrintilari", label: "Ayrıntılar" },
-  { id: "workflow", hash: "is-akisi", label: "İş akışı" },
+  { id: "details", hash: "gorev-ayrintilari", label: "Görev ayrıntıları" },
   { id: "delivery", hash: "teslim", label: "Teslim" },
   { id: "revision", hash: "revize", label: "Revize" },
-  { id: "comments", hash: "yorumlar", label: "Yorumlar" },
-  { id: "activity", hash: "hareketler", label: "Hareketler" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+/** Yan sütunda duran, sekme OLMAYAN paneller. */
+type AsideId = "workflow" | "comments" | "activity";
 
 function tabFromHash(hash: string): TabId | null {
   const normalizedHash = hash.replace(/^#/, "");
@@ -27,18 +35,18 @@ export default function TaskDetailTabs({
   revision,
   comments,
   activity,
-}: Record<TabId, ReactNode>) {
+}: Record<TabId | AsideId, ReactNode>) {
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const tabListRef = useRef<HTMLDivElement>(null);
   const panels: Record<TabId, ReactNode> = {
     details,
-    workflow,
     delivery,
     revision,
-    comments,
-    activity,
   };
 
+  // Eski derin bağlantılar (#is-akisi, #yorumlar, #hareketler) artık bir sekmeyi
+  // değil yan sütundaki bölümü işaret ediyor: tabFromHash null döner, sekme
+  // "details"ta kalır, tarayıcı da aynı id'li bölüme kaydırır.
   useEffect(() => {
     const syncFromHash = () => {
       const nextTab = tabFromHash(window.location.hash);
@@ -78,13 +86,13 @@ export default function TaskDetailTabs({
   const activeDefinition = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
 
   return (
-    <div>
-      <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-5 overflow-x-auto border-y border-border-subtle bg-background/90 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6">
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start lg:gap-5">
+      <div className="min-w-0 space-y-4">
         <div
           ref={tabListRef}
           role="tablist"
           aria-label="Görev bölümleri"
-          className="flex min-w-max items-center gap-1"
+          className="flex min-w-max items-center gap-1 border-b border-border-subtle pb-2"
         >
           {TABS.map((tab, index) => {
             const selected = tab.id === activeTab;
@@ -112,18 +120,31 @@ export default function TaskDetailTabs({
             );
           })}
         </div>
+
+        <div
+          id={`task-panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`task-tab-${activeTab}`}
+          data-task-panel={activeTab}
+          className="min-w-0"
+        >
+          <span id={activeDefinition.hash} className="sr-only" aria-hidden="true" />
+          {panels[activeTab]}
+        </div>
+
+        {/* Yorum yazmak geniş alan ister; yan sütuna sıkıştırılmıyor. */}
+        <section id="yorumlar" aria-label="Görev yorumları" className="min-w-0">
+          {comments}
+        </section>
       </div>
 
-      <div
-        id={`task-panel-${activeTab}`}
-        role="tabpanel"
-        aria-labelledby={`task-tab-${activeTab}`}
-        data-task-panel={activeTab}
-        className="min-w-0"
+      <aside
+        aria-label="Görev iş akışı ve geçmişi"
+        className="mt-4 min-w-0 space-y-4 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:mt-0"
       >
-        <span id={activeDefinition.hash} className="sr-only" aria-hidden="true" />
-        {panels[activeTab]}
-      </div>
+        <section id="is-akisi" className="min-w-0">{workflow}</section>
+        <section id="hareketler" className="min-w-0">{activity}</section>
+      </aside>
     </div>
   );
 }

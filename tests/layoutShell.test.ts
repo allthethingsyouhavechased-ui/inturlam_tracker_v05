@@ -30,23 +30,30 @@ describe("marka başlığı bilgi hiyerarşisi", () => {
   it("başlık özetini sade tutup sorumluları ve hedefleri ilgili çalışma yüzeylerine taşır", () => {
     const page = source("app/brands/[brandId]/page.tsx");
     const summary = source("components/BrandWorkspaceSummary.tsx");
+    // Şerit dört bilgiyi tek satırda taşır ve başlığın ALTINDA durur: özet →
+    // aktiflik → sorumlular → çekim hakkı. Sonra operasyon kartı, en sonda
+    // hedefler. Kilitlenen şey bilgi sırası, kutuların stili değil.
     const brandSummary = summary.indexOf('data-brand-info="summary"');
     const activity = summary.indexOf('data-brand-info="activity"', brandSummary);
-    const shoots = summary.indexOf('data-brand-info="shoots"', activity);
+    const responsibles = summary.indexOf('data-brand-info="responsibles"', activity);
+    const shoots = summary.indexOf('data-brand-info="shoots"', responsibles);
     const pageHeader = page.indexOf("<PageHeader");
-    const responsibility = page.indexOf('aria-label="Marka sorumluları"', pageHeader);
-    const operations = page.indexOf("<BrandOperationsOverview", responsibility);
+    const summaryStrip = page.indexOf("{workspaceSummary}", pageHeader);
+    const responsibility = page.indexOf('aria-label="Marka sorumluları"');
+    const operations = page.indexOf("<BrandOperationsOverview", summaryStrip);
     const targets = page.indexOf("<BrandContentTargetsSection", operations);
 
     assert.match(page, /<BrandWorkspaceSummary/);
-    assert.match(page, /<PageHeader[\s\S]*summary=\{workspaceSummary\}[\s\S]*actions=\{headerActions\}/);
+    assert.match(page, /<PageHeader[\s\S]*actions=\{headerActions\}/);
     assert.equal(page.match(/\{workspaceSummary\}/g)?.length, 1);
     assert.ok(brandSummary >= 0);
     assert.ok(activity > brandSummary);
-    assert.ok(shoots > activity);
-    assert.doesNotMatch(summary, /data-brand-info="(?:responsibility|targets)"/);
-    assert.ok(responsibility > pageHeader);
-    assert.ok(operations > responsibility);
+    assert.ok(responsibles > activity);
+    assert.ok(shoots > responsibles);
+    assert.doesNotMatch(summary, /data-brand-info="targets"/);
+    assert.ok(responsibility >= 0);
+    assert.ok(summaryStrip > pageHeader);
+    assert.ok(operations > summaryStrip);
     assert.ok(targets > operations);
     assert.doesNotMatch(page, /brand\.key_finding|staleStats/);
   });
@@ -54,11 +61,12 @@ describe("marka başlığı bilgi hiyerarşisi", () => {
   it("kompakt hedefleri başlık solda, kontroller sağda tek satırda sunar", () => {
     const targets = source("components/BrandContentTargetsSection.tsx");
     assert.match(targets, /compact && completionControl/);
-    assert.match(targets, /flex min-w-0 items-center justify-center gap-8/);
+    // Şeritte kendi hücresinde ortalanmak yerine kalan genişliği kaplar; üç blok
+    // (başlık · sayaçlar · ay gezgini) tek taban çizgisinde hizalanır.
+    assert.match(targets, /compact \? "flex min-w-0 flex-1 items-end/);
     assert.ok(targets.indexOf('compact \? "AYLIK HEDEF"') < targets.indexOf("data-compact-target-grid"));
     assert.match(targets, /flex-nowrap/);
     assert.match(targets, /grid shrink-0 gap-1 text-center text-\[9px\]/);
-    assert.match(source("components/BrandOperationsOverview.tsx"), /xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]/);
-    assert.match(source("app/brands/\[brandId\]/page.tsx"), /className="!mb-0"/);
+    assert.match(source("components/BrandOperationsOverview.tsx"), /flex flex-wrap items-end justify-between/);
   });
 });

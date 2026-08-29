@@ -10,6 +10,11 @@ export interface TaskMetadataFilterInput {
       çünkü revize VERİSİ (sayaç, hedef süre, rozet) duruyor ve tekrar bir yerde
       filtrelenmek istenirse kural burada hazır. */
   revision?: TaskRevisionFilter;
+  /** Ağırlık puanı aralığı. Form alanından geldiği için string; "" = sınır yok.
+      Zorluk (Kolay/Orta/Zor) kaba kategori, puan ise 1-100 arası serbest sayı —
+      "5 puandan ağır işler" sorusu zorluk filtresiyle sorulamıyor. */
+  pointsMin?: string;
+  pointsMax?: string;
   today: string;
   weekEnd: string;
   dateFrom: string;
@@ -23,6 +28,7 @@ export interface TaskMetadataShape {
   active_revision_id: string | null;
   active_revision_elapsed_minutes: number | null;
   active_revision_target_minutes: number | null;
+  weight_points?: number;
 }
 
 export function isRevisionOverTarget(
@@ -66,6 +72,12 @@ export function matchesTaskMetadataFilters(
     filters.difficulty !== "unset" &&
     task.difficulty !== filters.difficulty
   ) return false;
+
+  const points = task.weight_points ?? null;
+  const min = filters.pointsMin ? Number(filters.pointsMin) : null;
+  const max = filters.pointsMax ? Number(filters.pointsMax) : null;
+  if (min !== null && Number.isFinite(min) && (points === null || points < min)) return false;
+  if (max !== null && Number.isFinite(max) && (points === null || points > max)) return false;
 
   const active = task.active_revision_id !== null;
   const overTarget = isRevisionOverTarget(

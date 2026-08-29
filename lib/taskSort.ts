@@ -10,6 +10,7 @@ export type ListSortKey =
   | "marka"
   | "oncelik"
   | "zorluk"
+  | "puan"
   | "revize"
   | "durum"
   | "atanan"
@@ -29,6 +30,7 @@ export const LIST_SORT_HINT: Record<ListSortKey, string> = {
   marka: "Markaya göre sırala — aynı markanın görevleri alt alta",
   oncelik: "Önceliğe göre sırala (Acil → Düşük)",
   zorluk: "Zorluğa göre sırala (Zor → Kolay; Özel ayrı kategori)",
+  puan: "Ağırlık puanına göre sırala (yüksek → düşük)",
   revize: "Revize turu sayısına göre sırala",
   durum: "Duruma göre sırala (Beklemede → Yayınlandı)",
   atanan: "Atanana göre sırala — atanmamışlar en sonda",
@@ -84,6 +86,10 @@ function compare(a: TaskWithContext, b: TaskWithContext, key: ListSortKey): numb
       };
       return rank(a.difficulty) - rank(b.difficulty);
     }
+    // Puan da revize gibi "çok olan önce": listede aranan şey ağır iş, en
+    // hafifi değil.
+    case "puan":
+      return b.weight_points - a.weight_points;
     case "revize":
       return b.revision_count - a.revision_count;
     case "durum":

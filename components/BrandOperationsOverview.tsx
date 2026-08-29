@@ -40,7 +40,7 @@ function eventDate(event: CalendarEvent): string {
 
 export function BrandMonthControl({ brand, month }: { brand: Brand; month: string }) {
   return (
-    <div className="xl:justify-self-end [&_a]:text-brand-700 [&_a:hover]:bg-brand-500/10 [&_a:hover]:text-brand-800 [&_div]:border-brand-500/30 [&_div]:bg-brand-500/[0.06] dark:[&_a]:text-brand-300">
+    <div className="shrink-0 [&_a]:text-brand-700 [&_a:hover]:bg-brand-500/10 [&_a:hover]:text-brand-800 [&_div]:border-brand-500/30 [&_div]:bg-brand-500/[0.06] dark:[&_a]:text-brand-300">
       <MonthNavigator
         month={month}
         basePath={`/brands/${brand.id}`}
@@ -96,12 +96,16 @@ export default function BrandOperationsOverview({
       style={brandAccentStyle(brand.accent_hue)}
       className="overflow-hidden rounded-xl border border-border-default bg-surface"
     >
-      <div className="grid gap-3 border-b border-border-subtle px-4 py-3 sm:px-5 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] xl:items-center xl:gap-4">
+      {/* Üç blok tek bir taban çizgisinde: sol başlık, ortadaki hedef sayaçları
+          ve sağdaki ay gezgini. Önceden `1fr auto 1fr` ızgarasıydı ve ortadaki
+          blok kendi hücresinde ortalandığı için iki yanında ölçüsüz boşluk
+          kalıyor, üç blok birbiriyle hizasız görünüyordu. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-border-subtle px-4 py-3 sm:px-5">
         <div className="shrink-0">
           <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">OPERASYON ÖZETİ · {brand.name}</p>
           <h2 id="brand-operations-title" className="mt-0.5 text-sm font-semibold text-foreground">{monthLabel}</h2>
         </div>
-        {targets && <div className="min-w-0 xl:justify-self-center">{targets}</div>}
+        {targets}
         <BrandMonthControl brand={brand} month={month} />
       </div>
 
