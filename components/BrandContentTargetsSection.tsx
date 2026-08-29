@@ -49,7 +49,7 @@ export default function BrandContentTargetsSection({
   );
 
   // Compact hâl marka sayfasının üst şeridinde, sol başlık ile ay gezgininin
-  // ARASINDA duruyor. Ayrı bir "AYLIK HEDEF" başlığı YOK: POST/STORY/REELS
+  // ARASINDA duruyor. Ayrı bir grup başlığı YOK: POST/STORY/REELS
   // etiketleri kendi sayaçlarının SOLUNDA durduğu için satır zaten kendini
   // anlatıyor.
   //
