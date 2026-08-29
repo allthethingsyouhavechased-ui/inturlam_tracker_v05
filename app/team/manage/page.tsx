@@ -1,22 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ActionForm from "@/components/ActionForm";
 import DeactivatePersonButton from "@/components/DeactivatePersonButton";
 import ManagerRoleButton from "@/components/ManagerRoleButton";
 import NewPersonPopover from "@/components/NewPersonPopover";
 import PersonAvatar from "@/components/PersonAvatar";
 import ResetPersonPasswordPopover from "@/components/ResetPersonPasswordPopover";
-import SubmitButton from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import { canManageRoles, ROLE_ADMIN_PERSON_ID } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
-import {
-  saveGuestAccountAction,
-  setGuestAccountActiveAction,
-} from "@/lib/actions/people";
-import { listBrands } from "@/lib/repositories/brands";
 import { listGuestAccounts } from "@/lib/repositories/accounts";
 import { listInactivePeople, listLoginPeople } from "@/lib/repositories/people";
 
@@ -29,7 +22,7 @@ export default async function TeamManagementPage() {
   const people = listLoginPeople();
   const inactive = listInactivePeople();
   const canEditRoles = canManageRoles(currentPerson);
-  const brands = listBrands();
+  // Yalnız sayaç için: liste ve form artık /team/manage/guest sayfasında.
   const guestAccounts = listGuestAccounts();
 
   return (
@@ -41,17 +34,16 @@ export default async function TeamManagementPage() {
         breadcrumb={[{ label: "Ekip", href: "/team" }, { label: "Hesap yönetimi" }]}
         actions={
           <>
-            {/* Guest bölümü sayfanın en altında, aktif + pasif hesap
-                listelerinin arkasında kalıyordu; başlıktan doğrudan bir giriş
-                olmadan varlığı fark edilmiyordu. */}
-            <a
-              href="#guest-accounts-title"
+            {/* Guest hesapları artık ayrı bir sayfa: bu listenin en altında
+                dururken varlığı fark edilmiyordu (bkz. app/team/manage/guest). */}
+            <Link
+              href="/team/manage/guest"
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               <Icon name="user" className="size-3.5" />
               Guest hesapları
               <span className="tabular-nums text-muted">{guestAccounts.length}</span>
-            </a>
+            </Link>
             <NewPersonPopover />
           </>
         }
@@ -132,27 +124,6 @@ export default async function TeamManagementPage() {
                   <DeactivatePersonButton personId={person.id} />
                 ) : <span aria-hidden="true" />}
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* `scroll-mt`: sticky üst çubuk, çapaya atlayınca başlığı örtmesin. */}
-      <section className="mt-8 scroll-mt-[calc(var(--header-h)+1.5rem)]" aria-labelledby="guest-accounts-title">
-        <h2 id="guest-accounts-title" className="mb-1 scroll-mt-[calc(var(--header-h)+1.5rem)] text-sm font-semibold text-foreground">Guest hesapları</h2>
-        <p className="mb-3 text-xs text-muted">Her marka için en fazla bir ortak guest hesabı bulunur. Aynı marka yeniden kaydedilirse kullanıcı adı ve şifresi yenilenir.</p>
-        <ActionForm action={saveGuestAccountAction} successMessage="Guest hesabı kaydedildi." resetOnSuccess feedbackClassName="sm:col-span-2 lg:col-span-5" className="grid gap-3 rounded-xl border border-border-default bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
-          <label className="grid gap-1 text-xs font-medium text-secondary">Marka<select name="brandId" required className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm"><option value="">Seç</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
-          <label className="grid gap-1 text-xs font-medium text-secondary">Kullanıcı adı<input name="username" required minLength={3} maxLength={40} className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm" /></label>
-          <label className="grid gap-1 text-xs font-medium text-secondary">Şifre<input name="password" type="password" required minLength={8} className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm" /></label>
-          <label className="grid gap-1 text-xs font-medium text-secondary">Şifre tekrar<input name="confirmPassword" type="password" required minLength={8} className="min-h-10 rounded-lg border border-border-default bg-background px-2 text-sm" /></label>
-          <SubmitButton pendingLabel="Kaydediliyor…" className="min-h-10 self-end rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-500 disabled:cursor-wait disabled:opacity-70">Hesabı kaydet</SubmitButton>
-        </ActionForm>
-        <div className="mt-3 overflow-hidden rounded-xl border border-border-default bg-surface">
-          {guestAccounts.length === 0 ? <p className="p-4 text-sm text-muted">Henüz guest hesabı yok.</p> : guestAccounts.map((account, index) => (
-            <div key={account.id} className={`flex items-center justify-between gap-3 px-4 py-3 ${index > 0 ? "border-t border-border-subtle" : ""}`}>
-              <span><span className="block text-sm font-semibold text-foreground">{account.brand_name}</span><span className="text-xs text-muted">{account.username} · {account.active === 1 ? "Aktif" : "Pasif"}</span></span>
-              <ActionForm action={setGuestAccountActiveAction.bind(null, account.id, account.active !== 1)}><SubmitButton pendingLabel="İşleniyor…" className="rounded-lg border border-border-default px-3 py-2 text-xs font-semibold text-secondary hover:bg-surface-hover disabled:cursor-wait disabled:opacity-60">{account.active === 1 ? "Pasife al" : "Aktifleştir"}</SubmitButton></ActionForm>
             </div>
           ))}
         </div>

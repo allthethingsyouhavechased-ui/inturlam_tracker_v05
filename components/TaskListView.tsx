@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import AssigneeSelect from "@/components/AssigneeSelect";
 import CommentIcon from "@/components/CommentIcon";
 import PersonAvatar from "@/components/PersonAvatar";
@@ -125,6 +125,14 @@ const DEFAULT_COLUMN_WIDTH: Record<ListColumn, number> = {
 
 /** Seçim kutusu sütunu; sürüklenmez, yeniden boyutlandırılmaz. */
 const SELECT_COLUMN_WIDTH = 40;
+
+const DEFAULT_VISIBLE_COLUMNS: ReadonlySet<ListColumn> = new Set(DEFAULT_TASK_LIST_COLUMNS);
+
+// Sunucuda `false`, istemcide ilk boyamadan sonra `true` — depodan gelen
+// düzenin hydration'ı bozmaması için (bkz. components/UndoBar.tsx).
+const emptySubscribe = () => () => {};
+const useIsClient = () =>
+  useSyncExternalStore(emptySubscribe, () => true, () => false);
 
 export function TaskListColumnsControl({
   visibleColumns,
@@ -266,8 +274,17 @@ function SortableTh({
         aria-label={`${label} sütun genişliği`}
         onPointerDown={(event) => onResize(column, event)}
         onDragStart={(event) => event.preventDefault()}
-        className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-brand-500/40"
-      />
+        title={`${label} sütununun genişliğini sürükleyerek ayarla`}
+        // Görünür ince bir ayırıcı (`after`) + onu saran geniş tutma alanı:
+        // saydam bir tutamak nerede olduğunu belli etmiyordu, 1.5px'lik bir
+        // hedefi fareyle yakalamak da zordu.
+        className="group/handle absolute inset-y-1 right-0 z-10 flex w-3 translate-x-1/2 cursor-col-resize items-stretch justify-center"
+      >
+        <span
+          aria-hidden="true"
+          className="w-px rounded-full bg-border-strong transition-[width,background-color] group-hover/handle:w-[3px] group-hover/handle:bg-brand-500"
+        />
+      </span>
     </th>
   );
 }
@@ -310,15 +327,23 @@ export default function TaskListView({
   // depoya yazmak yerine yalnız bırakıldığında bir kez yazmak.
   const [dropTarget, setDropTarget] = useState<ListColumn | null>(null);
   const [draftWidth, setDraftWidth] = useState<{ column: ListColumn; width: number } | null>(null);
-  const columnOrder = layout?.order ?? ALL_TASK_LIST_COLUMNS;
+  // Sütun düzeni (görünürlük/sıra/genişlik) `localStorage`'dan geliyor, yani
+  // sunucunun bildiği bir şey değil. Hydration'a kadar VARSAYILAN düzen
+  // çiziliyor; kayıtlı düzen ilk boyamadan sonra uygulanıyor. Yoksa sunucu 7
+  // sütunluk bir <colgroup> yazarken istemci 12 sütunluk beklerdi ve React
+  // "hydration failed" verirdi (bkz. UndoBar'daki aynı useIsClient deseni).
+  const isClient = useIsClient();
+  const columnOrder = isClient ? layout?.order ?? ALL_TASK_LIST_COLUMNS : ALL_TASK_LIST_COLUMNS;
+  const effectiveVisible = isClient ? visibleColumns : DEFAULT_VISIBLE_COLUMNS;
   const orderedColumns = useMemo(
-    () => columnOrder.filter((column) => visibleColumns.has(column)),
-    [columnOrder, visibleColumns],
+    () => columnOrder.filter((column) => effectiveVisible.has(column)),
+    [columnOrder, effectiveVisible],
   );
-  const widthOf = (column: ListColumn): number =>
-    draftWidth?.column === column
-      ? draftWidth.width
-      : layout?.widths[column] ?? DEFAULT_COLUMN_WIDTH[column];
+  const widthOf = (column: ListColumn): number => {
+    if (draftWidth?.column === column) return draftWidth.width;
+    if (!isClient) return DEFAULT_COLUMN_WIDTH[column];
+    return layout?.widths[column] ?? DEFAULT_COLUMN_WIDTH[column];
+  };
   const tableWidth =
     SELECT_COLUMN_WIDTH + orderedColumns.reduce((total, column) => total + widthOf(column), 0);
 

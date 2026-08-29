@@ -12,7 +12,6 @@ import EmptyState from "@/components/EmptyState";
 import NewContentForm from "@/components/NewContentForm";
 import PersonAvatar from "@/components/PersonAvatar";
 import QuickAddModal from "@/components/QuickAddModal";
-import SocialHealthBadge from "@/components/SocialHealthBadge";
 import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
@@ -29,7 +28,7 @@ import {
 import { formatDateShort, formatIsoDateTime, monthParamISO, monthParamToDate, shiftMonthParam, todayISO } from "@/lib/date";
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
-import { classifySocial } from "@/lib/socialSilence";
+import { classifySocial, SOCIAL_HEALTH_LABEL } from "@/lib/socialSilence";
 import { requirePageSession } from "@/lib/identity";
 import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
 import { getBrand } from "@/lib/repositories/brands";
@@ -150,11 +149,23 @@ export default async function BrandPage({
         </div>
       }
       activityBadge={
-        socialHealth ? (
-          <SocialHealthBadge
-            health={socialHealth}
-            detail={socialRow?.days_silent != null ? `${socialRow.days_silent} gün` : undefined}
-          />
+        // Rozet KUTUSU yok: kendi yüksekliği başlık satırını büyütüp altındaki
+        // açıklamayı kaydırıyordu. Sağlıklı hesapta hiç yazılmıyor — "her şey
+        // yolunda" bilgisi şeritte yer tutmasın; yalnız dikkat isteyen durumlar
+        // (taranmadı / sessiz / veri gelmiyor) renkli metin olarak görünüyor.
+        socialHealth && socialHealth !== "ok" ? (
+          <span
+            className={`text-[11px] font-semibold ${
+              socialHealth === "silent" || socialHealth === "never-checked"
+                ? "text-danger"
+                : "text-warning"
+            }`}
+          >
+            {SOCIAL_HEALTH_LABEL[socialHealth]}
+            {socialRow?.days_silent != null && (
+              <span className="font-normal tabular-nums"> · {socialRow.days_silent} gün</span>
+            )}
+          </span>
         ) : null
       }
       activity={

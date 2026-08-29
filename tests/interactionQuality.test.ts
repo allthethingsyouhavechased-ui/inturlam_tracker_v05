@@ -24,7 +24,9 @@ describe("form geri bildirimi", () => {
   it("guest ve hesap yönetimi formları ortak geri bildirim akışını kullanır", () => {
     const guestTasks = source("app/guest/tasks/page.tsx");
     const guestTask = source("app/guest/tasks/[taskId]/page.tsx");
-    const accounts = source("app/team/manage/page.tsx");
+    // Guest hesabı formu 2026-08-29'da hesap yönetiminden ayrı bir sayfaya
+    // taşındı (listenin altında fark edilmiyordu).
+    const accounts = source("app/team/manage/guest/page.tsx");
 
     for (const page of [guestTasks, guestTask, accounts]) {
       assert.match(page, /<ActionForm/);
