@@ -163,17 +163,19 @@ export function DueHealthPanel({ rows, embedded = false }: { rows: DueHealthRow[
   const content = (
     <>
       {total > 0 && <div className="flex h-3 overflow-hidden rounded-full bg-black/5 dark:bg-white/10" aria-hidden="true">{rows.map((row) => <span key={row.bucket} className={dueTone[row.bucket]} style={{ width: `${(row.task_count / total) * 100}%` }} />)}</div>}
-      <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-black/10 sm:grid-cols-5 dark:bg-white/10">
-        {rows.map((row) => (
-          <div key={row.bucket} className="min-w-0 bg-zinc-50 p-3 dark:bg-zinc-950/70">
-            <dt className="flex min-w-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              <span className={`size-2 shrink-0 rounded-full ${dueTone[row.bucket]}`} aria-hidden="true" />
-              <span className="truncate">{row.label}</span>
-            </dt>
-            <dd className="mt-1 font-semibold tabular-nums">{row.task_count}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="@container mt-3">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-black/10 @sm:grid-cols-3 @2xl:grid-cols-5 dark:bg-white/10">
+          {rows.map((row) => (
+            <div key={row.bucket} className="min-w-0 bg-zinc-50 p-3 dark:bg-zinc-950/70">
+              <dt className="flex min-w-0 items-start gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <span className={`mt-0.5 size-2 shrink-0 rounded-full ${dueTone[row.bucket]}`} aria-hidden="true" />
+                <span className="leading-tight break-words">{row.label}</span>
+              </dt>
+              <dd className="mt-1 font-semibold tabular-nums">{row.task_count}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
     </>
   );
 
