@@ -112,11 +112,10 @@ export default async function CalendarPage({
         eyebrow="OPERASYON TAKVİMİ"
         title="Takvim"
         description="Toplantı, çekim ve diğer etkinlikleri merkezi takvimde planla. Görev teslim tarihleri bu takvimde gösterilmez."
+        actions={me.is_manager === 1 ? <CalendarSyncHealthCard health={getCalendarSyncHealth()} /> : undefined}
       />
 
       <div className="space-y-5">
-      {me.is_manager === 1 && <CalendarSyncHealthCard health={getCalendarSyncHealth()} />}
-
       <section aria-label="Takvim çalışma alanı" className="min-w-0 overflow-hidden rounded-xl border border-border-default bg-surface">
         <div className="flex min-w-0 flex-wrap items-center gap-3 border-b border-border-default px-3 py-3 sm:px-4">
           <MonthNavigator
