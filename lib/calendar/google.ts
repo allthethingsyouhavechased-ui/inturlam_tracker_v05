@@ -171,14 +171,29 @@ export async function syncCalendarEventNow(id: string): Promise<boolean> {
 export async function pullGoogleCalendarChanges(): Promise<{ inserted: number; updated: number; ignored: number }> {
   if (!isGoogleCalendarConfigured()) throw new Error("Google Calendar yapılandırması eksik.");
   const config = env();
+  const startedAt = new Date().toISOString();
   const lastSync = getCalendarSyncState("google_updated_min") ?? new Date(Date.now() - 30 * 86_400_000).toISOString();
   let pageToken: string | null = null;
   let inserted = 0; let updated = 0; let ignored = 0;
   let newest = lastSync;
+  // `updatedMin` ile artımlı okuma yalnızca Google'ın silinen etkinlik kayıtlarını
+  // sakladığı pencere içinde geçerli; daha eskisini istemek 410 döndürür. Pencere
+  // ~26-28 gün ölçüldü, yani yukarıdaki 30 günlük ilk-çalıştırma varsayılanı HER
+  // ZAMAN 410 veriyordu ve takvim hiç bağlanamıyordu. Google'ın önerdiği davranış:
+  // 410 gelince artımlı okumadan vazgeçip tam listeyi çekmek.
+  let fullSync = false;
   do {
-    const query = new URLSearchParams({ showDeleted: "true", singleEvents: "true", updatedMin: lastSync, maxResults: "2500" });
+    const query = new URLSearchParams({ showDeleted: "true", singleEvents: "true", maxResults: "2500" });
+    if (!fullSync) query.set("updatedMin", lastSync);
     if (pageToken) query.set("pageToken", pageToken);
-    const response = await googleFetch(`/calendars/${encodeURIComponent(config.calendarId)}/events?${query}`);
+    let response = await googleFetch(`/calendars/${encodeURIComponent(config.calendarId)}/events?${query}`);
+    if (response.status === 410 && !fullSync) {
+      fullSync = true;
+      pageToken = null;
+      inserted = 0; updated = 0; ignored = 0;
+      const retry = new URLSearchParams({ showDeleted: "true", singleEvents: "true", maxResults: "2500" });
+      response = await googleFetch(`/calendars/${encodeURIComponent(config.calendarId)}/events?${retry}`);
+    }
     if (!response.ok) throw new Error(`Google takvim okuması başarısız (${response.status}).`);
     const data = await response.json() as { items?: GoogleEvent[]; nextPageToken?: string };
     for (const item of data.items ?? []) {
@@ -189,7 +204,11 @@ export async function pullGoogleCalendarChanges(): Promise<{ inserted: number; u
     }
     pageToken = data.nextPageToken ?? null;
   } while (pageToken);
-  setCalendarSyncState("google_updated_min", newest);
+  // Tam senkron yapıldıysa ve hiçbir etkinlik `lastSync`ten yeni değilse, damgayı
+  // olduğu gibi bırakmak sonraki her çalıştırmayı yine 410'a sokar (aynı bayat
+  // tarih tekrar sorulur). Bu durumda isteğin BAŞLADIĞI an yazılır — "şimdi"
+  // değil, çünkü okuma sürerken güncellenen bir etkinlik atlanmamalı.
+  setCalendarSyncState("google_updated_min", newest > lastSync ? newest : fullSync ? startedAt : lastSync);
   return { inserted, updated, ignored };
 }
 

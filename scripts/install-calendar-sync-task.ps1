@@ -1,4 +1,4 @@
-param([string]$RepoPath = "C:\Users\intur\repos\inturlam-tracker-v03")
+param([string]$RepoPath = "C:\Users\intur\repos\inturlam-tracker-v05")
 
 $ErrorActionPreference = "Stop"
 $resolvedRepo = (Resolve-Path -LiteralPath $RepoPath).Path
@@ -22,5 +22,5 @@ $runnerArgs = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle H
 $action = New-ScheduledTaskAction -Execute $powerShellPath -Argument $runnerArgs -WorkingDirectory $resolvedRepo
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew
-$task = Register-ScheduledTask -TaskName "Inturlam Tracker v03 Calendar Sync" -Action $action -Trigger $trigger -Settings $settings -Description "İNTURLAM v03 Google Calendar çift yönlü senkron" -Force
+$task = Register-ScheduledTask -TaskName "Inturlam Tracker v05 Calendar Sync" -Action $action -Trigger $trigger -Settings $settings -Description "İNTURLAM v05 Google Calendar çift yönlü senkron (5 dakikada bir)" -Force
 $task | Select-Object TaskName, State
