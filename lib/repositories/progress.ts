@@ -29,6 +29,16 @@ function validMonth(month: string): string {
   return month;
 }
 
+// Puanlanabilir durumlar TEK kaynaktan: TASK_STATUS_COEFFICIENT'in anahtarları.
+// v03'te tasks.status "IptalEdildi" de olabiliyordu (v03 lib/types.ts'te TaskStatus
+// altı değerliydi), v05'te bu değer yalnızca ContentStatus'ta kaldı. v03 verisi
+// taşındığında o satırlar buraya sızıyor ve TASK_STATUS_COEFFICIENT[status]
+// undefined döndüğü için weight_points * undefined = NaN bütün toplamı NaN yapıyordu
+// (weighted_total saf toplam olduğu için sağlam kalıyor, sadece pay NaN oluyordu).
+// İptal edilmiş iş aylık plana ne payda ne paydada girmeli — bu yüzden eleniyor.
+const SCORABLE_STATUSES = Object.keys(TASK_STATUS_COEFFICIENT);
+const SCORABLE_STATUS_PLACEHOLDERS = SCORABLE_STATUSES.map(() => "?").join(", ");
+
 function listProgressTasks(month: string, whereSql = "", params: string[] = []): ProgressTaskRow[] {
   return plainList<ProgressTaskRow>(
     getDb().prepare(
@@ -36,9 +46,10 @@ function listProgressTasks(month: string, whereSql = "", params: string[] = []):
          FROM tasks t
          JOIN content_items ci ON ci.id = t.content_item_id
          JOIN brands b ON b.id = ci.brand_id
-        WHERE substr(t.due_date, 1, 7) = ? ${whereSql}
+        WHERE substr(t.due_date, 1, 7) = ?
+          AND t.status IN (${SCORABLE_STATUS_PLACEHOLDERS}) ${whereSql}
         ORDER BY b.sort_order, b.name, t.due_date, t.created_at`,
-    ).all(validMonth(month), ...params),
+    ).all(validMonth(month), ...SCORABLE_STATUSES, ...params),
   );
 }
 
@@ -115,8 +126,9 @@ export function getPersonMonthlyProgressSummary(personId: string, month: string)
            ELSE 0 END), 0) AS weighted_earned,
          COUNT(*) AS task_count
        FROM tasks t
-       WHERE t.assignee_id = ? AND substr(t.due_date, 1, 7) = ?`,
-    ).get(personId, valid),
+       WHERE t.assignee_id = ? AND substr(t.due_date, 1, 7) = ?
+         AND t.status IN (${SCORABLE_STATUS_PLACEHOLDERS})`,
+    ).get(personId, valid, ...SCORABLE_STATUSES),
   );
   const total = Number(row?.weighted_total ?? 0);
   const earned = Number(Number(row?.weighted_earned ?? 0).toFixed(2));
