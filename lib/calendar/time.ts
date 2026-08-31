@@ -73,6 +73,19 @@ export function calendarFormEndDate(event: CalendarRangeEvent): string {
   return event.all_day === 1 ? calendarEventEndDate(event) : event.end_at;
 }
 
+/**
+ * Yeni (henüz kaydedilmemiş) etkinlik formunun varsayılan saat aralığı:
+ * seçili günün 09:00–10:00'u.
+ *
+ * CalendarEventDialog içinde satır içi şablon olarak duruyordu; pencere yalnızca
+ * istemcide portal olarak çizildiği için (SSR'da `document` yok, bkz. CLAUDE.md)
+ * sunucudan çekilen HTML'de hiç görünmüyor ve HTTP seviyesinde doğrulanamıyordu.
+ * Kural buraya alındı ki saf birim testi yazılabilsin.
+ */
+export function newEventFormRange(day: string): { start: string; end: string } {
+  return { start: `${day}T09:00`, end: `${day}T10:00` };
+}
+
 export function eventOccursOnDate(event: CalendarRangeEvent, date: string): boolean {
   return date >= calendarEventStartDate(event) && date <= calendarEventEndDate(event);
 }

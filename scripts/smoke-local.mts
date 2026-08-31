@@ -7,7 +7,13 @@ import {
   deleteAuthSession,
 } from "@/lib/repositories/authSessions";
 
-const baseUrl = process.env.INTURLAM_SMOKE_URL ?? "http://127.0.0.1:3001";
+// Bu script CALISAN bir sunucuya HTTP atar; hicbir sey derlemez.
+// Varsayilan port 3000 — v03 gecis doneminde bir sure 3001'di, sunucu 3000'e
+// alindiktan sonra bu varsayilan guncellenmedigi icin script "fetch failed" verip
+// aylarca calistirilmadi. Calistirilmayinca da asagidaki metin kontrolleri
+// arayuz yeniden adlandirmalariyla sessizce bayatladi (2026-08-31'de topluca
+// guncellendi). Arayuzde bir bolumu YENIDEN ADLANDIRIRKEN buraya da bak.
+const baseUrl = process.env.INTURLAM_SMOKE_URL ?? "http://127.0.0.1:3000";
 const db = getDb();
 const person = db
   .prepare("SELECT id FROM people WHERE active = 1 ORDER BY is_manager DESC, id LIMIT 1")
@@ -72,20 +78,24 @@ try {
   const currentTodayLinks = occurrenceCount(currentHtml, encodedTodayHref);
   const selectedTodayLinks = occurrenceCount(selectedHtml, encodedTodayHref);
   assert.ok(selectedTodayLinks > currentTodayLinks, "Bugün kısayolu yalnızca başka gün seçildiğinde eklenmeli.");
-  assert.ok(selectedHtml.includes(`value="${selectedDate}T09:00"`), "Seçili gün başlangıç alanına taşınmalı.");
-  assert.ok(selectedHtml.includes(`value="${selectedDate}T10:00"`), "Seçili gün bitiş alanına taşınmalı.");
-  assert.ok(currentHtml.includes('name="colorKey"') && currentHtml.includes('value="rose"'), "Takvim etkinlik rengi seçimini göstermeli.");
-  assert.ok(brandHtml.includes("ÇEKİM HAKLARI") && brandHtml.includes("YILLIK"), "Marka sayfası yıllık çekim hakkını göstermeli.");
+  // Etkinlik penceresinin İÇİ (başlangıç/bitiş alanları, renk seçici) burada
+  // aranmaz: pencere `open && isClient && createPortal(...)` ile yalnızca
+  // istemcide çizildiği için sunucudan çekilen HTML'de hiçbir zaman bulunmaz.
+  // Varsayılan saat aralığı kuralı tests/calendarNewEventRange.test.ts'te.
+  assert.ok(currentHtml.includes("Yeni etkinlik"), "Takvim yeni etkinlik açma düğmesini göstermeli.");
+  // "Yıllık" etiketi sayfada bu yazımla basılıyor; kontrol uzun süre "YILLIK"
+  // (büyük harf) arıyordu ve o dize marka sayfasında hiç var olmadı.
+  assert.ok(brandHtml.includes("ÇEKİM HAKLARI") && brandHtml.includes("Yıllık"), "Marka sayfası yıllık çekim hakkını göstermeli.");
   assert.ok(brandHtml.includes("Etkinlik raporları"), "Marka sayfası etkinlik raporlarına bağlanmalı.");
   assert.ok(brandEventReportsHtml.includes("Toplantı ve çekim raporları"), "Marka etkinlik raporu çalışma alanını göstermeli.");
-  assert.ok(homeHtml.includes("AYLIK ÜRETİM AKIŞI") && homeHtml.includes("Atanmış markalar toplamı"), "Bugün sayfası atanmış marka toplamını ve üretim akışını göstermeli.");
-  assert.ok(panomHtml.includes("Üzerimdeki markalar") && panomHtml.includes("Bu ayki katkım"), "Panom kişisel araç düğmelerini göstermeli.");
+  assert.ok(homeHtml.includes("AYLIK ÜRETİM AKIŞI") && homeHtml.includes("PORTFÖY İLERLEMESİ"), "Bugün sayfası portföy ilerlemesini ve üretim akışını göstermeli.");
+  assert.ok(panomHtml.includes("Marka analizi") && panomHtml.includes("Katkı analizi"), "Panom kişisel araç düğmelerini göstermeli.");
   assert.ok(!panomHtml.includes("Ekipte gecikmiş / bu hafta teslim"), "Panom ekip geneli görev panelini göstermemeli.");
-  assert.ok(contributionHtml.includes("Katkı dökümü") && contributionHtml.includes("Durum analizi"), "Katkı detay sayfası ayrıntılı analizi göstermeli.");
+  assert.ok(contributionHtml.includes("Bu ayki katkım") && contributionHtml.includes("Puanı oluşturan görevler"), "Katkı detay sayfası ayrıntılı analizi göstermeli.");
   assert.ok(assignedBrandsHtml.includes("TOPLAM İLERLEME") && assignedBrandsHtml.includes("AĞIRLIKLI PUAN"), "Üzerimdeki markalar detay sayfası birleşik ilerlemeyi göstermeli.");
   const undatedTaskCount = (db.prepare("SELECT COUNT(*) AS count FROM tasks WHERE due_date IS NULL").get() as { count: number }).count;
   if (undatedTaskCount > 0) assert.ok(tasksHtml.includes("Tarih bekleyenler"), "Görevler sayfası tarih bekleyenler düğmesini göstermeli.");
-  assert.ok(reportsHtml.includes("Ekip aylık puanı"), "Raporlar sayfası ekip aylık puanı panelini göstermeli.");
+  assert.ok(reportsHtml.includes("Ekip görünümü"), "Raporlar sayfası ekip görünümü panelini göstermeli.");
 
   console.log(JSON.stringify({
     baseUrl,

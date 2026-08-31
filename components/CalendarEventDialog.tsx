@@ -17,7 +17,7 @@ import Icon from "@/components/ui/Icon";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import { cancelCalendarEventAction, saveCalendarEventAction } from "@/lib/actions/calendar";
-import { calendarFormEndDate } from "@/lib/calendar/time";
+import { calendarFormEndDate, newEventFormRange } from "@/lib/calendar/time";
 import { clearCalendarDialogParams } from "@/lib/calendar/dialogUrl";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { CalendarEvent, CalendarEventType } from "@/lib/types";
@@ -168,12 +168,13 @@ export default function CalendarEventDialog({
 
   const event = seed.event;
   const allDay = event?.all_day === 1;
+  const newRange = newEventFormRange(seed.day);
   const start = event
     ? allDay ? event.start_at.slice(0, 10) : localDateTime(event.start_at)
-    : `${seed.day}T09:00`;
+    : newRange.start;
   const end = event
     ? allDay ? calendarFormEndDate(event) : localDateTime(event.end_at)
-    : `${seed.day}T10:00`;
+    : newRange.end;
 
   return (
     <>
