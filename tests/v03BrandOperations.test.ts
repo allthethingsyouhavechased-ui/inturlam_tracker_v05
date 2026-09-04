@@ -7,7 +7,12 @@ import { after, beforeEach, describe, it } from "node:test";
 const TMP_DB = path.join(os.tmpdir(), `inturlam-test-v03-brand-operations-${process.pid}.db`);
 process.env.INTURLAM_DB_PATH = TMP_DB;
 const { getDb } = await import("@/lib/db/client");
-const { getBrand, updateBrand } = await import("@/lib/repositories/brands");
+const {
+  getBrand,
+  getBrandShootUsage,
+  setBrandShootUsage,
+  updateBrand,
+} = await import("@/lib/repositories/brands");
 const {
   listBrandPersonAssignments,
   replaceBrandPersonAssignments,
@@ -33,6 +38,31 @@ describe("v03 marka operasyon özeti", () => {
     assert.equal(getBrand("b1")?.annual_shoot_allowance, 24);
     assert.throws(() => db.prepare("UPDATE brands SET annual_shoot_allowance = -1 WHERE id = 'b1'").run());
     assert.deepEqual(listBrandPersonAssignments("b1").map((row) => row.person_name), ["Ada"]);
+  });
+
+  it("kullanılan çekim sayısını dönem dönem saklar, boş bırakılınca kaydı siler", () => {
+    const db = getDb();
+    db.prepare("INSERT INTO brands (id,name,cluster) VALUES ('b1','Bir','tek')").run();
+
+    assert.equal(getBrandShootUsage("b1", "2026-09"), null);
+
+    setBrandShootUsage("b1", "2026-09", 3);
+    setBrandShootUsage("b1", "2026-10", 1);
+    setBrandShootUsage("b1", "2026", 11);
+    assert.equal(getBrandShootUsage("b1", "2026-09"), 3);
+    assert.equal(getBrandShootUsage("b1", "2026-10"), 1);
+    assert.equal(getBrandShootUsage("b1", "2026"), 11);
+
+    setBrandShootUsage("b1", "2026-09", 4);
+    assert.equal(getBrandShootUsage("b1", "2026-09"), 4);
+
+    setBrandShootUsage("b1", "2026-09", null);
+    assert.equal(getBrandShootUsage("b1", "2026-09"), null);
+    assert.equal(getBrandShootUsage("b1", "2026"), 11);
+
+    assert.throws(() => setBrandShootUsage("b1", "2026-11", -1));
+    db.prepare("DELETE FROM brands WHERE id = 'b1'").run();
+    assert.equal(getBrandShootUsage("b1", "2026"), null);
   });
 
   it("bir markaya birden fazla aktif sorumlu atar, tekrarları ayıklar ve seçimleri kaldırır", () => {

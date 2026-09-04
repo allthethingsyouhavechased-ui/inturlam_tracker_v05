@@ -31,12 +31,24 @@ export default function EditBrandForm({
   clusters,
   people,
   assignments,
+  shootUsage,
   triggerClassName,
 }: {
   brand: Brand;
   clusters: { id: string; label: string }[];
   people: Person[];
   assignments: BrandPersonAssignment[];
+  /** Kullanılan çekim sayacının düzenlendiği dönem. `monthlyUsed`/`annualUsed`
+      null ise o dönemde elle giriş yok, sayı takvimden geliyor demektir. */
+  shootUsage: {
+    month: string;
+    monthLabel: string;
+    year: string;
+    monthlyUsed: number | null;
+    annualUsed: number | null;
+    monthlyFromCalendar: number;
+    annualFromCalendar: number;
+  };
   triggerClassName?: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -276,6 +288,41 @@ export default function EditBrandForm({
                   inputMode="numeric"
                   defaultValue={brand.annual_shoot_allowance ?? ""}
                   placeholder="Örn. 24"
+                  className={inputClass}
+                />
+              </label>
+            </div>
+
+            <input type="hidden" name="shootUsageMonth" value={shootUsage.month} />
+            <input type="hidden" name="shootUsageYear" value={shootUsage.year} />
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-secondary">Kullanılan çekimler</h4>
+              <p className="mt-1 text-xs text-muted">
+                Boş bırakırsan takvimdeki çekim etkinlikleri sayılır ({shootUsage.monthLabel}: {shootUsage.monthlyFromCalendar}, {shootUsage.year}: {shootUsage.annualFromCalendar}). Sayı yazarsan o dönem için takvim yerine bu sayı gösterilir.
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className={labelClass}>
+                {shootUsage.monthLabel} kullanılan
+                <input
+                  name="monthlyShootUsed"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  defaultValue={shootUsage.monthlyUsed ?? ""}
+                  placeholder={`Takvimden: ${shootUsage.monthlyFromCalendar}`}
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                {shootUsage.year} kullanılan
+                <input
+                  name="annualShootUsed"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  defaultValue={shootUsage.annualUsed ?? ""}
+                  placeholder={`Takvimden: ${shootUsage.annualFromCalendar}`}
                   className={inputClass}
                 />
               </label>

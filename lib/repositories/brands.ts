@@ -101,6 +101,33 @@ export function updateBrand(input: {
   );
 }
 
+// Elle girilmiş "kullanılan çekim" sayısı; `null` = kayıt yok, çağıran o dönemin
+// takvimindeki 'Cekim' etkinliklerini saymalı. `period` aylık için 'YYYY-MM',
+// yıllık için 'YYYY'.
+export function getBrandShootUsage(brandId: string, period: string): number | null {
+  const row = plainOne<{ used_count: number }>(
+    getDb()
+      .prepare("SELECT used_count FROM brand_shoot_usage WHERE brand_id = ? AND period = ?")
+      .get(brandId, period),
+  );
+  return row?.used_count ?? null;
+}
+
+// `used = null` satırı SİLER — sayaç o dönem için takvimden saymaya geri döner.
+export function setBrandShootUsage(brandId: string, period: string, used: number | null): void {
+  const db = getDb();
+  if (used === null) {
+    db.prepare("DELETE FROM brand_shoot_usage WHERE brand_id = ? AND period = ?").run(brandId, period);
+    return;
+  }
+  db.prepare(
+    `INSERT INTO brand_shoot_usage (brand_id, period, used_count, updated_at)
+     VALUES (?, ?, ?, datetime('now'))
+     ON CONFLICT (brand_id, period) DO UPDATE SET
+       used_count = excluded.used_count, updated_at = excluded.updated_at`,
+  ).run(brandId, period, used);
+}
+
 export function deleteBrand(id: string): boolean {
   return Number(getDb().prepare("DELETE FROM brands WHERE id = ?").run(id).changes) === 1;
 }

@@ -25,13 +25,13 @@ import {
   TASK_STATUS_LABEL,
   UNKNOWN_CLUSTER_LABEL,
 } from "@/lib/constants";
-import { formatDateShort, formatIsoDateTime, monthParamISO, monthParamToDate, shiftMonthParam, todayISO } from "@/lib/date";
+import { formatDateShort, formatIsoDateTime, formatMonthLabel, monthParamISO, monthParamToDate, shiftMonthParam, todayISO } from "@/lib/date";
 import { SOCIAL_SILENCE_DAYS } from "@/lib/social";
 import { listBrandSocialRows } from "@/lib/repositories/social";
 import { classifySocial, SOCIAL_HEALTH_LABEL } from "@/lib/socialSilence";
 import { requirePageSession } from "@/lib/identity";
 import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
-import { getBrand } from "@/lib/repositories/brands";
+import { getBrand, getBrandShootUsage } from "@/lib/repositories/brands";
 import { countIdeasForBrand } from "@/lib/repositories/ideas";
 import { listActivityForBrand } from "@/lib/repositories/activity";
 import { clusterLabelMap, listClusters } from "@/lib/repositories/clusters";
@@ -95,6 +95,14 @@ export default async function BrandPage({
     rangeEnd: `${year + 1}-01-01`,
     brandId,
   });
+  // Kullanılan çekim sayısı varsayılan olarak takvimden sayılır; elle girilmiş
+  // bir dönem kaydı varsa onun yerine o geçer (uygulamaya işlenmemiş çekimler).
+  const monthlyShootsFromCalendar = monthlyEvents.filter((event) => event.type === "Cekim").length;
+  const annualShootsFromCalendar = annualEvents.filter((event) => event.type === "Cekim").length;
+  const monthlyShootsUsedManual = getBrandShootUsage(brandId, month);
+  const annualShootsUsedManual = getBrandShootUsage(brandId, String(year));
+  const monthlyShootsUsed = monthlyShootsUsedManual ?? monthlyShootsFromCalendar;
+  const annualShootsUsed = annualShootsUsedManual ?? annualShootsFromCalendar;
   // Instagram kullanıcı adı girilmemiş markalar takip listesinde yok; o zaman
   // rozet de çizilmez (yanlışlıkla "taranmadı" demek yerine hiç bahsetmemek).
   const socialRow = listBrandSocialRows().find((row) => row.brand_id === brandId) ?? null;
@@ -113,6 +121,15 @@ export default async function BrandPage({
             clusters={clusters}
             people={people}
             assignments={assignments}
+            shootUsage={{
+              month,
+              monthLabel: formatMonthLabel(monthParamToDate(month)),
+              year: String(year),
+              monthlyUsed: monthlyShootsUsedManual,
+              annualUsed: annualShootsUsedManual,
+              monthlyFromCalendar: monthlyShootsFromCalendar,
+              annualFromCalendar: annualShootsFromCalendar,
+            }}
             triggerClassName={buttonClass({ variant: "secondary", size: "sm", className: BRAND_SECONDARY_CONTROL })}
           />
         ) : null
@@ -184,14 +201,14 @@ export default async function BrandPage({
           <span className="shrink-0 text-xs text-muted">
             Aylık{" "}
             <span className="font-semibold tabular-nums text-foreground">
-              {monthlyEvents.filter((event) => event.type === "Cekim").length}
+              {monthlyShootsUsed}
               {brand.monthly_shoot_allowance !== null && <span className="font-medium text-muted"> / {brand.monthly_shoot_allowance}</span>}
             </span>
           </span>
           <span className="shrink-0 text-xs text-muted">
             Yıllık{" "}
             <span className="font-semibold tabular-nums text-foreground">
-              {annualEvents.filter((event) => event.type === "Cekim").length}
+              {annualShootsUsed}
               {brand.annual_shoot_allowance !== null && <span className="font-medium text-muted"> / {brand.annual_shoot_allowance}</span>}
             </span>
           </span>

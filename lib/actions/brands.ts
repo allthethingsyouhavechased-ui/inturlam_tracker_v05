@@ -9,7 +9,9 @@ import {
   createBrand,
   deleteBrand,
   getBrand,
+  getBrandShootUsage,
   setBrandArchived,
+  setBrandShootUsage,
   updateBrand,
 } from "@/lib/repositories/brands";
 import {
@@ -45,6 +47,13 @@ function cleanNonNegativeInt(value: FormDataEntryValue | null, label: string): n
   const parsed = Number(text);
   if (!Number.isSafeInteger(parsed)) throw new Error(`${label} geçersiz.`);
   return parsed;
+}
+
+// Dönem gizli form alanından geliyor; biçimi doğrulanmazsa kullanıcı başka bir
+// dönemin (ya da hiç var olmayan bir dönemin) sayacını yazabilirdi.
+function cleanPeriod(value: FormDataEntryValue | null, pattern: RegExp): string | null {
+  const text = String(value ?? "").trim();
+  return pattern.test(text) ? text : null;
 }
 
 function sameIds(left: string[], right: string[]): boolean {
@@ -107,6 +116,21 @@ export async function updateBrandAction(formData: FormData) {
     formData.get("annualShootAllowance"),
     "Yıllık çekim hakkı",
   );
+  // Kullanılan çekim sayısı markaya değil DÖNEME yazılır (aylık kota her ay
+  // sıfırlanır). Dönem alanları yoksa sayaçlara hiç dokunulmaz.
+  const usageMonth = cleanPeriod(formData.get("shootUsageMonth"), /^\d{4}-\d{2}$/);
+  const usageYear = cleanPeriod(formData.get("shootUsageYear"), /^\d{4}$/);
+  const monthlyShootUsed = usageMonth
+    ? cleanNonNegativeInt(formData.get("monthlyShootUsed"), "Kullanılan aylık çekim")
+    : null;
+  const annualShootUsed = usageYear
+    ? cleanNonNegativeInt(formData.get("annualShootUsed"), "Kullanılan yıllık çekim")
+    : null;
+  const monthlyUsageChanged = usageMonth !== null
+    && getBrandShootUsage(id, usageMonth) !== monthlyShootUsed;
+  const annualUsageChanged = usageYear !== null
+    && getBrandShootUsage(id, usageYear) !== annualShootUsed;
+
   const responsibilitySelectionPresent = formData.get("responsibilitySelectionPresent") === "1";
   const responsiblePersonIds = formData.getAll("responsiblePersonId").map(String).filter(Boolean);
   const currentResponsiblePersonIds = listBrandPersonAssignments(id).map((item) => item.person_id);
@@ -140,12 +164,15 @@ export async function updateBrandAction(formData: FormData) {
     current.annual_shoot_allowance !== annualShootAllowance;
   const assignmentsChanged = responsibilitySelectionPresent
     && !sameIds(responsiblePersonIds, currentResponsiblePersonIds);
-  if (!brandChanged && !assignmentsChanged) return;
+  const usageChanged = monthlyUsageChanged || annualUsageChanged;
+  if (!brandChanged && !assignmentsChanged && !usageChanged) return;
   if (brandChanged) {
     if (logo) {
       await replaceBrandLogo(logo, current.logo_path, (logoPath) => update(logoPath));
     } else update();
   }
+  if (monthlyUsageChanged && usageMonth) setBrandShootUsage(id, usageMonth, monthlyShootUsed);
+  if (annualUsageChanged && usageYear) setBrandShootUsage(id, usageYear, annualShootUsed);
   if (assignmentsChanged) {
     replaceBrandPersonAssignments(id, responsiblePersonIds, actor.person.id);
   }
@@ -155,7 +182,7 @@ export async function updateBrandAction(formData: FormData) {
     entityType: "brand",
     entityId: id,
     brandId: id,
-    summary: assignmentsChanged && !brandChanged
+    summary: assignmentsChanged && !brandChanged && !usageChanged
       ? `“${name}” marka sorumlularını güncelledi`
       : assignmentsChanged
         ? `“${name}” marka bilgilerini ve sorumlularını güncelledi`

@@ -35,6 +35,20 @@ CREATE TABLE IF NOT EXISTS brands (
   annual_shoot_allowance INTEGER CHECK (annual_shoot_allowance >= 0)
 );
 
+-- Bir dönemde KULLANILMIŞ çekim sayısının elle girilmiş değeri. Varsayılan
+-- kaynak takvimdeki 'Cekim' etkinlikleridir; bu tablo yalnızca o sayımın
+-- gerçeği yansıtmadığı dönemler için bir ÜSTÜNE YAZMA kaydı tutar (satır yoksa
+-- takvim sayısı gösterilir, bkz. resolveShootUsage). `period` aylık hak için
+-- 'YYYY-MM', yıllık hak için 'YYYY' — aylık kota her ay sıfırlandığı için tek
+-- bir marka sütunu olamaz.
+CREATE TABLE IF NOT EXISTS brand_shoot_usage (
+  brand_id   TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  period     TEXT NOT NULL,
+  used_count INTEGER NOT NULL CHECK (used_count >= 0),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (brand_id, period)
+);
+
 CREATE TABLE IF NOT EXISTS brand_relations (
   id               TEXT PRIMARY KEY,
   brand_id         TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
