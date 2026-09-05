@@ -1,4 +1,6 @@
 import Link from "next/link";
+import MonthlyPointTargetCard from "@/components/MonthlyPointTargetCard";
+import { getPersonPointTargetProgress } from "@/lib/repositories/monthlyPointTargets";
 import EmptyState from "@/components/EmptyState";
 import MonthNavigator from "@/components/MonthNavigator";
 import { buttonClass } from "@/components/ui/Button";
@@ -24,11 +26,12 @@ export default async function ContributionPage({
   const month = monthParamISO(monthDate);
   const previousMonth = shiftMonthParam(month, -1);
   const progress = getPersonMonthlyProgress(me.id, month);
-  const previous = getPersonMonthlyProgress(me.id, previousMonth);
+  const targetProgress = getPersonPointTargetProgress(me.id, month);
+  const previous = getPersonPointTargetProgress(me.id, previousMonth);
   const contributions = listPersonMonthlyContributions(me.id, month);
-  const comparison = progress.percent === null
-    ? "Bu ay plan yok"
-    : comparePeriod(progress.percent, previous.percent);
+  const comparison = targetProgress.percent === null
+    ? "Bu ay hedef tanımlanmadı"
+    : comparePeriod(targetProgress.percent, previous.percent);
 
   return (
     <div>
@@ -41,11 +44,14 @@ export default async function ContributionPage({
       />
 
       <div className="space-y-6">
+      <div id="aylik-hedefim" className="scroll-mt-24">
+        <MonthlyPointTargetCard progress={targetProgress} />
+      </div>
       <section aria-label="Katkı özeti" className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-subtle sm:grid-cols-2 lg:grid-cols-4">
         <div className="bg-surface p-4 sm:p-5">
-          <p className="text-eyebrow text-brand-600 dark:text-brand-300">AYLIK İLERLEME</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">ATANAN PLANIN İLERLEMESİ</p>
           <p className="mt-1 font-display text-2xl font-semibold text-foreground">{progress.percent === null ? "Plan yok" : `%${progress.percent}`}</p>
-          <p className="mt-1 text-xs text-muted">Teslim ayına göre tamamlanma</p>
+          <p className="mt-1 text-xs text-muted">Görev durumuna göre katkı; kişisel hedeften ayrı</p>
         </div>
         <div className="bg-surface p-4 sm:p-5">
           <p className="text-eyebrow text-brand-600 dark:text-brand-300">KAZANILAN PUAN</p>
@@ -60,7 +66,7 @@ export default async function ContributionPage({
         <div className="bg-surface p-4 sm:p-5">
           <p className="text-eyebrow text-brand-600 dark:text-brand-300">DÖNEM KARŞILAŞTIRMASI</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{comparison}</p>
-          <p className="mt-1 text-xs text-muted">Önceki ay {previous.percent === null ? "plan yok" : `%${previous.percent}`}</p>
+          <p className="mt-1 text-xs text-muted">Önceki ay hedef gerçekleşmesi: {previous.percent === null ? "hedef yok" : `%${previous.percent}`}</p>
         </div>
       </section>
 

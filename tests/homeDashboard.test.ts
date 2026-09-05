@@ -22,14 +22,14 @@ describe("Bugün sayfası bilgi akışı", () => {
     assert.match(source, /listBrandMonthlyProgress/);
     assert.match(source, /getPortfolioMonthlyProgress/);
     assert.match(source, /listMonthlyTaskStatusCounts/);
-    assert.match(source, /getPersonMonthlyProgress/);
+    assert.match(source, /getPersonPointTargetProgress/);
     assert.match(source, /<HomeBrandProgress/);
     assert.doesNotMatch(source, /TaskPanel|ActivityPanel|listRecentActivity/);
   });
 
   it("kişisel odağı teslim, revize ve inceleme kurallarıyla süzüyor", () => {
     assert.match(source, /<HomeFocusPanel/);
-    assert.match(source, /getPersonMonthlyProgress/);
+    assert.match(source, /getPersonPointTargetProgress/);
     assert.match(source, /task\.status === "Beklemede" \|\| task\.status === "DevamEdiyor"/);
     assert.match(source, /task\.active_revision_id !== null && task\.assignee_id === me\.id/);
     assert.match(source, /task\.status === "Incelemede" && task\.assignee_id === me\.id/);

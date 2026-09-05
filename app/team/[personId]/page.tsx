@@ -1,4 +1,6 @@
 import Link from "next/link";
+import MonthlyPointTargetReport from "@/components/MonthlyPointTargetReport";
+import { monthParamISO, monthParamToDate } from "@/lib/date";
 import { notFound } from "next/navigation";
 import PersonAvatar from "@/components/PersonAvatar";
 import Badge from "@/components/ui/Badge";
@@ -13,10 +15,13 @@ export const dynamic = "force-dynamic";
 
 export default async function PersonProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ personId: string }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const current = await requirePageSession();
+  const month = monthParamISO(monthParamToDate((await searchParams).month));
   const { personId } = await params;
   const person = getPerson(personId);
   if (!person) notFound();
@@ -76,6 +81,7 @@ export default async function PersonProfilePage({
           </Link>
         )}
       </header>
+      <MonthlyPointTargetReport month={month} basePath={`/team/${person.id}`} personId={person.id} canManage={current.is_manager === 1} canExport={current.is_manager === 1} />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section aria-labelledby="profile-about" className="min-w-0">

@@ -4,6 +4,8 @@ import ReportsClient, {
   type RangeKey,
 } from "@/components/ReportsClient";
 import PageHeader from "@/components/ui/PageHeader";
+import MonthlyPointTargetReport from "@/components/MonthlyPointTargetReport";
+import { monthParamISO, monthParamToDate } from "@/lib/date";
 import { currentMonthRange, currentWeekRange, todayISO } from "@/lib/date";
 import { withAllDepartments } from "@/lib/departments";
 import { requireReportAccess } from "@/lib/identity";
@@ -60,7 +62,7 @@ function formatReportDate(value: string): string {
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; start?: string; end?: string }>;
+  searchParams: Promise<{ range?: string; start?: string; end?: string; month?: string }>;
 }) {
   await requireReportAccess();
   const sp = await searchParams;
@@ -159,6 +161,8 @@ export default async function ReportsPage({
         generatedAt={generatedAt}
         teamMonthlyProgress={teamMonthlyProgress}
       />
+      <MonthlyPointTargetReport month={monthParamISO(monthParamToDate(sp.month ?? (range?.start ?? today).slice(0, 7)))} basePath="/reports" canManage canExport
+        preservedQuery={new URLSearchParams({ range: sp.range ?? "all", start: sp.start ?? "", end: sp.end ?? "" }).toString()} />
     </div>
   );
 }

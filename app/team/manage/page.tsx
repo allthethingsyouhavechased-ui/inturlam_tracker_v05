@@ -34,6 +34,7 @@ export default async function TeamManagementPage() {
         breadcrumb={[{ label: "Ekip", href: "/team" }, { label: "Hesap yönetimi" }]}
         actions={
           <>
+            <Link href="/team/manage/targets" className={buttonClass({ variant: "secondary", size: "sm" })}>Aylık puan hedefleri</Link>
             {/* Guest hesapları artık ayrı bir sayfa: bu listenin en altında
                 dururken varlığı fark edilmiyordu (bkz. app/team/manage/guest). */}
             <Link

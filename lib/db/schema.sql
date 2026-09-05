@@ -92,6 +92,30 @@ CREATE TABLE IF NOT EXISTS people (
 -- Ekip ve marka guest hesapları tek oturum altyapısında birleşir. Mevcut
 -- people.password_hash sütunu v02 geri uyumluluğu için korunur; v03 okumaları
 -- accounts.password_hash kullanır.
+-- Kişisel hedef, atanmış görev toplamından bağımsız ve her ay için ayrıdır.
+-- Mevcut veriye varsayılan hedef yazılmaz; yönetici açıkça belirler.
+CREATE TABLE IF NOT EXISTS person_monthly_point_targets (
+  person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  month TEXT NOT NULL CHECK (month GLOB '[1-9][0-9][0-9][0-9]-[0-1][0-9]' AND substr(month, 6, 2) BETWEEN '01' AND '12'),
+  target_points INTEGER NOT NULL CHECK (typeof(target_points) = 'integer' AND target_points BETWEEN 1 AND 100000),
+  updated_by TEXT REFERENCES people(id) ON DELETE SET NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (person_id, month)
+);
+
+CREATE TABLE IF NOT EXISTS person_monthly_point_target_changes (
+  id TEXT PRIMARY KEY,
+  person_id TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  month TEXT NOT NULL,
+  previous_points INTEGER,
+  target_points INTEGER NOT NULL,
+  actor_id TEXT REFERENCES people(id) ON DELETE SET NULL,
+  actor_name TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_point_target_changes_month ON person_monthly_point_target_changes(month, created_at);
+
 CREATE TABLE IF NOT EXISTS accounts (
   id            TEXT PRIMARY KEY,
   kind          TEXT NOT NULL CHECK (kind IN ('team','guest')),

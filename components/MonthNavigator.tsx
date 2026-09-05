@@ -21,11 +21,13 @@ export default function MonthNavigator({
   basePath,
   ariaLabel = "Analiz ayı",
   preservedQuery = "",
+  scroll = true,
 }: {
   month: string;
   basePath: string;
   ariaLabel?: string;
   preservedQuery?: string;
+  scroll?: boolean;
 }) {
   const currentMonth = todayISO().slice(0, 7);
 
@@ -34,6 +36,7 @@ export default function MonthNavigator({
       {month !== currentMonth && (
         <Link
           href={hrefForMonth(basePath, currentMonth, preservedQuery)}
+          scroll={scroll}
           className="ui-press inline-flex min-h-11 items-center rounded-md border border-border-default bg-surface px-2.5 text-[11px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground md:min-h-10"
         >
           Bu ay
@@ -42,6 +45,7 @@ export default function MonthNavigator({
       <div className="flex min-w-0 items-center rounded-md border border-border-default bg-surface p-0.5">
         <Link
           href={hrefForMonth(basePath, shiftMonthParam(month, -1), preservedQuery)}
+          scroll={scroll}
           aria-label="Önceki ay"
           className="ui-press grid size-11 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground md:size-9"
         >
@@ -52,6 +56,7 @@ export default function MonthNavigator({
         </span>
         <Link
           href={hrefForMonth(basePath, shiftMonthParam(month, 1), preservedQuery)}
+          scroll={scroll}
           aria-label="Sonraki ay"
           className="ui-press grid size-11 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground md:size-9"
         >

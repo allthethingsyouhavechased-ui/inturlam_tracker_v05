@@ -115,6 +115,10 @@ export default async function PanomPage() {
               <Icon name="reports" className="size-4" />
               Katkı analizi
             </Link>
+            <Link href="/panom/katkim#aylik-hedefim" className={buttonClass({ variant: "secondary" })}>
+              <Icon name="calendar" className="size-4" />
+              Aylık hedefim
+            </Link>
           </span>
         ) : undefined}
       />

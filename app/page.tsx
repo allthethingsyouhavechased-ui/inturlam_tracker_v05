@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getPersonPointTargetProgress } from "@/lib/repositories/monthlyPointTargets";
 import HomeBrandProgress from "@/components/HomeBrandProgress";
 import HomeFocusPanel from "@/components/HomeFocusPanel";
 import MonthNavigator from "@/components/MonthNavigator";
@@ -18,7 +19,6 @@ import { listPersonBrandAssignments } from "@/lib/repositories/brandAssignments"
 import { listBrandsWithOpenCounts } from "@/lib/repositories/brands";
 import {
   getPortfolioMonthlyProgress,
-  getPersonMonthlyProgress,
   listBrandMonthlyProgress,
   listMonthlyTaskStatusCounts,
 } from "@/lib/repositories/progress";
@@ -93,7 +93,7 @@ export default async function HomePage({
   const portfolioBrands = listBrandMonthlyProgress(month);
   const portfolioProgress = getPortfolioMonthlyProgress(month);
   const portfolioStatusCounts = listMonthlyTaskStatusCounts(month);
-  const personalProgress = getPersonMonthlyProgress(me.id, month);
+  const personalProgress = getPersonPointTargetProgress(me.id, month);
   const assignedBrandIds = listPersonBrandAssignments(me.id).map((assignment) => assignment.brand_id);
   const personalDeadlines = openTasks
     .filter((task) => (

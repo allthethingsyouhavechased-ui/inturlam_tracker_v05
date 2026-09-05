@@ -1,4 +1,6 @@
 import Link from "next/link";
+import MonthlyPointTargetReport from "@/components/MonthlyPointTargetReport";
+import { monthParamISO, monthParamToDate } from "@/lib/date";
 import { notFound } from "next/navigation";
 import DepartmentReportClient from "@/components/reports/DepartmentReportClient";
 import { currentMonthRange, currentWeekRange, todayISO } from "@/lib/date";
@@ -87,7 +89,7 @@ export default async function DepartmentReportPage({
   searchParams,
 }: {
   params: Promise<{ departmentId: string }>;
-  searchParams: Promise<{ range?: string; start?: string; end?: string }>;
+  searchParams: Promise<{ range?: string; start?: string; end?: string; month?: string }>;
 }) {
   await requireReportAccess();
   const { departmentId } = await params;
@@ -168,6 +170,8 @@ export default async function DepartmentReportPage({
         <p className="text-xs text-zinc-500 dark:text-zinc-400">{reportLabel}</p>
       </div>
 
+      <MonthlyPointTargetReport month={monthParamISO(monthParamToDate(sp.month ?? (range?.start ?? today).slice(0, 7)))} basePath={`/reports/departman/${department}`} department={department} canManage canExport
+        preservedQuery={new URLSearchParams({ range: sp.range ?? "all", start: sp.start ?? "", end: sp.end ?? "" }).toString()} />
       <DepartmentReportClient
         departmentId={department}
         departmentLabel={label}

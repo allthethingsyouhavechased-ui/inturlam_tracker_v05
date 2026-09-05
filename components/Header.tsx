@@ -9,7 +9,7 @@ import { getCurrentPerson } from "@/lib/identity";
 import { todayISO } from "@/lib/date";
 import { formatPoints } from "@/lib/progress";
 import { countUnreadForPerson, listNotificationsForPerson } from "@/lib/repositories/notifications";
-import { getPersonMonthlyProgressSummary } from "@/lib/repositories/progress";
+import { getPersonPointTargetProgress } from "@/lib/repositories/monthlyPointTargets";
 
 // Header LAYOUT'ta duruyor, yani uygulamanın HER isteğinde çalışıyor. Bu yüzden
 // burada yalnızca gerçekten her ekranda gösterilen veri okunur. Hızlı görev
@@ -21,7 +21,7 @@ export default async function Header() {
   const notifications = person ? listNotificationsForPerson(person.id) : [];
   const unreadCount = person ? countUnreadForPerson(person.id) : 0;
   const month = todayISO().slice(0, 7);
-  const monthlyProgress = person ? getPersonMonthlyProgressSummary(person.id, month) : null;
+  const monthlyProgress = person ? getPersonPointTargetProgress(person.id, month) : null;
 
   return (
     <header className="app-topbar sticky top-0 z-30 border-b border-border-subtle bg-background/90 backdrop-blur-xl">
@@ -30,7 +30,7 @@ export default async function Header() {
           <MobileMenuButton />
         </div>
 
-        <div className="header-search-center flex min-w-0 flex-1 justify-start px-2 md:px-0">
+        <div className="flex min-w-0 flex-1 justify-start px-2 md:px-0">
           <GlobalSearch />
         </div>
 
@@ -38,11 +38,11 @@ export default async function Header() {
           {person && monthlyProgress && (
             <Link
               href={`/panom/katkim?month=${month}`}
-              title={`Bu ay ${formatPoints(monthlyProgress.weighted_earned)} / ${formatPoints(monthlyProgress.weighted_total)} puan`}
+              title={`Aylık hedefim: ${formatPoints(monthlyProgress.earned_points)} / ${monthlyProgress.target_points ?? "—"} puan`}
               className="ui-press hidden min-h-9 items-center gap-1 rounded-md border border-border-default bg-surface px-2.5 text-[11px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground sm:inline-flex"
             >
               <span className="text-muted">Bu ay</span>
-              <span className="tabular-nums text-foreground">{monthlyProgress.percent === null ? "Plan yok" : `%${monthlyProgress.percent}`}</span>
+              <span className="tabular-nums text-foreground">{monthlyProgress.percent === null ? "Hedef yok" : `${formatPoints(monthlyProgress.earned_points)}/${monthlyProgress.target_points} · %${monthlyProgress.percent}`}</span>
             </Link>
           )}
           {person && (

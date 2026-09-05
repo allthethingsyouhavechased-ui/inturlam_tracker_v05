@@ -1,4 +1,6 @@
 import Link from "next/link";
+import MonthlyPointTargetCard from "@/components/MonthlyPointTargetCard";
+import type { PointTargetProgress } from "@/lib/monthlyPointTargets";
 import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/Button";
@@ -39,7 +41,7 @@ interface HomeBrandProgressProps {
   portfolioBrands: BrandMonthlyProgressRow[];
   portfolioProgress: MonthlyProgress;
   portfolioStatusCounts: Record<TaskStatus, number>;
-  personalProgress: MonthlyProgress;
+  personalProgress: PointTargetProgress;
   assignedBrandIds: string[];
   section?: "all" | "summary" | "details";
 }
@@ -61,16 +63,14 @@ export default function HomeBrandProgress({
     <div className="space-y-5">
       {section !== "details" && <section aria-label="Aylık analiz özeti" className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-subtle sm:grid-cols-3">
         <div className="bg-surface px-4 py-4 sm:px-5">
-          <p className="text-eyebrow text-brand-600 dark:text-brand-300">BENİM AYLIK İLERLEMEM</p>
-          <div className="mt-1"><ProgressValue progress={personalProgress} showPoints={false} /></div>
-          <ProgressTrack progress={personalProgress} />
+          <MonthlyPointTargetCard progress={personalProgress} compact />
         </div>
         <div className="bg-surface px-4 py-4 sm:px-5">
-          <p className="text-eyebrow text-brand-600 dark:text-brand-300">BU AYKİ PUANIM</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">ATANAN İŞ PUANIM</p>
           <div className="mt-1 flex items-end justify-between gap-3">
             <div>
-              <p className="font-display text-2xl font-semibold tabular-nums text-foreground">{formatPoints(personalProgress.weighted_earned)}</p>
-              <p className="mt-0.5 text-[11px] tabular-nums text-muted">{formatPoints(personalProgress.weighted_total)} puanlık plandan</p>
+              <p className="font-display text-2xl font-semibold tabular-nums text-foreground">{formatPoints(personalProgress.assigned_points)}</p>
+              <p className="mt-0.5 text-[11px] text-muted">Aylık hedeften bağımsız iş planı</p>
             </div>
             {/* Düz metin bağlantıyken tıklanabilir olduğu anlaşılmıyordu —
                 komşusu bir sayı bloğu, altı çizgisi yalnız hover'da çıkıyordu. */}

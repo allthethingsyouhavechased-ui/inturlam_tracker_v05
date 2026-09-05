@@ -1,4 +1,6 @@
 import Link from "next/link";
+import MonthlyPointTargetReport from "@/components/MonthlyPointTargetReport";
+import { monthParamISO, monthParamToDate } from "@/lib/date";
 import { notFound } from "next/navigation";
 import PersonAvatar from "@/components/PersonAvatar";
 import PersonReportClient, {
@@ -67,7 +69,7 @@ export default async function PersonReportPage({
   searchParams,
 }: {
   params: Promise<{ personId: string }>;
-  searchParams: Promise<{ range?: string; start?: string; end?: string }>;
+  searchParams: Promise<{ range?: string; start?: string; end?: string; month?: string }>;
 }) {
   await requireReportAccess();
   const { personId } = await params;
@@ -152,6 +154,8 @@ export default async function PersonReportPage({
         <p className="text-xs text-zinc-500 dark:text-zinc-400">{reportLabel}</p>
       </div>
 
+      <MonthlyPointTargetReport month={monthParamISO(monthParamToDate(sp.month ?? (range?.start ?? today).slice(0, 7)))} basePath={`/reports/kisi/${person.id}`} personId={person.id} canManage canExport
+        preservedQuery={new URLSearchParams({ range: sp.range ?? "all", start: sp.start ?? "", end: sp.end ?? "" }).toString()} />
       <PersonReportClient
         personId={person.id}
         personName={person.name}

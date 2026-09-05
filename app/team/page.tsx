@@ -33,7 +33,12 @@ export default async function TeamPage() {
         title="Ekip"
         description="Kim ne üzerinde çalışıyor, ekip kapasitesi nasıl dağılıyor ve kimin desteğe ihtiyacı var?"
         actions={
-          canManageAccounts ? (
+          <>
+            <Link href="/team/targets" className={buttonClass({ variant: "secondary" })}>
+              <Icon name="reports" className="size-4" />
+              Aylık hedefler
+            </Link>
+            {canManageAccounts && (
             <Link
               href="/team/manage"
               className={buttonClass({ variant: "secondary" })}
@@ -41,7 +46,8 @@ export default async function TeamPage() {
               <Icon name="settings" className="size-4" />
               Hesap yönetimi
             </Link>
-          ) : undefined
+            )}
+          </>
         }
       />
 

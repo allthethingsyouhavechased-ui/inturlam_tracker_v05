@@ -7,6 +7,9 @@
 // `node:zlib` kullanıyor; burada kalınca istemci paketine hiç girmiyor.
 
 import { NextResponse } from "next/server";
+import { assertTargetMonth } from "@/lib/monthlyPointTargets";
+import { buildPointTargetSheet } from "@/lib/pointTargetWorkbook";
+import { getPersonPointTargetProgress, listMonthlyPointTargets } from "@/lib/repositories/monthlyPointTargets";
 import { getCurrentPerson } from "@/lib/identity";
 import { currentMonthRange, currentWeekRange, todayISO } from "@/lib/date";
 import {
@@ -108,6 +111,20 @@ export async function GET(request: Request): Promise<NextResponse> {
   // Kişi kapsamı departmandan önce gelir: ikisi birden verilirse dosya tek bir
   // şeyi anlatmalı, kişi daha dar olan.
   const scope: ReportScope = person?.id ?? (department ? { department } : null);
+
+  if (params.get("view") === "targets") {
+    let month: string;
+    try { month = assertTargetMonth(params.get("month") ?? today.slice(0, 7)); }
+    catch { return NextResponse.json({ error: "Geçerli bir hedef ayı seçin." }, { status: 400 }); }
+    const rows = person ? [{ person_id: person.id, person_name: person.name, active: person.active, department: person.department, ...getPersonPointTargetProgress(person.id, month) }]
+      : listMonthlyPointTargets(month).filter(row => !department || departmentKey(row.department) === department);
+    const fileName = xlsxFileName([person?.name ?? department ?? "ekip", "aylik-hedefler", month]);
+    return new NextResponse(new Uint8Array(buildXlsx([buildPointTargetSheet(rows)])), { headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Cache-Control": "no-store",
+    } });
+  }
 
   // Döküm de panolarla aynı arşiv kuralını görsün.
   sweepArchivablePublishedTasks();

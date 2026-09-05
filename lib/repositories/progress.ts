@@ -119,10 +119,7 @@ export function getPersonMonthlyProgressSummary(personId: string, month: string)
       `SELECT
          COALESCE(SUM(t.weight_points), 0) AS weighted_total,
          COALESCE(SUM(t.weight_points * CASE t.status
-           WHEN 'DevamEdiyor' THEN 0.25
-           WHEN 'Incelemede' THEN 0.6
-           WHEN 'Onaylandi' THEN 0.9
-           WHEN 'Yayinlandi' THEN 1
+           ${Object.entries(TASK_STATUS_COEFFICIENT).map(([status, coefficient]) => `WHEN '${status}' THEN ${coefficient}`).join(" ")}
            ELSE 0 END), 0) AS weighted_earned,
          COUNT(*) AS task_count
        FROM tasks t
