@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import PersonAvatar from "@/components/PersonAvatar";
+import { validateImageFiles } from "@/lib/imageUploadPolicy";
 
 export default function PersonAvatarPicker({
   name,
@@ -12,9 +13,13 @@ export default function PersonAvatarPicker({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    try { if (file) validateImageFiles([file]); }
+    catch (error) { setError((error as Error).message); event.target.value = ""; return; }
+    setError(null);
     if (preview) URL.revokeObjectURL(preview);
     setPreview(file ? URL.createObjectURL(file) : null);
   }
@@ -34,6 +39,7 @@ export default function PersonAvatarPicker({
       )}
 
       <div className="space-y-1.5">
+        {error && <p role="alert" className="text-xs text-danger">{error}</p>}
         <button
           type="button"
           onClick={() => inputRef.current?.click()}

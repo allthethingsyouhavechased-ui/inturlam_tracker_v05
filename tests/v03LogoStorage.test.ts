@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { VALID_PNG } from "./fixtures/image.ts";
 import { spawnSync } from "node:child_process";
 import { after, beforeEach, describe, it } from "node:test";
 
@@ -22,8 +23,8 @@ function reset() {
   fs.mkdirSync(TMP_ROOT, { recursive: true });
 }
 
-function logoFile(name = "logo.png", bytes = [1, 2, 3]): File {
-  return new File([new Uint8Array(bytes)], name, { type: "image/png" });
+function logoFile(name = "logo.png"): File {
+  return new File([VALID_PNG], name, { type: "image/png" });
 }
 
 function runScript(script: string, args: string[] = []) {
@@ -73,13 +74,13 @@ describe("v03 marka logosu runtime yaşam döngüsü", () => {
     const oldRuntimeLogo = path.join(TMP_UPLOADS, "logos", "old.png");
     fs.mkdirSync(path.dirname(oldRuntimeLogo), { recursive: true });
     fs.writeFileSync(oldRuntimeLogo, new Uint8Array([9]));
-    const next = await replaceBrandLogo(logoFile("next.png", [4]), "/uploads/logos/old.png", (filePath) => filePath);
+    const next = await replaceBrandLogo(logoFile("next.png"), "/uploads/logos/old.png", (filePath) => filePath);
     assert.equal(fs.existsSync(oldRuntimeLogo), false);
     assert.equal(fs.existsSync(path.join(TMP_UPLOADS, next.replace(/^\/uploads\//, ""))), true);
 
     const repoLogo = path.join(process.cwd(), "public", "logos", "adadisticaret.jpg");
     const originalRepoLogo = fs.readFileSync(repoLogo);
-    await replaceBrandLogo(logoFile("replacement.png", [5]), "/logos/adadisticaret.jpg", (filePath) => filePath);
+    await replaceBrandLogo(logoFile("replacement.png"), "/logos/adadisticaret.jpg", (filePath) => filePath);
     assert.deepEqual(fs.readFileSync(repoLogo), originalRepoLogo);
   });
 

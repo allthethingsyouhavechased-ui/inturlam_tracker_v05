@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { deleteTaskAttachmentAction } from "@/lib/actions/tasks";
 import { getActionErrorMessage } from "@/lib/errorMessage";
 import type { TaskAttachment } from "@/lib/types";
+import { validateImageFiles, IMAGE_UPLOAD_HINT, imageUploadCapacity } from "@/lib/imageUploadPolicy";
 
 interface PendingImage {
   file: File;
@@ -34,6 +35,9 @@ export default function TaskNotesAttachments({
 
   function addFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
+    try { validateImageFiles([...pendingImages.map(image => image.file), ...Array.from(fileList)]); }
+    catch (error) { setError((error as Error).message); syncInput(pendingImages.map(image => image.file)); return; }
+    setError(null);
     const next = [
       ...pendingImages,
       ...Array.from(fileList).map((file) => ({ file, url: URL.createObjectURL(file) })),
@@ -107,6 +111,8 @@ export default function TaskNotesAttachments({
         </div>
       )}
       {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+      <p className="text-xs text-muted">{IMAGE_UPLOAD_HINT}</p>
+      <p className="text-xs text-muted" aria-live="polite">{imageUploadCapacity(pendingImages.map(image => image.file))}</p>
       <label className="inline-block cursor-pointer text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400">
         📎 Görsel ekle
         <input

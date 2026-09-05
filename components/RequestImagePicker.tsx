@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
+import { validateImageFiles, IMAGE_UPLOAD_HINT, imageUploadCapacity } from "@/lib/imageUploadPolicy";
 
 interface PendingImage {
   file: File;
@@ -11,6 +12,7 @@ interface PendingImage {
 export default function RequestImagePicker() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<PendingImage[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   function syncInput(next: PendingImage[]) {
     const transfer = new DataTransfer();
@@ -20,10 +22,13 @@ export default function RequestImagePicker() {
 
   function addFiles(fileList: FileList | null) {
     if (!fileList) return;
+    try { validateImageFiles([...images.map(image => image.file), ...Array.from(fileList)]); }
+    catch (error) { setError((error as Error).message); syncInput(images); return; }
+    setError(null);
     const next = [
       ...images,
       ...Array.from(fileList).map((file) => ({ file, url: URL.createObjectURL(file) })),
-    ].slice(0, 6);
+    ];
     setImages(next);
     syncInput(next);
   }
@@ -46,8 +51,10 @@ export default function RequestImagePicker() {
         >
           <Icon name="plus" className="size-4" /> Görsel ekle
         </button>
-        <span className="text-[11px] text-muted">En fazla 6 adet PNG, JPG, GIF veya WEBP · dosya başına 8 MB</span>
+        <span className="text-[11px] text-muted">{IMAGE_UPLOAD_HINT}</span>
       </div>
+      <p className="text-xs text-muted" aria-live="polite">{imageUploadCapacity(images.map(image => image.file))}</p>
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
       <input
         ref={inputRef}
         type="file"

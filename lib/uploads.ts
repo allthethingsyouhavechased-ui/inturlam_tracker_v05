@@ -1,5 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
+import { ALLOWED_IMAGE_EXTENSIONS, MAX_IMAGE_PIXELS, validateImageFiles } from "@/lib/imageUploadPolicy";
+export { ALLOWED_IMAGE_EXTENSIONS, MAX_IMAGE_FILES, MAX_IMAGE_SIZE, validateImageFiles } from "@/lib/imageUploadPolicy";
 
 function runtimeUploadRoot(): string {
   return process.env.INTURLAM_UPLOAD_ROOT || path.join(process.cwd(), "data", "uploads");
@@ -10,32 +13,29 @@ export interface SavedImageFile {
   originalName: string | null;
 }
 
-export const MAX_IMAGE_FILES = 6;
-export const MAX_IMAGE_SIZE = 8 * 1024 * 1024; // 8MB
-
-export const ALLOWED_IMAGE_EXTENSIONS: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/gif": "gif",
-  "image/webp": "webp",
-};
-
 export function extractImageFiles(formData: FormData, field = "images"): File[] {
   return formData
     .getAll(field)
-    .filter((v): v is File => v instanceof File && v.size > 0)
-    .slice(0, MAX_IMAGE_FILES);
+    .filter((v): v is File => v instanceof File && (v.size > 0 || v.name !== ""));
 }
 
-export function validateImageFiles(images: File[]): void {
-  for (const image of images) {
-    if (image.size > MAX_IMAGE_SIZE) {
-      throw new Error(`${image.name}: dosya çok büyük (max 8MB).`);
-    }
-    if (!(image.type in ALLOWED_IMAGE_EXTENSIONS)) {
-      throw new Error(`${image.name}: sadece görsel dosyaları (PNG/JPG/GIF/WEBP) yüklenebilir.`);
-    }
+export async function validateImageContent(image: File): Promise<Buffer> {
+  validateImageFiles([image]);
+  const buffer = Buffer.from(await image.arrayBuffer());
+  const decoder = sharp(buffer, { animated: true, limitInputPixels: MAX_IMAGE_PIXELS, failOn: "warning" });
+  try {
+    const metadata = await decoder.metadata();
+    const expected = image.type === "image/jpeg" ? "jpeg" : ALLOWED_IMAGE_EXTENSIONS[image.type];
+    if (metadata.format !== expected) throw new Error("Tür uyuşmazlığı");
+    // Stats fully decodes pixel data, unlike metadata alone. Every animation
+    // frame is included in the pixel budget. Original bytes remain unchanged.
+    await decoder.stats();
+  } catch {
+    throw new Error(`${image.name}: görsel bozuk, türü uyuşmuyor veya toplam 24 milyon piksel sınırını aşıyor.`);
+  } finally {
+    decoder.destroy();
   }
+  return buffer;
 }
 
 // `subdir` runtime `data/uploads` kökü altında ayrı bir klasör (ör. "comments", "tasks") —
@@ -45,6 +45,7 @@ export async function saveImageFiles(
   subdir: string,
 ): Promise<SavedImageFile[]> {
   if (images.length === 0) return [];
+  validateImageFiles(images);
   const uploadDir = path.join(/* turbopackIgnore: true */ runtimeUploadRoot(), subdir);
   await fs.mkdir(uploadDir, { recursive: true });
   const saved: { filePath: string; originalName: string | null }[] = [];
@@ -52,7 +53,7 @@ export async function saveImageFiles(
     for (const image of images) {
       const ext = ALLOWED_IMAGE_EXTENSIONS[image.type];
       const fileName = `${crypto.randomUUID()}.${ext}`;
-      const buffer = Buffer.from(await image.arrayBuffer());
+      const buffer = await validateImageContent(image);
       await fs.writeFile(path.join(/* turbopackIgnore: true */ uploadDir, fileName), buffer);
       saved.push({ filePath: `/uploads/${subdir}/${fileName}`, originalName: image.name || null });
     }

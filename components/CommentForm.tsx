@@ -6,6 +6,7 @@ import { buttonClass } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Input";
 import { addCommentAction } from "@/lib/actions/comments";
 import { getActionErrorMessage } from "@/lib/errorMessage";
+import { validateImageFiles, IMAGE_UPLOAD_HINT, imageUploadCapacity } from "@/lib/imageUploadPolicy";
 
 interface PendingImage {
   file: File;
@@ -24,6 +25,9 @@ export default function CommentForm({ taskId }: { taskId: string }) {
 
   function addFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
+    try { validateImageFiles([...images.map(image => image.file), ...Array.from(fileList)]); }
+    catch (error) { setError((error as Error).message); if (fileInputRef.current) fileInputRef.current.value = ""; return; }
+    setError(null);
     const next = Array.from(fileList).map((file) => ({
       file,
       url: URL.createObjectURL(file),
@@ -101,6 +105,8 @@ export default function CommentForm({ taskId }: { taskId: string }) {
         </div>
       )}
       {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+      <p className="text-xs text-muted">{IMAGE_UPLOAD_HINT}</p>
+      <p className="text-xs text-muted" aria-live="polite">{imageUploadCapacity(images.map(image => image.file))}</p>
       <div className="flex items-center justify-between gap-2">
         <label className="cursor-pointer text-xs font-medium text-muted hover:text-brand-600 dark:hover:text-brand-400">
           📎 Görsel ekle
