@@ -1,4 +1,5 @@
 import { assertTaskTransition, TaskTransitionError } from "@/lib/taskLifecycle";
+import { isTaskShared, TASK_SHARED_SQL } from "@/lib/taskSharing";
 import type { DatabaseSync } from "node:sqlite";
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import type {
@@ -56,7 +57,7 @@ export function listGuestTaskDeliveries(taskId: string, brandId: string): GuestT
        JOIN tasks t ON t.id = d.task_id
        JOIN content_items ci ON ci.id = t.content_item_id
       WHERE d.task_id = ? AND d.guest_visible = 1
-        AND t.origin = 'guest' AND ci.brand_id = ?
+        AND ${TASK_SHARED_SQL} AND ci.brand_id = ?
       ORDER BY d.version_number DESC`,
   ).all(taskId, brandId)));
   return rows.map((delivery) => ({
@@ -132,8 +133,8 @@ export function createTaskDelivery(
       throw new Error("Yayınlanmış veya arşivlenmiş göreve yeni teslim eklenemez.");
     }
     if (!task.due_date) throw new Error("Teslim göndermeden önce iç teslim tarihi planlanmalı.");
-    if (input.guestVisible && task.origin !== "guest") {
-      throw new Error("Guest paylaşımı yalnızca guest kaynaklı görevlerde açılabilir.");
+    if (input.guestVisible && !isTaskShared(input.taskId)) {
+      throw new Error("Teslim paylaşmadan önce müşteri erişimini açın.");
     }
     if (db.prepare(
       "SELECT 1 FROM task_deliveries WHERE task_id = ? AND status = 'Beklemede'",
@@ -228,7 +229,7 @@ export function decideTaskDelivery(input: {
     }
     if (input.actorKind === "guest") {
       if (account.brand_id !== input.brandId || input.actorPersonId !== null) throw new TaskTransitionError("Bu teslim için karar verme yetkiniz yok.");
-      if (!input.brandId || row.brand_id !== input.brandId || row.origin !== "guest" || row.guest_visible !== 1) {
+      if (!input.brandId || row.brand_id !== input.brandId || !isTaskShared(row.task_id, input.brandId) || row.guest_visible !== 1) {
         throw new Error("Bu teslim için karar verme yetkiniz yok.");
       }
     }

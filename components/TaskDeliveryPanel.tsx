@@ -1,4 +1,5 @@
 import RequestImagePicker from "@/components/RequestImagePicker";
+import DeliverySharePreview from "@/components/DeliverySharePreview";
 /* eslint-disable @next/next/no-img-element */
 import ActionForm from "@/components/ActionForm";
 import SubmitButton from "@/components/SubmitButton";
@@ -162,7 +163,7 @@ function PendingDecision({ delivery }: { delivery: TaskDelivery }) {
 export default function TaskDeliveryPanel({
   taskId,
   taskStatus,
-  taskOrigin,
+  customerShared,
   planned,
   archived,
   deliveries,
@@ -170,7 +171,7 @@ export default function TaskDeliveryPanel({
 }: {
   taskId: string;
   taskStatus: TaskStatus;
-  taskOrigin: "team" | "guest";
+  customerShared: boolean;
   planned: boolean;
   archived: boolean;
   deliveries: TaskDelivery[];
@@ -201,7 +202,7 @@ export default function TaskDeliveryPanel({
 
       {canSubmit && (
         <div className="border-b border-border-subtle px-4 py-4 sm:px-5">
-          <ActionForm
+          <DeliverySharePreview><ActionForm
             action={createTaskDeliveryAction}
             successMessage="Yeni teslim incelemeye gönderildi."
             resetOnSuccess
@@ -223,7 +224,7 @@ export default function TaskDeliveryPanel({
               <textarea name="note" maxLength={2000} rows={3} placeholder="Bu versiyonda yapılanları ve incelenmesi gereken noktaları yaz…" className={inputClass} />
             </label>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              {taskOrigin === "guest" ? (
+              {customerShared ? (
                 <label className="inline-flex items-center gap-2 text-xs font-medium text-secondary">
                   <input type="checkbox" name="guestVisible" value="1" className="h-4 w-4 rounded border-border-default accent-brand-600" />
                   Bu teslimi guest ile paylaş
@@ -231,7 +232,7 @@ export default function TaskDeliveryPanel({
               ) : <span />}
               <SubmitButton pendingLabel="Teslim ediliyor…">Yeni versiyonu teslim et</SubmitButton>
             </div>
-          </ActionForm>
+          </ActionForm></DeliverySharePreview>
         </div>
       )}
 

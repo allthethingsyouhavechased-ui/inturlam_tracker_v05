@@ -1,5 +1,8 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
+import { TASK_SHARED_SQL } from "@/lib/taskSharing";
 import type { Notification } from "@/lib/types";
+
+const RECIPIENT_TASK_ACCESS = `(NOT EXISTS (SELECT 1 FROM accounts a WHERE a.id=n.recipient_id AND a.kind='guest') OR n.task_id IS NULL OR EXISTS (SELECT 1 FROM tasks t JOIN content_items ci ON ci.id=t.content_item_id JOIN accounts a ON a.id=n.recipient_id AND a.brand_id=ci.brand_id WHERE t.id=n.task_id AND ${TASK_SHARED_SQL}))`;
 
 export interface NewNotification {
   recipientId: string;
@@ -51,7 +54,7 @@ export function listNotificationsForRecipient(
         `SELECT n.*, e.start_at AS calendar_event_start_at
            FROM notifications n
            LEFT JOIN calendar_events e ON e.id = n.calendar_event_id
-          WHERE n.recipient_id = ?
+          WHERE n.recipient_id = ? AND ${RECIPIENT_TASK_ACCESS}
           ORDER BY n.created_at DESC, n.rowid DESC LIMIT ?`,
       )
       .all(recipientId, limit),
@@ -66,7 +69,7 @@ export function countUnreadForRecipient(recipientId: string): number {
   const { n } = plainOne<{ n: number }>(
     getDb()
       .prepare(
-        `SELECT COUNT(*) AS n FROM notifications WHERE recipient_id = ? AND read = 0`,
+        `SELECT COUNT(*) AS n FROM notifications n WHERE recipient_id = ? AND read = 0 AND ${RECIPIENT_TASK_ACCESS}`,
       )
       .get(recipientId),
   )!;

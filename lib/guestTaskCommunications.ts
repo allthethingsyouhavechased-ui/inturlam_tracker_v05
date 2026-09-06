@@ -1,4 +1,5 @@
 import { insertActivity } from "@/lib/repositories/activity";
+import { isTaskShared } from "@/lib/taskSharing";
 import { createNotification } from "@/lib/repositories/notifications";
 import { getActiveGuestAccountForBrand } from "@/lib/repositories/accounts";
 import { listActivePeople } from "@/lib/repositories/people";
@@ -70,6 +71,7 @@ function notifyTeam(input: GuestTaskBase & { assigneeId?: string | null; summary
 
 function notifyGuest(input: TeamTaskBase & { summary: string }): void {
   try {
+    if (!isTaskShared(input.taskId,input.brandId)) return;
     const guest = getActiveGuestAccountForBrand(input.brandId);
     if (!guest) return;
     createNotification({

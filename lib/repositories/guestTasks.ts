@@ -1,8 +1,10 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
+import { isTaskShared, TASK_SHARED_SQL } from "@/lib/taskSharing";
 import { listGuestTaskDeliveries } from "@/lib/repositories/deliveries";
 import type { GuestTaskDTO, SharedTaskAttachment, SharedTaskComment, TaskStatus } from "@/lib/types";
 
 interface GuestTaskRow {
+  origin: "team" | "guest";
   id: string;
   title: string;
   status: TaskStatus;
@@ -17,9 +19,9 @@ interface GuestTaskRow {
 }
 
 const GUEST_TASK_SELECT = `
-  SELECT t.id, t.title, t.status, t.requested_date,
+  SELECT t.id, t.title, t.status, t.origin, COALESCE(t.requested_date, '') AS requested_date,
          COALESCE(t.guest_brief, '') AS brief,
-         ci.title AS content_title, COALESCE(t.type_override, ci.type) AS content_type,
+         t.title AS content_title, COALESCE(t.type_override, ci.type) AS content_type,
          b.id AS brand_id, b.name AS brand_name,
          t.created_at, t.updated_at
     FROM tasks t
@@ -45,9 +47,10 @@ export function listSharedAttachments(taskId: string): SharedTaskAttachment[] {
 }
 
 function toDto(row: GuestTaskRow, viewerAccountId: string): GuestTaskDTO {
+  const { origin, ...publicRow } = row;
   return {
-    ...row,
-    editable: row.status === "Beklemede",
+    ...publicRow,
+    editable: origin === "guest" && row.status === "Beklemede",
     comments: listSharedComments(row.id).map(({ id, author_name, body, created_at, updated_at }) => ({
       id,
       author_name,
@@ -69,14 +72,14 @@ function toDto(row: GuestTaskRow, viewerAccountId: string): GuestTaskDTO {
 export function listGuestTasks(brandId: string, viewerAccountId: string): GuestTaskDTO[] {
   return plainList<GuestTaskRow>(getDb().prepare(
     `${GUEST_TASK_SELECT}
-      WHERE t.origin = 'guest' AND b.id = ?
-      ORDER BY CASE WHEN t.due_date IS NULL THEN 0 ELSE 1 END, t.requested_date, t.created_at DESC`,
+      WHERE ${TASK_SHARED_SQL} AND b.id = ?
+      ORDER BY t.requested_date, t.created_at DESC`,
   ).all(brandId)).map((row) => toDto(row, viewerAccountId));
 }
 
 export function getGuestTask(taskId: string, brandId: string, viewerAccountId: string): GuestTaskDTO | undefined {
   const row = plainOne<GuestTaskRow>(getDb().prepare(
-    `${GUEST_TASK_SELECT} WHERE t.id = ? AND t.origin = 'guest' AND b.id = ?`,
+    `${GUEST_TASK_SELECT} WHERE t.id = ? AND ${TASK_SHARED_SQL} AND b.id = ?`,
   ).get(taskId, brandId));
   return row ? toDto(row, viewerAccountId) : undefined;
 }
@@ -130,6 +133,7 @@ export function updateGuestTask(input: {
     `UPDATE tasks
         SET title = ?, guest_brief = ?, requested_date = ?, updated_at = datetime('now')
       WHERE id = ? AND origin = 'guest' AND status = 'Beklemede'
+        AND COALESCE((SELECT enabled FROM task_customer_sharing WHERE task_id=tasks.id),1)=1
         AND content_item_id IN (SELECT id FROM content_items WHERE brand_id = ?)`,
   ).run(input.title, input.brief, input.requestedDate, input.taskId, input.brandId);
   return result.changes === 1;
@@ -143,6 +147,8 @@ export function addSharedComment(
   const db = getDb();
   db.exec("BEGIN IMMEDIATE");
   try {
+    const account = db.prepare("SELECT kind,brand_id,active FROM accounts WHERE id=?").get(input.accountId) as {kind:string;brand_id:string|null;active:number}|undefined;
+    if (!account || account.active!==1 || !isTaskShared(input.taskId,account.kind==="guest" ? account.brand_id ?? "" : undefined)) throw new Error("Paylaşılan görev bulunamadı.");
     db.prepare(
       `INSERT INTO task_shared_comments (id, task_id, account_id, author_name, body) VALUES (?, ?, ?, ?, ?)`,
     ).run(id, input.taskId, input.accountId, input.authorName, input.body);
@@ -191,6 +197,8 @@ export function deleteGuestOwnedSharedAttachment(
   taskId: string,
   accountId: string,
 ): SharedTaskAttachment | undefined {
+  const account=getDb().prepare("SELECT brand_id FROM accounts WHERE id=? AND kind='guest' AND active=1").get(accountId) as {brand_id:string}|undefined;
+  if(!account || !isTaskShared(taskId,account.brand_id)) throw new Error("Paylaşılan görev bulunamadı.");
   const attachment = getSharedAttachment(id, taskId);
   if (!attachment) return undefined;
   if (attachment.account_id !== accountId) {
@@ -203,19 +211,19 @@ export function deleteGuestOwnedSharedAttachment(
 export function guestCanAccessUpload(accountBrandId: string, filePath: string): boolean {
   return Boolean(getDb().prepare(
     `SELECT 1 FROM (
-       SELECT sa.file_path, ci.brand_id, t.origin, 1 AS guest_visible
+       SELECT sa.file_path, ci.brand_id, (${TASK_SHARED_SQL}) AS shared, 1 AS guest_visible
          FROM task_shared_attachments sa
          JOIN tasks t ON t.id = sa.task_id
          JOIN content_items ci ON ci.id = t.content_item_id
        UNION ALL
-       SELECT da.file_path, ci.brand_id, t.origin, d.guest_visible
+       SELECT da.file_path, ci.brand_id, (${TASK_SHARED_SQL}) AS shared, d.guest_visible
          FROM task_delivery_attachments da
          JOIN task_deliveries d ON d.id = da.delivery_id
          JOIN tasks t ON t.id = d.task_id
          JOIN content_items ci ON ci.id = t.content_item_id
      ) visible_uploads
      WHERE brand_id = ? AND file_path = ?
-       AND origin = 'guest' AND guest_visible = 1`,
+       AND shared = 1 AND guest_visible = 1`,
   ).get(accountBrandId, filePath));
 }
 

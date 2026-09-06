@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import {after,beforeEach,it} from "node:test";
+const dbPath=path.join(os.tmpdir(),`intracker-sharing-${process.pid}.db`);
+process.env.INTURLAM_DB_PATH=dbPath;
+const {getDb}=await import("@/lib/db/client");
+const {setTaskSharing,isTaskShared}=await import("@/lib/taskSharing");
+const {getGuestTask,listGuestTasks,guestCanAccessUpload,addSharedComment,updateGuestTask}=await import("@/lib/repositories/guestTasks");
+const {createTaskDelivery,decideTaskDelivery,listGuestTaskDeliveries}=await import("@/lib/repositories/deliveries");
+const {createNotification,listNotificationsForRecipient,countUnreadForRecipient}=await import("@/lib/repositories/notifications");
+function clean(){globalThis.__inturlamDb?.close();globalThis.__inturlamDb=undefined;for(const s of ["","-wal","-shm"])fs.rmSync(dbPath+s,{force:true});}
+beforeEach(()=>{clean();getDb().exec(`INSERT INTO brands(id,name,cluster) VALUES('b','Marka','tek'),('other','Başka','tek'); INSERT INTO people(id,name,is_manager) VALUES('m','Yönetici',1),('p','Üye',0); INSERT INTO accounts(id,kind,person_id) VALUES('tm','team','m'),('tp','team','p'); INSERT INTO accounts(id,kind,brand_id,username) VALUES('g','guest','b','guest'),('bad','guest','other','other'); INSERT INTO content_items(id,brand_id,title,type) VALUES('c','b','Gizli içerik adı','Reel'); INSERT INTO tasks(id,content_item_id,title,due_date,notes,weight_points,assignee_id) VALUES('t','c','Müşteri işi','2026-09-10','Gizli iç not',50,'p');`);});after(clean);
+function share(enabled=true){setTaskSharing({taskId:"t",actorId:"m",enabled,brief:"Müşteri briefi",requestedDate:"2026-09-20"});}
+function submit(){return createTaskDelivery({taskId:"t",note:"Teslim",externalUrl:null,guestVisible:true,submittedByAccountId:"tp",submittedByName:"Üye",submittedByPersonId:"p"},[{filePath:"/uploads/deliveries/public.png",originalName:"Teslim"}]);}
+function decision(deliveryId:string,revision=false){return decideTaskDelivery({deliveryId,decision:revision?"RevizeIstendi":"Onaylandi",actorKind:"guest",actorAccountId:"g",actorName:"Müşteri",actorPersonId:null,brandId:"b",decisionNote:revision?"Metni düzelt":null,revisionReason:revision?"Metin":null,revisionTargetMinutes:revision?60:null});}
+it("team task defaults private; preview DTO never contains internal fields and guest cannot rewrite team brief",()=>{
+ assert.equal(getGuestTask("t","b","g"),undefined);assert.throws(submit,/erişimini açın/);share();const dto=getGuestTask("t","b","g")!;assert.equal(dto.brief,"Müşteri briefi");assert.equal(dto.requested_date,"2026-09-20");assert.equal(dto.editable,false);assert.equal(getGuestTask("t","other","bad"),undefined);for(const key of ["notes","weight_points","assignee_id","due_date","origin"])assert.equal(key in dto,false);assert.ok(!JSON.stringify(dto).includes("Gizli"));assert.equal(updateGuestTask({taskId:"t",brandId:"b",title:"değişti",brief:"x",requestedDate:"2026-09-21"}),false);
+});
+it("same team task retains V1 revision and V2 customer approval",()=>{share();const v1=submit();decision(v1.id,true);const v2=submit();decision(v2.id);assert.deepEqual(listGuestTaskDeliveries("t","b").map(d=>d.status),["Onaylandi","RevizeIstendi"]);});
+it("revocation blocks list/detail/comments/decision/direct files and private assets remain hidden",()=>{
+ share();const v=submit();addSharedComment({taskId:"t",accountId:"g",authorName:"Guest",body:"Yorum"},[{filePath:"/uploads/guest-tasks/shared.png",originalName:null}]);assert.equal(guestCanAccessUpload("b","/uploads/deliveries/public.png"),true);assert.equal(guestCanAccessUpload("other","/uploads/deliveries/public.png"),false);assert.equal(guestCanAccessUpload("b","/uploads/private.png"),false);share(false);assert.equal(isTaskShared("t"),false);assert.equal(listGuestTasks("b","g").length,0);assert.equal(listGuestTaskDeliveries("t","b").length,0);assert.equal(guestCanAccessUpload("b","/uploads/deliveries/public.png"),false);assert.equal(guestCanAccessUpload("b","/uploads/guest-tasks/shared.png"),false);assert.throws(()=>decision(v.id),/yetkiniz/);assert.throws(()=>addSharedComment({taskId:"t",accountId:"g",authorName:"Guest",body:"Yeni"}),/bulunamadı/);
+});
+it("legacy guest defaults shared but explicit revoke wins, audit retained",()=>{getDb().prepare("UPDATE tasks SET origin='guest' WHERE id='t'").run();assert.equal(isTaskShared("t"),true);share(false);assert.equal(isTaskShared("t"),false);assert.equal(getDb().prepare("SELECT COUNT(*) n FROM task_customer_sharing_events").get()?.n,1);});
+it("only managers change sharing and invalid date rolls back",()=>{assert.throws(()=>setTaskSharing({taskId:"t",actorId:"p",enabled:true,brief:"x",requestedDate:null}),/yöneticiler/);assert.throws(()=>setTaskSharing({taskId:"t",actorId:"m",enabled:true,brief:"x",requestedDate:"2026-02-30"}),/tarihi/);assert.equal(isTaskShared("t"),false);});
+it("internal attachment stays private and revoked notification previews disappear",()=>{share();getDb().prepare("INSERT INTO task_attachments(id,task_id,file_path) VALUES('private','t','/uploads/private.png')").run();assert.equal(guestCanAccessUpload("b","/uploads/private.png"),false);createNotification({recipientId:"g",recipientName:"Guest",actorId:"m",actorName:"Yönetici",taskId:"t",brandId:"b",summary:"Paylaşılan teslim"});assert.equal(countUnreadForRecipient("g"),1);share(false);assert.equal(countUnreadForRecipient("g"),0);assert.equal(listNotificationsForRecipient("g").length,0);});

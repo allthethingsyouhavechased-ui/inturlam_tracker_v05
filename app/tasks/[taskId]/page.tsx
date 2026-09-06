@@ -14,6 +14,8 @@ import TaskPrioritySelect from "@/components/TaskPrioritySelect";
 import TaskDifficultySelect from "@/components/TaskDifficultySelect";
 import TaskDetailTabs from "@/components/TaskDetailTabs";
 import TaskDeliveryPanel from "@/components/TaskDeliveryPanel";
+import TaskSharingPanel from "@/components/TaskSharingPanel";
+import { isTaskShared } from "@/lib/taskSharing";
 import TaskRepeatSelect from "@/components/TaskRepeatSelect";
 import TaskRevisionPanel from "@/components/TaskRevisionPanel";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
@@ -58,8 +60,9 @@ export default async function TaskPage({
   const attachments = listAttachmentsByTask(taskId);
   const deliveries = listTaskDeliveries(taskId);
   const revisionRounds = listTaskRevisions(taskId);
-  const sharedComments = task.origin === "guest" ? listSharedComments(taskId) : [];
-  const sharedAttachments = task.origin === "guest" ? listSharedAttachments(taskId) : [];
+  const customerShared = isTaskShared(taskId);
+  const sharedComments = listSharedComments(taskId);
+  const sharedAttachments = listSharedAttachments(taskId);
   const sourceRequest = canReviewClientRequests(me)
     ? getClientRequestByTask(taskId)
     : undefined;
@@ -109,6 +112,7 @@ export default async function TaskPage({
         </div>
       )}
 
+      {me.is_manager === 1 && <TaskSharingPanel taskId={task.id} title={task.title} brandName={task.brand_name} initialBrief={task.guest_brief ?? ""} initialDate={task.requested_date ?? ""} shared={customerShared} publicItems={<div className="space-y-2 text-xs"><p>{sharedComments.length} paylaşılan yorum · {sharedAttachments.length} paylaşılan ek · {deliveries.filter(d=>d.guest_visible===1).length} müşteri teslimi</p>{sharedComments.map(c=><p key={c.id} className="whitespace-pre-wrap">{c.author_name}: {c.body}</p>)}{sharedAttachments.map(a=><a key={a.id} href={a.file_path} className="block underline">{a.original_name ?? "Paylaşılan ek"}</a>)}{deliveries.filter(d=>d.guest_visible===1).map(d=><div key={d.id}><p>V{d.version_number} · {d.note}</p>{d.external_url&&<p className="break-all">{d.external_url}</p>}{d.attachments.map(a=><a key={a.id} className="block underline" href={a.file_path}>{a.original_name ?? "Teslim eki"}</a>)}</div>)}</div>} />}
       <TaskDetailTabs
         details={
           <form key="details" action={updateTaskDetailsAction} className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
@@ -157,7 +161,7 @@ export default async function TaskPage({
             key="delivery"
             taskId={task.id}
             taskStatus={task.status}
-            taskOrigin={task.origin}
+            customerShared={customerShared}
             planned={task.due_date !== null}
             archived={task.archived_at !== null}
             deliveries={deliveries}
@@ -193,7 +197,7 @@ export default async function TaskPage({
             </div>
           </section>
 
-          {task.origin === "guest" && <section className="rounded-xl border border-border-default bg-surface"><div className="border-b border-border-subtle px-4 py-3 sm:px-5"><h2 className="text-sm font-semibold text-foreground">Guest ile paylaşılan konuşma</h2></div><div className="space-y-3 p-4 sm:p-5">{sharedComments.map((comment) => <div key={comment.id} className="rounded-lg bg-surface-subtle px-3 py-2"><p className="text-xs font-semibold text-foreground">{comment.author_name}</p><p className="mt-1 whitespace-pre-wrap text-sm text-secondary">{comment.body}</p></div>)}{sharedAttachments.length > 0 && <div className="flex flex-wrap gap-2">{sharedAttachments.map((attachment) => <a key={attachment.id} href={attachment.file_path} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-600">{attachment.original_name ?? "Ek görsel"}</a>)}</div>}<form action={addTeamSharedCommentAction} className="space-y-2 border-t border-border-subtle pt-3"><input type="hidden" name="taskId" value={task.id} /><textarea name="body" required maxLength={2000} rows={3} placeholder="Guest’in göreceği yorumu yaz…" className={inputClass} /><input name="images" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple className="text-xs" /><SubmitButton>Guest’e gönder</SubmitButton></form></div></section>}
+          {customerShared && <section className="rounded-xl border border-border-default bg-surface"><div className="border-b border-border-subtle px-4 py-3 sm:px-5"><h2 className="text-sm font-semibold text-foreground">Guest ile paylaşılan konuşma</h2></div><div className="space-y-3 p-4 sm:p-5">{sharedComments.map((comment) => <div key={comment.id} className="rounded-lg bg-surface-subtle px-3 py-2"><p className="text-xs font-semibold text-foreground">{comment.author_name}</p><p className="mt-1 whitespace-pre-wrap text-sm text-secondary">{comment.body}</p></div>)}{sharedAttachments.length > 0 && <div className="flex flex-wrap gap-2">{sharedAttachments.map((attachment) => <a key={attachment.id} href={attachment.file_path} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-600">{attachment.original_name ?? "Ek görsel"}</a>)}</div>}<form action={addTeamSharedCommentAction} className="space-y-2 border-t border-border-subtle pt-3"><input type="hidden" name="taskId" value={task.id} /><textarea name="body" required maxLength={2000} rows={3} placeholder="Guest’in göreceği yorumu yaz…" className={inputClass} /><input name="images" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple className="text-xs" /><SubmitButton>Guest’e gönder</SubmitButton></form></div></section>}
           </div>
         }
         workflow={

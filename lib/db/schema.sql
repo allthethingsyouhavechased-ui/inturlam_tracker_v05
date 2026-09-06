@@ -746,3 +746,17 @@ CREATE TABLE IF NOT EXISTS quick_create_requests (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (actor_id, request_id)
 );
+CREATE TABLE IF NOT EXISTS task_customer_sharing (
+  task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+  enabled INTEGER NOT NULL CHECK(enabled IN (0,1)),
+  updated_by TEXT REFERENCES people(id) ON DELETE SET NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS task_customer_sharing_events (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  actor_id TEXT REFERENCES people(id) ON DELETE SET NULL,
+  previous_enabled INTEGER NOT NULL,
+  enabled INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

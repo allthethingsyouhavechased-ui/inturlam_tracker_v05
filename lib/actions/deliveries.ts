@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isTaskShared } from "@/lib/taskSharing";
 import { recordActivity } from "@/lib/activity";
 import {
   TASK_DELIVERY_STATUS_LABEL,
@@ -179,7 +180,7 @@ export async function decideGuestTaskDeliveryAction(formData: FormData) {
   const deliveryId = String(formData.get("deliveryId") ?? "").trim();
   const taskId = getTaskIdForDelivery(deliveryId);
   const task = taskId ? getTask(taskId) : undefined;
-  if (!task || task.brand_id !== actor.brand.id || task.origin !== "guest") {
+  if (!task || !isTaskShared(task.id, actor.brand.id)) {
     throw new Error("Teslim bulunamadı.");
   }
   const decision = decisionValue(formData);

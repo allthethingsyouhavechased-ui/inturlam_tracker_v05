@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isTaskShared } from "@/lib/taskSharing";
 import { getCurrentActor, requireGuestSession, requireSession } from "@/lib/identity";
 import {
   announceGuestComment,
@@ -61,7 +62,7 @@ export async function addGuestSharedCommentAction(formData: FormData) {
   const taskId = String(formData.get("taskId") ?? "").trim();
   if (!getGuestTask(taskId, actor.brand.id, actor.account_id)) throw new Error("Görev bulunamadı.");
   const task = getTask(taskId);
-  if (!task || task.origin !== "guest") throw new Error("Görev bulunamadı.");
+  if (!task) throw new Error("Görev bulunamadı.");
   const body = text(formData, "body", 2000);
   const images = extractImageFiles(formData);
   validateImageFiles(images);
@@ -97,7 +98,7 @@ export async function addTeamSharedCommentAction(formData: FormData) {
   if (!actor || actor.kind !== "team" || actor.person.id !== person.id) throw new Error("Ekip oturumu gerekli.");
   const taskId = String(formData.get("taskId") ?? "").trim();
   const task = getTask(taskId);
-  if (!task || task.origin !== "guest") throw new Error("Guest görevi bulunamadı.");
+  if (!task || !isTaskShared(taskId)) throw new Error("Paylaşılan görev bulunamadı.");
   const body = text(formData, "body", 2000);
   const images = extractImageFiles(formData);
   validateImageFiles(images);

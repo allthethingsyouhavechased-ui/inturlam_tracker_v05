@@ -159,9 +159,9 @@ describe("versiyonlu görev teslimi", () => {
     }
   });
 
-  it("team kaynaklı görevin teslimini guest ile paylaşmaz", () => {
+  it("müşteri erişimi açılmamış team görevinin teslimini paylaşmaz", () => {
     seedBase();
-    assert.throws(() => submit(createTeamTask(), true), /yalnızca guest kaynaklı/i);
+    assert.throws(() => submit(createTeamTask(), true), /erişimini açın/i);
   });
 
   it("raporda ilk onay oranını, revize nedenini ve marka kırılımını hesaplar", () => {
