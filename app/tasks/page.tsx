@@ -2,7 +2,8 @@ import AutoRefresh from "@/components/AutoRefresh";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import TaskExplorer from "@/components/TaskExplorer";
-import TaskPlanningQueue from "@/components/TaskPlanningQueue";
+import { listTaskPage } from "@/lib/repositories/taskListing";
+import { parseTaskPage, parseTaskListSort } from "@/lib/taskPagination";
 import { buttonClass } from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
 import Icon from "@/components/ui/Icon";
@@ -14,26 +15,17 @@ import {
 import { canDeleteTasks } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
 import { listBrands } from "@/lib/repositories/brands";
-import { listPersonalTaskTargets } from "@/lib/repositories/personalTargets";
 import { listActivePeople } from "@/lib/repositories/people";
-import { countArchivedTasks, listAllTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
-import { listLegacyUndatedTasks, listUnplannedGuestTasks } from "@/lib/repositories/guestTasks";
+import { countArchivedTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
 import { archiveCountdownBadge } from "@/lib/taskArchive";
 import { TASKS_VIEW_PREFERENCE, parseWorkspaceView } from "@/lib/uiPreferences";
 
 export const dynamic = "force-dynamic";
 
-// Filtreler istemci state'inde tutuluyor — her tıklamada sunucu render'ı
-// tetiklemek listeyi yavaşlatırdı. URL bu yüzden yalnızca BAŞLANGIÇ değerini
-// veriyor; istemci sonrasında `history.replaceState` ile adres çubuğunu
-// güncelliyor (bkz. `components/TaskExplorer.tsx`), yani sunucuya dönmeden
-// bağlantı paylaşılabilir ve yenilemede filtre korunur kalıyor.
-// Değer doğrulaması `lib/taskFilterParams.ts`'te tek yerde; marka ve kişi
-// id'leri veritabanı bilgisi gerektirdiği için burada ayrıca süzülüyor.
 export default async function AllTasksPage({
   searchParams,
 }: {
-  searchParams: Promise<TaskFilterSearchParams>;
+  searchParams: Promise<TaskFilterSearchParams & { page?: string; column?: string; dir?: string }>;
 }) {
   const me = await requirePageSession();
   const sp = await searchParams;
@@ -49,38 +41,26 @@ export default async function AllTasksPage({
   // Geri sayım rozeti SUNUCUDA iliştiriliyor (bkz. `archiveCountdownBadge`):
   // kart bileşeni istemci tarafında, orada `new Date()` çağırmak gün sınırında
   // hydration uyuşmazlığı üretebilirdi.
-  const targetByTask = new Map(
-    listPersonalTaskTargets(me.id).map((target) => [
-      target.task_id,
-      target.target_date,
-    ]),
-  );
-  const tasks = listAllTasks().map((task) => {
-    const countdown = archiveCountdownBadge(task);
-    return {
-      ...task,
-      ...(countdown ? { badges: [countdown] } : {}),
-      ...(task.assignee_id === me.id
-        ? { personal_target_date: targetByTask.get(task.id) ?? null }
-        : {}),
-    };
-  });
   const archivedCount = countArchivedTasks();
   const brands = listBrands();
   const people = listActivePeople();
-  const unplannedGuestTasks = listUnplannedGuestTasks();
-  const legacyUndatedTasks = me.is_manager === 1 ? listLegacyUndatedTasks() : [];
 
   const parsedFilters = parseTaskFilterParams(sp);
   const initialFilters = {
     ...parsedFilters,
-    assignee: people.some((person) => person.id === parsedFilters.assignee)
+    assignee: parsedFilters.assignee === "__unassigned__" || people.some((person) => person.id === parsedFilters.assignee)
       ? parsedFilters.assignee
       : "",
     brand: brands.some((brand) => brand.id === parsedFilters.brand) ? parsedFilters.brand : "",
   };
   const today = todayISO();
   const weekEnd = currentWeekRange().end;
+  const listSort = parseTaskListSort(sp.column, sp.dir);
+  const result = listTaskPage(me.id, initialFilters, { page: parseTaskPage(sp.page), sort: listSort, today, weekEnd });
+  const tasks = result.tasks.map(task => {
+    const countdown = archiveCountdownBadge(task);
+    return { ...task, ...(countdown ? { badges: [countdown] } : {}) };
+  });
 
   return (
     // Panom ile AYNI genişlik (layout'un max-w-7xl kabuğu). Bir dönem
@@ -101,17 +81,18 @@ export default async function AllTasksPage({
               <Icon name="templates" className="size-4 text-brand-500" />
               Şablonlar
             </Link>
-            <TaskPlanningQueue guestTasks={unplannedGuestTasks} legacyTasks={legacyUndatedTasks} />
+            <Link href="/tasks/planning" className={buttonClass({ variant: "secondary" })}><Icon name="calendar" className="size-4" />Tarih bekleyenler</Link>
           </>
         }
       />
       <TaskExplorer
+        key={JSON.stringify([{ ...initialFilters, q: "" },result.page,listSort])}
+        pagination={{ total: result.total, totalActive: result.totalActive, page: result.page, pages: result.pages, allDepartments: result.allDepartments, departmentCounts: result.departmentCounts }}
+        listSort={listSort}
         tasks={tasks}
-        brands={brands}
+        brands={brands.map(({ id, name }) => ({ id, name }))}
         people={people}
         initialFilters={initialFilters}
-        focusToday={today}
-        focusWeekEnd={weekEnd}
         initialView={initialView}
         canDeleteTasks={canDeleteTasks(me)}
         archivedCount={archivedCount}

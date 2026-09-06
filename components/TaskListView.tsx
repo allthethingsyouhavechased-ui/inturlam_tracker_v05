@@ -297,6 +297,8 @@ export default function TaskListView({
   onVisibleColumnsChange,
   layout,
   showColumnsControl = true,
+  serverSort,
+  onServerSortChange,
 }: {
   tasks: TaskWithContext[];
   people: Person[];
@@ -307,6 +309,8 @@ export default function TaskListView({
   visibleColumns?: ReadonlySet<ListColumn>;
   onVisibleColumnsChange?: (columns: ReadonlySet<ListColumn>) => void;
   showColumnsControl?: boolean;
+  serverSort?: ListSort | null;
+  onServerSortChange?: (sort: ListSort | null) => void;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Geri alma penceresi boyunca satırlar listeden İYİMSER olarak düşürülür;
@@ -316,7 +320,8 @@ export default function TaskListView({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   // null = sunucudan gelen varsayılan sıra (öncelik → teslim tarihi → marka).
-  const [sort, setSort] = useState<ListSort | null>(null);
+  const [localSort, setSort] = useState<ListSort | null>(null);
+  const sort = serverSort === undefined ? localSort : serverSort;
   const [localVisibleColumns, setLocalVisibleColumns] = useState<ReadonlySet<ListColumn>>(
     () => new Set(DEFAULT_TASK_LIST_COLUMNS),
   );
@@ -526,8 +531,8 @@ export default function TaskListView({
   // Sıralama yalnızca görüntüleme sırasını değiştirir; seçim id bazlı olduğu
   // için sütun değiştirmek seçimi bozmaz.
   const rows = useMemo(
-    () => (sort ? sortTasksForList(visibleTasks, sort) : visibleTasks),
-    [visibleTasks, sort],
+    () => (sort && serverSort === undefined ? sortTasksForList(visibleTasks, sort) : visibleTasks),
+    [visibleTasks, sort, serverSort],
   );
 
   function toggle(id: string) {
@@ -544,7 +549,8 @@ export default function TaskListView({
   }
 
   function toggleSort(key: ListSortKey) {
-    setSort((prev) => nextSort(prev, key));
+    if (onServerSortChange) onServerSortChange(nextSort(sort,key));
+    else setSort((prev) => nextSort(prev, key));
   }
 
   function run(fn: () => Promise<void>) {
@@ -663,7 +669,7 @@ export default function TaskListView({
           onClick={toggleAll}
           className="ui-press min-h-11 rounded-md border border-border-default bg-surface px-3 text-xs font-semibold text-secondary"
         >
-          {allSelected ? "Seçimi kaldır" : "Tümünü seç"}
+          {allSelected ? "Seçimi kaldır" : onServerSortChange ? "Bu sayfadakileri seç" : "Tümünü seç"}
         </button>
       </div>
 

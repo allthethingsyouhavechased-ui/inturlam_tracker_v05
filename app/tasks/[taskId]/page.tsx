@@ -1,3 +1,4 @@
+import TaskListReturnLink from "@/components/TaskListReturnLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ActivityFeed from "@/components/ActivityFeed";
@@ -71,6 +72,7 @@ export default async function TaskPage({
   return (
     <div>
       <AutoRefresh />
+      <TaskListReturnLink />
       <PageHeader
         eyebrow={CONTENT_TYPE_LABEL[task.content_type].toLocaleUpperCase("tr-TR")}
         title={task.title}

@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { taskPageHref } from "@/lib/taskPagination";
+import type { ListSort } from "@/lib/taskSort";
+import { restoreTaskListScroll, rememberTaskList } from "@/lib/taskListNavigation";
 import EmptyState from "@/components/EmptyState";
 import SavedTaskViews from "@/components/SavedTaskViews";
 import TaskBoard, { type SortKey } from "@/components/TaskBoard";
@@ -31,16 +35,13 @@ import {
 } from "@/lib/departments";
 import type { Person, TaskDifficulty, TaskPriority, TaskStatus, TaskWithContext } from "@/lib/types";
 import {
-  matchesTaskMetadataFilters,
   type TaskDueFilter,
 } from "@/lib/taskMetadata";
 import {
-  matchesTaskFocus,
   TASK_FOCUS_LABEL,
   type TaskFocus,
 } from "@/lib/taskFocus";
 import {
-  taskFilterSearch,
   type TaskFilterState,
 } from "@/lib/taskFilterParams";
 import {
@@ -89,23 +90,25 @@ export default function TaskExplorer({
   brands,
   people,
   initialFilters,
-  focusToday,
-  focusWeekEnd,
   initialView = "pano",
   canDeleteTasks,
   archivedCount = 0,
+  pagination,
+  listSort = null,
 }: {
   tasks: TaskWithContext[];
   brands: { id: string; name: string }[];
   people: Person[];
   /** Sunucuda doğrulanmış URL filtreleri (bkz. `lib/taskFilterParams.ts`). */
   initialFilters: TaskFilterState;
-  focusToday: string;
-  focusWeekEnd: string;
   initialView?: WorkspaceView;
   canDeleteTasks: boolean;
   archivedCount?: number;
+  pagination: { total: number; totalActive: number; page: number; pages: number; allDepartments: number; departmentCounts: Record<string, number> };
+  listSort?: ListSort | null;
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [brandId, setBrandId] = useState(initialFilters.brand);
   const [statusFilter, setStatusFilter] = useState<string>(initialFilters.status);
   const [priority, setPriority] = useState<string>(initialFilters.priority);
@@ -119,6 +122,13 @@ export default function TaskExplorer({
   const [assigneeId, setAssigneeId] = useState(initialFilters.assignee);
   const [focus, setFocus] = useState<TaskFocus | "">(initialFilters.focus);
   const [q, setQ] = useState(initialFilters.q);
+  const [previousQuery, setPreviousQuery] = useState(initialFilters.q);
+  // Search responses must not remount the input or overwrite typing that is
+  // newer than the response. Back/forward navigation still restores the URL.
+  if (previousQuery !== initialFilters.q) {
+    setPreviousQuery(initialFilters.q);
+    if (q === previousQuery) setQ(initialFilters.q);
+  }
   const [sortKey, setSortKey] = useState<SortKey>(initialFilters.sort);
   const [view, setView] = useState<WorkspaceView>(initialView);
   const [taskListColumns, setTaskListColumns, taskListLayout] = useTaskListColumns(
@@ -127,14 +137,6 @@ export default function TaskExplorer({
     ALL_TASK_LIST_COLUMNS,
   );
 
-  // Filtreler istemci state'inde kalmaya devam ediyor (her tıklamada sunucu
-  // render'ı tetiklemek listeyi yavaşlatırdı) ama artık adres çubuğuna da
-  // YAZILIYOR: bir filtre kombinasyonu paylaşılabiliyor ve sayfa yenilenince
-  // kayboluyor değil geri geliyor.
-  //
-  // `router.replace` DEĞİL ham `history.replaceState`: Next router'ı sunucu
-  // render'ı tetikler, bu da tam olarak kaçınmak istediğimiz şey. `pushState` de
-  // değil — her tuş vuruşu geçmişe kayıt eklerdi, geri tuşu kullanılamaz olurdu.
   const currentFilters: TaskFilterState = useMemo(
     () => ({
       brand: brandId,
@@ -174,12 +176,11 @@ export default function TaskExplorer({
   }
 
   useEffect(() => {
-    const search = taskFilterSearch(currentFilters);
-    const next = `${window.location.pathname}${search}`;
-    if (next !== `${window.location.pathname}${window.location.search}`) {
-      window.history.replaceState(window.history.state, "", next);
-    }
-  }, [currentFilters]);
+    if (JSON.stringify(currentFilters) === JSON.stringify(initialFilters)) return;
+    const timer = setTimeout(() => startTransition(() => router.replace(taskPageHref(currentFilters, 1, listSort), { scroll: false })), 250);
+    return () => clearTimeout(timer);
+  }, [currentFilters, initialFilters, listSort, router]);
+  useEffect(() => restoreTaskListScroll(), []);
 
   function changeView(next: WorkspaceView) {
     setView(next);
@@ -201,64 +202,8 @@ export default function TaskExplorer({
     [people, department],
   );
 
-  // Departman DIŞINDAKİ tüm filtreleri geçen görevler. Departman sekmelerindeki
-  // sayılar buradan geliyor: seçili sekme sayıyı kendi üzerine kilitlemesin,
-  // "diğer ekipte kaç iş var" bilgisi seçim yapınca kaybolmasın.
-  const withoutDepartment = useMemo(() => {
-    const needle = q.trim().toLocaleLowerCase("tr-TR");
-    return tasks.filter((task) => {
-      if (!matchesTaskFocus(task, focus, focusToday, focusWeekEnd)) return false;
-      if (brandId && task.brand_id !== brandId) return false;
-      if (statusFilter && task.status !== statusFilter) return false;
-      if (priority && task.priority !== priority) return false;
-      if (!matchesTaskMetadataFilters(task, {
-        due,
-        difficulty,
-        pointsMin,
-        pointsMax,
-        today: focusToday,
-        weekEnd: focusWeekEnd,
-        dateFrom,
-        dateTo,
-      })) return false;
-      if (assigneeId === UNASSIGNED && task.assignee_id) return false;
-      if (
-        assigneeId &&
-        assigneeId !== UNASSIGNED &&
-        task.assignee_id !== assigneeId
-      ) {
-        return false;
-      }
-      if (
-        needle &&
-        ![task.title, task.brand_name, task.content_title, task.assignee_name ?? ""]
-          .some((value) => value.toLocaleLowerCase("tr-TR").includes(needle))
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [tasks, focus, focusToday, focusWeekEnd, brandId, statusFilter, priority, difficulty, pointsMin, pointsMax, due, dateFrom, dateTo, assigneeId, q]);
-
-  const departmentCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const task of withoutDepartment) {
-      if (!task.assignee_id) continue;
-      const key = departmentByPerson.get(task.assignee_id);
-      if (!key) continue;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-    return counts;
-  }, [withoutDepartment, departmentByPerson]);
-
-  const filtered = useMemo(() => {
-    if (!department) return withoutDepartment;
-    return withoutDepartment.filter(
-      (task) =>
-        task.assignee_id != null &&
-        departmentByPerson.get(task.assignee_id) === department,
-    );
-  }, [withoutDepartment, department, departmentByPerson]);
+  const departmentCounts = new Map(Object.entries(pagination.departmentCounts));
+  const filtered = tasks;
 
   const hasFilter = Boolean(
     brandId || statusFilter || priority || difficulty || pointsMin || pointsMax || due || dateFrom || dateTo || department || assigneeId || focus || q,
@@ -300,7 +245,7 @@ export default function TaskExplorer({
   }
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-4" aria-busy={isPending} onClickCapture={rememberTaskList}>
       <section
         aria-label="Görev araçları"
         className="min-w-0 rounded-xl border border-border-default bg-surface p-3"
@@ -334,7 +279,7 @@ export default function TaskExplorer({
               className={selectClass}
               aria-label="Departmana göre filtrele"
             >
-              <option value="">Tüm ekipler · {withoutDepartment.length}</option>
+              <option value="">Tüm ekipler · {pagination.allDepartments}</option>
               {DEPARTMENTS.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label} · {departmentCounts.get(option.id) ?? 0}
@@ -383,9 +328,9 @@ export default function TaskExplorer({
 
             <p className="ml-auto whitespace-nowrap text-xs text-muted">
               <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-                {filtered.length}
+                {pagination.total}
               </span>{" "}
-              / {tasks.length} görev
+              / {pagination.totalActive} görev
               {view === "pano" && sortKey !== "varsayilan" && (
                 <span> · {SORT_LABEL[sortKey]} sıralaması</span>
               )}
@@ -616,6 +561,13 @@ export default function TaskExplorer({
         )}
       </section>
 
+      <nav aria-label="Görev sayfaları" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <p className="text-muted" role="status">{isPending ? "Görevler yükleniyor…" : "Sayfa " + pagination.page + " / " + pagination.pages + " · " + tasks.length + " / " + pagination.total + " görev gösteriliyor"}<span className="block text-xs">Pano ve toplu seçim yalnız bu sayfadaki işleri kapsar.</span></p>
+        <div className="flex gap-2">
+          {pagination.page > 1 && <Link className="rounded-md border border-border-default px-3 py-2" href={taskPageHref(currentFilters,pagination.page-1,listSort)}>Önceki</Link>}
+          {pagination.page < pagination.pages && <Link className="rounded-md border border-border-default px-3 py-2" href={taskPageHref(currentFilters,pagination.page+1,listSort)}>Sonraki</Link>}
+        </div>
+      </nav>
       {filtered.length === 0 ? (
         <EmptyState
           title={
@@ -639,7 +591,7 @@ export default function TaskExplorer({
           tasks={filtered}
           people={people}
           canDeleteTasks={canDeleteTasks}
-          sortKey={sortKey}
+          sortKey="varsayilan"
           boardId="gorevler"
         />
       ) : (
@@ -651,6 +603,8 @@ export default function TaskExplorer({
           onVisibleColumnsChange={setTaskListColumns}
           layout={taskListLayout}
           showColumnsControl={false}
+          serverSort={listSort}
+          onServerSortChange={(sort) => startTransition(() => router.replace(taskPageHref(currentFilters,1,sort), { scroll: false }))}
         />
       )}
     </div>
