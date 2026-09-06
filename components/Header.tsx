@@ -39,7 +39,7 @@ export default async function Header() {
             <Link
               href={`/panom/katkim?month=${month}`}
               title={`Aylık hedefim: ${formatPoints(monthlyProgress.earned_points)} / ${monthlyProgress.target_points ?? "—"} puan`}
-              className="ui-press hidden min-h-9 items-center gap-1 rounded-md border border-border-default bg-surface px-2.5 text-[11px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground sm:inline-flex"
+              className="ui-press hidden min-h-9 items-center gap-1 rounded-md border border-border-default bg-surface px-2.5 text-[11px] font-semibold text-secondary hover:bg-surface-hover hover:text-foreground lg:inline-flex"
             >
               <span className="text-muted">Bu ay</span>
               <span className="tabular-nums text-foreground">{monthlyProgress.percent === null ? "Hedef yok" : `${formatPoints(monthlyProgress.earned_points)}/${monthlyProgress.target_points} · %${monthlyProgress.percent}`}</span>

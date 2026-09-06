@@ -46,6 +46,10 @@ describe('atomic quick creation', () => {
     fieldError(input({assigneeId:'missing'}),'assigneeId'); untouched();
     getDb().exec("UPDATE people SET active=0 WHERE id='member'"); fieldError(input(),'assigneeId'); untouched();
   });
+  it('rejects a brand archived after the form was opened', () => {
+    getDb().exec("UPDATE brands SET archived=1 WHERE id='brand'");
+    fieldError(input(),'brandId'); untouched();
+  });
   it('rolls back new content when the task insert fails, then allows the same request to retry', () => {
     getDb().exec("CREATE TRIGGER fail_quick_task BEFORE INSERT ON tasks BEGIN SELECT RAISE(ABORT, 'simulated disk write failure'); END");
     assert.throws(() => quickCreateTask('manager',input()), /simulated/); untouched();

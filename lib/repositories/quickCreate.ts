@@ -40,7 +40,7 @@ export function quickCreateTask(actorId: string, formData: FormData) {
     if (!TASK_DIFFICULTIES.includes(values.difficulty as TaskDifficulty)) errors.difficulty = "Zorluk derecesi seçin.";
     const date = new Date(`${values.dueDate}T00:00:00Z`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(values.dueDate) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== values.dueDate) errors.dueDate = "Geçerli bir teslim tarihi seçin.";
-    if (!db.prepare("SELECT 1 FROM brands WHERE id = ?").get(values.brandId)) errors.brandId = "Marka bulunamadı. Listeyi yenileyin.";
+    if (!db.prepare("SELECT 1 FROM brands WHERE id = ? AND archived = 0").get(values.brandId)) errors.brandId = "Marka bulunamadı veya arşivlenmiş. Listeyi yenileyin.";
     if (values.assigneeId && !db.prepare("SELECT 1 FROM people WHERE id = ? AND active = 1").get(values.assigneeId)) errors.assigneeId = "Sorumlu artık aktif değil. Başka bir kişi seçin.";
     if (values.contentItemId !== NEW_CONTENT_VALUE && !db.prepare("SELECT 1 FROM content_items WHERE id = ? AND brand_id = ? AND archived = 0 AND status <> 'IptalEdildi'").get(values.contentItemId, values.brandId)) errors.contentItemId = "Çalışma bulunamadı veya bu markaya ait değil. Başka bir çalışma seçin.";
     let weightPoints = 0;
