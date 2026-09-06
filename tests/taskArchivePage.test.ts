@@ -10,8 +10,9 @@ const activeExplorer = fs.readFileSync(path.join(process.cwd(), "components", "T
 
 describe("ayrı görev arşivi", () => {
   it("aktif görev sayfasına arşiv kayıtlarını indirmez ve ayrı rotaya bağlanır", () => {
-    assert.match(tasksPage, /listAllTasks\(\)/);
-    assert.doesNotMatch(tasksPage, /listAllTasks\(true\)/);
+    assert.match(tasksPage, /listTaskPage\(me.id/);
+    assert.doesNotMatch(tasksPage, /listAllTasks/);
+    assert.match(fs.readFileSync(path.join(process.cwd(), "lib/repositories/taskListing.ts"), "utf8"), /t.archived_at IS NULL/);
     assert.match(activeExplorer, /href="\/tasks\/archive"/);
   });
 

@@ -47,24 +47,24 @@ describe("Panom teslim radari", () => {
 });
 
 describe("İkincil operasyon panelleri", () => {
-  it("görev sonucunu ayrı satır açmadan görünüm seçicinin solunda gösterir", () => {
+  it("görev sonucunu sayfa ve toplam sayısıyla panodan önce gösterir", () => {
     const explorer = source("components/TaskExplorer.tsx");
-    const result = explorer.indexOf("{filtered.length}");
-    const viewToggle = explorer.indexOf("<WorkspaceViewToggle", result);
-    const board = explorer.indexOf("filtered.length === 0", viewToggle);
+    const result = explorer.indexOf('aria-label="Görev sayfaları"');
+    const board = explorer.indexOf("filtered.length === 0", result);
 
-    assert.ok(result >= 0 && viewToggle > result && board > viewToggle);
-    assert.equal(explorer.match(/\{filtered\.length\}/g)?.length, 1);
-    assert.match(explorer, /ml-auto whitespace-nowrap text-xs text-muted/);
+    assert.ok(result >= 0 && board > result);
+    assert.match(explorer, /pagination\.total/);
+    assert.match(explorer, /pagination\.page/);
+    assert.match(explorer, /Pano ve toplu seçim yalnız bu sayfadaki işleri kapsar/);
   });
 
-  it("tarih bekleyenleri Görevler başlığındaki açılır düğmeye taşır", () => {
+  it("tarih bekleyenleri Görevler başlığından ayrı sınırlı listeye bağlar", () => {
     const tasks = source("app/tasks/page.tsx");
-    const queue = source("components/TaskPlanningQueue.tsx");
+    const queue = source("app/tasks/planning/page.tsx");
 
-    assert.match(tasks, /actions=\{[\s\S]*?<TaskPlanningQueue/);
+    assert.match(tasks, /actions=\{[\s\S]*?href="\/tasks\/planning"/);
     assert.match(queue, /Tarih bekleyenler/);
-    assert.match(queue, /Planlama kuyruğu/);
+    assert.match(queue, /listPlanningPage/);
   });
 
   it("aktif iş akışı ve ekip aylık puanını aynı sekmeli analiz yüzeyinde tutar", () => {
