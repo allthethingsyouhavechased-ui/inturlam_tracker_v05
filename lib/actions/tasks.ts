@@ -1,5 +1,6 @@
 "use server";
 
+import { TaskTransitionError } from "@/lib/taskLifecycle";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordActivity } from "@/lib/activity";
@@ -27,7 +28,6 @@ import {
   bulkUpdateTaskAssignee,
   bulkUpdateTaskPriority,
   bulkUpdateTaskStatus,
-  createNextOccurrence,
   completeTaskRevision,
   createTask,
   deleteTask,
@@ -124,7 +124,9 @@ export async function setTaskStatusAction(taskId: string, status: TaskStatus) {
   if (!TASK_STATUSES.includes(status)) throw new Error("Geçersiz durum.");
   const task = getTask(taskId);
   if (!task) throw new Error("Görev bulunamadı.");
-  const changed = updateTaskStatus(taskId, status, actor.id);
+  let changed: boolean;
+  try { changed = updateTaskStatus(taskId, status, actor.id); }
+  catch (error) { return { ok: false as const, error: error instanceof TaskTransitionError ? error.message : "Görev durumu güncellenemedi. Yeniden deneyin." }; }
   if (changed) {
     if (task.origin === "guest") {
       await announceGuestTaskStatus({
@@ -145,20 +147,8 @@ export async function setTaskStatusAction(taskId: string, status: TaskStatus) {
     }
   }
 
-  // Tekrar eden görev tamamlandıysa bir sonraki örneğini aç. Yeni görev
-  // "Beklemede" başladığı için bu dal tekrar tetiklenmez (sonsuz döngü yok).
-  if (changed && status === "Yayinlandi" && (task.repeat_days ?? 0) > 0) {
-    createNextOccurrence(task, todayISO());
-    await recordActivity({
-      action: "task.repeat",
-      entityType: "task",
-      entityId: taskId,
-      brandId: task.brand_id,
-      summary: `“${task.title}” tekrar eden görevinin bir sonraki örneği açıldı`,
-    });
-  }
-
   revalidatePath("/", "layout");
+  return { ok: true as const };
 }
 
 export async function setTaskRepeatAction(taskId: string, repeatDays: number) {
@@ -473,7 +463,9 @@ export async function bulkSetTaskStatusAction(ids: string[], status: TaskStatus)
     const task = getTask(id);
     return task?.origin === "guest" && task.status !== status ? [task] : [];
   });
-  const changedCount = bulkUpdateTaskStatus(clean, status, actor.id);
+  let changedCount: number;
+  try { changedCount = bulkUpdateTaskStatus(clean, status, actor.id); }
+  catch (error) { return { ok: false as const, error: error instanceof TaskTransitionError ? error.message : "Görev durumları güncellenemedi. Yeniden deneyin." }; }
   if (changedCount > 0) {
     await recordActivity({
       action: "task.bulk.status",
@@ -493,6 +485,7 @@ export async function bulkSetTaskStatusAction(ids: string[], status: TaskStatus)
     }
   }
   revalidatePath("/", "layout");
+  return { ok: true as const };
 }
 
 export async function bulkSetTaskPriorityAction(

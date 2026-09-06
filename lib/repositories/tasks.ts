@@ -1,3 +1,4 @@
+import { changeTaskStatuses, createTaskSuccessor } from "@/lib/taskLifecycle";
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import { NO_DEPARTMENT, type DepartmentKey } from "@/lib/departments";
 import { departmentPeopleCondition } from "@/lib/repositories/people";
@@ -365,41 +366,10 @@ export function updateTaskRepeat(id: string, repeatDays: number | null): void {
     .run(repeatDays, id);
 }
 
-// Tekrar eden görevin bir sonraki örneğini açar. Tarih, ESKİ görevin teslim
-// tarihine göre kayar (bugüne göre değil) — geç tamamlanan haftalık iş takvimi
-// kaydırmasın. Tarihi yoksa bugünden itibaren hesaplanır.
+// Compatibility entry point: re-read the source under a write lock.
 export function createNextOccurrence(task: Task & { content_type?: ContentType }, _today: string): string {
   void _today;
-  const base = task.due_date;
-  if (!base) throw new Error("Tekrar eden görev için önce teslim tarihi atanmalı.");
-  const d = new Date(`${base}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + (task.repeat_days ?? 0));
-  const id = crypto.randomUUID();
-  getDb()
-    .prepare(
-      `INSERT INTO tasks (id, content_item_id, title, type_override, priority, difficulty, assignee_id, due_date, notes, repeat_days)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      id,
-      task.content_item_id,
-      task.title,
-      task.content_type ?? task.type_override,
-      task.priority,
-      task.difficulty,
-      task.assignee_id,
-      d.toISOString().slice(0, 10),
-      task.notes,
-      task.repeat_days,
-    );
-  return id;
-}
-
-interface TaskStatusRow {
-  id: string;
-  status: TaskStatus;
-  origin: "team" | "guest";
-  due_date: string | null;
+  return createTaskSuccessor(task.id);
 }
 
 export function listArchivedTasks(): TaskWithContext[] {
@@ -420,88 +390,8 @@ export function countArchivedTasks(): number {
   );
 }
 
-function applyTaskStatusChanges(
-  tasks: TaskStatusRow[],
-  status: TaskStatus,
-  actorId: string | null,
-): number {
-  if (
-    status !== "Beklemede" &&
-    tasks.some((task) => task.origin === "guest" && task.due_date === null)
-  ) {
-    throw new Error("Guest görevi ilerletilmeden önce iç teslim tarihi atanmalı.");
-  }
-  if (status === "Yayinlandi") {
-    const activeRevision = getDb().prepare(
-      "SELECT 1 FROM task_revision_rounds WHERE task_id = ? AND completed_at IS NULL",
-    );
-    if (tasks.some((task) => activeRevision.get(task.id))) {
-      throw new Error("Görev yayınlanmadan önce aktif revize turu tamamlanmalı.");
-    }
-    const pendingDelivery = getDb().prepare(
-      "SELECT 1 FROM task_deliveries WHERE task_id = ? AND status = 'Beklemede'",
-    );
-    if (tasks.some((task) => pendingDelivery.get(task.id))) {
-      throw new Error("Görev yayınlanmadan önce bekleyen teslim için karar verilmeli.");
-    }
-  }
-  const changed = tasks.filter((task) => task.status !== status);
-  if (changed.length === 0) return 0;
-
-  const db = getDb();
-  // `archived_at = NULL`: HER durum değişikliği görevi panoya geri koyar ve
-  // arşiv sayacını sıfırlar. İki yönü de gerekli — arşivlenmiş bir iş yeniden
-  // açıldığında görünmez kalmamalı, yeniden yayınlandığında da hemen arşive
-  // düşmemeli (yeni `completed_at` zaten sayacı baştan başlatır).
-  const update = db.prepare(`
-    UPDATE tasks
-       SET status = ?,
-           completed_at = CASE
-             WHEN ? = 'Yayinlandi' THEN datetime('now')
-             ELSE NULL
-           END,
-           completed_by = CASE
-             WHEN ? = 'Yayinlandi' THEN ?
-             ELSE NULL
-           END,
-           archived_at = NULL,
-           updated_at = datetime('now')
-     WHERE id = ?
-  `);
-  const insertEvent = db.prepare(`
-    INSERT INTO task_status_events
-      (id, task_id, from_status, to_status, actor_id)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  const clearPersonalTargets = db.prepare(
-    "DELETE FROM task_personal_targets WHERE task_id = ?",
-  );
-
-  db.exec("BEGIN IMMEDIATE");
-  try {
-    for (const task of changed) {
-      update.run(status, status, status, actorId, task.id);
-      insertEvent.run(crypto.randomUUID(), task.id, task.status, status, actorId);
-      if (status === "Yayinlandi") clearPersonalTargets.run(task.id);
-    }
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
-  return changed.length;
-}
-
-export function updateTaskStatus(
-  id: string,
-  status: TaskStatus,
-  actorId: string | null = null,
-): boolean {
-  const task = plainOne<TaskStatusRow>(
-    getDb().prepare("SELECT id, status, origin, due_date FROM tasks WHERE id = ?").get(id),
-  );
-  if (!task) return false;
-  return applyTaskStatusChanges([task], status, actorId) > 0;
+export function updateTaskStatus(id: string, status: TaskStatus, actorId: string | null = null): boolean {
+  return changeTaskStatuses([id], status, actorId) > 0;
 }
 
 export function updateTaskPriority(id: string, priority: TaskPriority): boolean {
@@ -754,14 +644,7 @@ export function bulkUpdateTaskStatus(
   status: TaskStatus,
   actorId: string | null = null,
 ): number {
-  if (ids.length === 0) return 0;
-  const placeholders = ids.map(() => "?").join(", ");
-  const tasks = plainList<TaskStatusRow>(
-    getDb()
-      .prepare(`SELECT id, status, origin, due_date FROM tasks WHERE id IN (${placeholders})`)
-      .all(...ids),
-  );
-  return applyTaskStatusChanges(tasks, status, actorId);
+  return changeTaskStatuses(ids, status, actorId);
 }
 
 export function bulkUpdateTaskPriority(ids: string[], priority: TaskPriority): number {

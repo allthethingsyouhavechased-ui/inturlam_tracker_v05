@@ -727,3 +727,12 @@ CREATE TABLE IF NOT EXISTS brand_shoot_usage_history (
 );
 CREATE INDEX IF NOT EXISTS idx_shoot_usage_history_period
   ON brand_shoot_usage_history(brand_id, period, id DESC);
+-- One successor per source occurrence; deleting a successor retains the claim.
+-- No backfill: old tasks are not guessed into a recurrence series.
+CREATE TABLE IF NOT EXISTS task_recurrence_occurrences (
+  source_task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+  successor_task_id TEXT UNIQUE REFERENCES tasks(id) ON DELETE SET NULL,
+  series_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_task_recurrence_series ON task_recurrence_occurrences(series_id);

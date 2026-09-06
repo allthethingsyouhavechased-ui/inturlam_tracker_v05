@@ -1,3 +1,4 @@
+import { assertTaskTransition, TaskTransitionError } from "@/lib/taskLifecycle";
 import type { DatabaseSync } from "node:sqlite";
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import type {
@@ -218,7 +219,15 @@ export function decideTaskDelivery(input: {
         WHERE d.id = ?`,
     ).get(input.deliveryId) as DeliveryTaskRow | undefined;
     if (!row) throw new Error("Teslim bulunamadı.");
+    const account = db.prepare("SELECT kind, person_id, brand_id, active FROM accounts WHERE id = ?").get(input.actorAccountId) as { kind: string; person_id: string | null; brand_id: string | null; active: number } | undefined;
+    if (!account || account.active !== 1 || account.kind !== input.actorKind) throw new TaskTransitionError("Bu teslim için karar verme yetkiniz yok.");
+    if (input.actorKind === "team") {
+      if (!input.actorPersonId || account.person_id !== input.actorPersonId || !db.prepare("SELECT 1 FROM people WHERE id = ? AND active = 1 AND is_manager = 1").get(input.actorPersonId)) {
+        throw new TaskTransitionError("Teslim kararını yalnızca yöneticiler verebilir.");
+      }
+    }
     if (input.actorKind === "guest") {
+      if (account.brand_id !== input.brandId || input.actorPersonId !== null) throw new TaskTransitionError("Bu teslim için karar verme yetkiniz yok.");
       if (!input.brandId || row.brand_id !== input.brandId || row.origin !== "guest" || row.guest_visible !== 1) {
         throw new Error("Bu teslim için karar verme yetkiniz yok.");
       }
@@ -267,6 +276,7 @@ export function decideTaskDelivery(input: {
         input.actorPersonId,
       );
     }
+    assertTaskTransition(db, { id: row.task_id, origin: row.origin, due_date: row.due_date }, nextStatus, input.actorPersonId, true);
     writeTaskStatus(
       db,
       row.task_id,

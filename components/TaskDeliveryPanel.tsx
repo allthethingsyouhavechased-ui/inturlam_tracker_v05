@@ -1,3 +1,4 @@
+import RequestImagePicker from "@/components/RequestImagePicker";
 /* eslint-disable @next/next/no-img-element */
 import ActionForm from "@/components/ActionForm";
 import SubmitButton from "@/components/SubmitButton";
@@ -165,6 +166,7 @@ export default function TaskDeliveryPanel({
   planned,
   archived,
   deliveries,
+  canDecide = false,
 }: {
   taskId: string;
   taskStatus: TaskStatus;
@@ -172,6 +174,7 @@ export default function TaskDeliveryPanel({
   planned: boolean;
   archived: boolean;
   deliveries: TaskDelivery[];
+  canDecide?: boolean;
 }) {
   const pending = deliveries.find((delivery) => delivery.status === "Beklemede") ?? null;
   const history = deliveries.filter((delivery) => delivery.id !== pending?.id);
@@ -192,7 +195,7 @@ export default function TaskDeliveryPanel({
         <div className="border-b border-border-subtle bg-brand-50/40 px-4 py-4 dark:bg-brand-950/10 sm:px-5">
           <p className="mb-3 text-xs font-semibold text-brand-700 dark:text-brand-300">Karar bekleyen teslim</p>
           <DeliverySummary delivery={pending} />
-          <PendingDecision delivery={pending} />
+          {canDecide ? <PendingDecision delivery={pending} /> : <p className="mt-3 text-xs text-muted">Teslim için yönetici kararı bekleniyor.</p>}
         </div>
       )}
 
@@ -212,7 +215,7 @@ export default function TaskDeliveryPanel({
               </label>
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Önizleme görselleri <span className="font-normal text-muted">(opsiyonel)</span>
-                <input name="images" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple className={controlClass("py-2 text-xs")} />
+                <RequestImagePicker />
               </label>
             </div>
             <label className="grid gap-1.5 text-xs font-medium text-secondary">

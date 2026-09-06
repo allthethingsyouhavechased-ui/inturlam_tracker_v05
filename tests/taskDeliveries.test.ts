@@ -27,7 +27,7 @@ function resetDb(): void {
 function seedBase(): void {
   const db = getDb();
   db.prepare("INSERT INTO brands (id, name, cluster) VALUES ('b1', 'Bir Marka', 'tek'), ('b2', 'İki Marka', 'tek')").run();
-  db.prepare("INSERT INTO people (id, name) VALUES ('p1', 'Ayşe')").run();
+  db.prepare("INSERT INTO people (id, name, is_manager) VALUES ('p1', 'Ayşe', 1)").run();
   db.prepare("INSERT INTO accounts (id, kind, person_id) VALUES ('team:p1', 'team', 'p1')").run();
   db.prepare("INSERT INTO accounts (id, kind, brand_id, username) VALUES ('g1', 'guest', 'b1', 'bir-guest'), ('g2', 'guest', 'b2', 'iki-guest')").run();
   db.prepare("INSERT INTO content_items (id, brand_id, title, type) VALUES ('c1', 'b1', 'İçerik', 'Reel')").run();

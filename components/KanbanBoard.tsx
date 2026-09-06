@@ -213,7 +213,8 @@ export default function KanbanBoard({
   const [tasks, setTasks] = useState(initialTasks);
   const [prevInitialTasks, setPrevInitialTasks] = useState(initialTasks);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   // Sunucudan yeni `tasks` geldiğinde (AutoRefresh, başka bir action) yerel
   // state'i senkronize et — bunu useEffect yerine render sırasında yapmak
@@ -245,7 +246,7 @@ export default function KanbanBoard({
   function handleDragEnd(event: DragEndEvent) {
     setActiveId(null);
     const { active, over } = event;
-    if (!over) return;
+    if (!over || pending) return;
     const newStatus = over.id as TaskStatus;
     const taskId = active.id as string;
     const task = tasks.find((t) => t.id === taskId);
@@ -254,7 +255,16 @@ export default function KanbanBoard({
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
     );
-    startTransition(() => setTaskStatusAction(taskId, newStatus));
+    setStatusError(null);
+    startTransition(async () => {
+      try {
+        const result = await setTaskStatusAction(taskId, newStatus);
+        if (!result.ok) throw new Error(result.error);
+      } catch (error) {
+        setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: task.status } : t));
+        setStatusError(error instanceof Error ? error.message : "Durum güncellenemedi. Yeniden deneyin.");
+      }
+    });
   }
 
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
@@ -268,6 +278,7 @@ export default function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
+      {statusError && <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">{statusError}</p>}
       <div className="grid gap-4 lg:grid-cols-5">
         {TASK_STATUSES.map((status) => (
           <Column

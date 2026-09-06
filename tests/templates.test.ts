@@ -209,7 +209,7 @@ describe("tekrar eden görev", () => {
     assert.equal(next.due_date, "2026-07-27", "takvim kaymamalı: 20 + 7");
     assert.equal(next.title, original.title);
     assert.equal(next.assignee_id, "ekin");
-    assert.equal(next.notes, "Her hafta aynı saat");
+    assert.equal(next.notes, null); // Notes belong to the completed occurrence.
     assert.equal(next.repeat_days, 7, "tekrar devretmeli");
     assert.equal(next.status, "Beklemede", "yeni örnek açık başlamalı (döngü yok)");
   });

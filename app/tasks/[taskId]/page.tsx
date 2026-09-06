@@ -151,6 +151,7 @@ export default async function TaskPage({
         }
         delivery={
           <TaskDeliveryPanel
+            canDecide={me.is_manager === 1}
             key="delivery"
             taskId={task.id}
             taskStatus={task.status}

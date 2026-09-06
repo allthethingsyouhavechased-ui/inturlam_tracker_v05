@@ -204,7 +204,8 @@ export default function TaskBoard({
   const [internalSortKey, setInternalSortKey] = useState<SortKey>("varsayilan");
   const [openComments, setOpenComments] = useState<{ id: string; title: string } | null>(null);
   const contextMenu = useTaskContextMenu();
-  const [, startTransition] = useTransition();
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const isControlled = externalSortKey !== undefined;
   const sortKey = isControlled ? externalSortKey : internalSortKey;
@@ -231,7 +232,7 @@ export default function TaskBoard({
   function handleDragEnd(event: DragEndEvent) {
     setActiveId(null);
     const { active, over } = event;
-    if (!over) return;
+    if (!over || pending) return;
     const newStatus = over.id as TaskStatus;
     const taskId = active.id as string;
     const task = taskList.find((t) => t.id === taskId);
@@ -240,13 +241,23 @@ export default function TaskBoard({
     setTaskList((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
     );
-    startTransition(() => setTaskStatusAction(taskId, newStatus));
+    setStatusError(null);
+    startTransition(async () => {
+      try {
+        const result = await setTaskStatusAction(taskId, newStatus);
+        if (!result.ok) throw new Error(result.error);
+      } catch (error) {
+        setTaskList((prev) => prev.map((t) => t.id === taskId ? { ...t, status: task.status } : t));
+        setStatusError(error instanceof Error ? error.message : "Durum güncellenemedi. Yeniden deneyin.");
+      }
+    });
   }
 
   const activeTask = activeId ? taskList.find((t) => t.id === activeId) : null;
 
   return (
     <div className="space-y-2">
+      {statusError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{statusError}</p>}
       {(!isControlled || toolbar) && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {!isControlled && (

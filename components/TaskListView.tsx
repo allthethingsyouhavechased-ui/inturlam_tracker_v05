@@ -574,7 +574,7 @@ export default function TaskListView({
             onChange={(e) => {
               const v = e.target.value as TaskStatus;
               e.currentTarget.value = "";
-              if (v) run(() => bulkSetTaskStatusAction(ids, v));
+              if (v) run(async () => { const result = await bulkSetTaskStatusAction(ids, v); if (!result.ok) throw new Error(result.error); });
             }}
             className={barSelectClass}
           >
