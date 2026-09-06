@@ -102,8 +102,9 @@ export default async function PanomPage() {
             ? `${me.name} için atanmış işler, kişisel hedefler ve yaklaşan riskler.`
             : "Kişisel görev akışını görmek için çalışma kimliğini seç."
         }
+        actionsClassName="xl:flex-nowrap"
         actions={me ? (
-          <span aria-label="Kişisel pano araçları" className="flex max-w-2xl flex-wrap items-center gap-2 lg:justify-end">{me.is_manager === 1 && <DecisionQueue items={listPendingDecisions(me.id)} />}
+          <span aria-label="Kişisel pano araçları" className="flex flex-wrap items-center gap-2 lg:justify-end xl:flex-nowrap">{me.is_manager === 1 && <DecisionQueue items={listPendingDecisions(me.id)} />}
             <PersonalDeadlineRadarTrigger
               personId={me.id}
               tasks={myPlanningTasks}

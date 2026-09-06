@@ -28,7 +28,7 @@ export default function MonthlyPointTargetReport({ month, basePath, personId, de
         </div>
         <div className="flex flex-wrap items-center gap-3 print:hidden">
           <MonthNavigator month={month} basePath={basePath} preservedQuery={preservedQuery} scroll={false} ariaLabel="Kişisel hedef rapor ayı" />
-          {canManage && <Link className="text-xs font-semibold text-brand-600 hover:underline" href={`/team/manage/targets?month=${month}`}>Hedefleri düzenle</Link>}
+          {canManage && <Link className="text-xs font-semibold text-brand-600 hover:underline" href={`/team/targets?month=${month}&manage=1`}>Hedefleri düzenle</Link>}
           {canExport && <a className="text-xs font-semibold text-brand-600 hover:underline" href={`/reports/export?${query}`}>Hedefleri Excel indir</a>}
         </div>
       </div>

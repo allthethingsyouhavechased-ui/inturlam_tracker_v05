@@ -34,6 +34,7 @@ describe("Panom teslim radari", () => {
     assert.match(radar, /export function PersonalDeadlineRadarTrigger/);
     assert.match(radar, /export function PersonalDeadlineRadarPanel/);
     assert.match(panom, /aria-label="Kişisel pano araçları"/);
+    assert.match(panom, /actionsClassName="xl:flex-nowrap"/);
     assert.match(panom, /<PersonalDeadlineRadarTrigger/);
     assert.match(panom, /href="\/panom\/markalar"/);
     assert.match(panom, /href="\/panom\/katkim"/);
@@ -43,6 +44,26 @@ describe("Panom teslim radari", () => {
     assert.doesNotMatch(source("app/globals.css"), /\.panom-dock-panel/);
     assert.match(source("app/panom/markalar/page.tsx"), /combineMonthlyProgress/);
     assert.doesNotMatch(views, /otherTasks|Ekipte gecikmiş \/ bu hafta teslim/);
+    const toolbar = views.indexOf('aria-label="Kişisel görev görünümü araçları"');
+    const queues = views.indexOf('aria-label="Kişisel iş kuyrukları"');
+    const viewToggle = views.indexOf("<WorkspaceViewToggle", queues);
+    assert.ok(toolbar >= 0 && queues > toolbar && viewToggle > queues);
+  });
+});
+
+describe("Aylık ekip hedefleri", () => {
+  it("rapor, düzenleme ve dışa aktarmayı tek ekip sayfasında toplar", () => {
+    const targets = source("app/team/targets/page.tsx");
+    const legacy = source("app/team/manage/targets/page.tsx");
+    const accounts = source("app/team/manage/page.tsx");
+    const report = source("components/MonthlyPointTargetReport.tsx");
+
+    assert.match(targets, /<MonthlyPointTargetManagerDialog/);
+    assert.match(targets, /Hedefleri Excel indir/);
+    assert.match(targets, /actionsClassName="lg:flex-nowrap"/);
+    assert.match(legacy, /redirect\(`\/team\/targets\?month=\$\{month\}&manage=1`\)/);
+    assert.doesNotMatch(accounts, /team\/manage\/targets/);
+    assert.match(report, /href=\{`\/team\/targets\?month=\$\{month\}&manage=1`\}/);
   });
 });
 

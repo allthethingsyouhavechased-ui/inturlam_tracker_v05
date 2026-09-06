@@ -89,18 +89,12 @@ export default function PanomViews({
     <div>
       {hasIdentity && (
         <section className="space-y-3">
-          <div role="group" aria-label="Kişisel iş kuyrukları" className="flex min-w-0 flex-wrap gap-2">
-            {(Object.keys(PERSONAL_FOCUS_LABELS) as PersonalFocus[]).map((key) => <button key={key} type="button" aria-pressed={focus === key} onClick={() => changeFocus(key)}
-              className={`min-h-11 rounded-lg border px-3 py-2 text-xs font-medium ${focus === key ? "border-brand-500 bg-brand-600 text-white" : "border-border-default bg-surface text-secondary hover:bg-surface-hover"}`}>
-              {PERSONAL_FOCUS_LABELS[key]} <span className="ml-1 tabular-nums">{counts[key]}</span>
-            </button>)}
-          </div>
           <div
             role="group"
             aria-label="Kişisel görev görünümü araçları"
             className="flex min-h-16 min-w-0 flex-wrap items-center gap-3 rounded-xl border border-border-default bg-surface p-3"
           >
-            <label className="flex min-w-0 flex-1 items-center gap-2">
+            <label className="flex min-w-0 shrink-0 items-center gap-2">
               <span className="shrink-0 text-xs font-medium text-muted">Sırala</span>
               <select
                 value={sortKey}
@@ -115,6 +109,13 @@ export default function PanomViews({
                 ))}
               </select>
             </label>
+
+            <div role="group" aria-label="Kişisel iş kuyrukları" className="flex min-w-0 flex-wrap gap-2 xl:flex-nowrap">
+              {(Object.keys(PERSONAL_FOCUS_LABELS) as PersonalFocus[]).map((key) => <button key={key} type="button" aria-pressed={focus === key} onClick={() => changeFocus(key)}
+                className={`min-h-11 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-medium ${focus === key ? "border-brand-500 bg-brand-600 text-white" : "border-border-default bg-surface text-secondary hover:bg-surface-hover"}`}>
+                {PERSONAL_FOCUS_LABELS[key]} <span className="ml-1 tabular-nums">{counts[key]}</span>
+              </button>)}
+            </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-3 sm:border-l sm:border-border-subtle sm:pl-3">
               {view === "liste" && (

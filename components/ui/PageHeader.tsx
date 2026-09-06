@@ -21,6 +21,7 @@ export default function PageHeader({
   summaryClassName,
   descriptionClassName,
   actions,
+  actionsClassName,
   className,
   layout = "default",
 }: {
@@ -33,6 +34,7 @@ export default function PageHeader({
   summaryClassName?: string;
   descriptionClassName?: string;
   actions?: ReactNode;
+  actionsClassName?: string;
   className?: string;
   // "brand": künye sütunu (logo + breadcrumb + eyebrow) ile BAŞLIK yan yana
   // durur, üst üste değil. Marka çalışma alanında başlık bloğu dört satıra
@@ -98,7 +100,7 @@ export default function PageHeader({
       </div>
       {brandLayout && <div className="min-w-0 lg:flex-1">{heading}</div>}
       {summary && <div className={cn("min-w-0", !workspaceLayout && "flex-1 lg:ml-auto", summaryClassName ?? (!workspaceLayout && "lg:max-w-3xl"))}>{summary}</div>}
-      {actions && <div className={cn("flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 lg:w-auto lg:shrink-0", workspaceLayout && "lg:justify-self-end")}>{actions}</div>}
+      {actions && <div className={cn("flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 lg:w-auto lg:shrink-0", workspaceLayout && "lg:justify-self-end", actionsClassName)}>{actions}</div>}
     </div>
   );
 }
