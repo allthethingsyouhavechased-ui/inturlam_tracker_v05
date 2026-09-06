@@ -15,4 +15,11 @@ Windows, Node 24.18.0, Intel Core i5-14400F; geçici SQLite, eşit tarihli ve uz
 | 2.000 | 50 | 48.628 bayt | 29,20 ms |
 | 10.000 | 50 | 48.632 bayt | 117,69 ms |
 
-Bu ölçüm repository DTO'sudur; HTTP sayfası, HTML, React yükü ve statik kaynaklar dahil değildir ve kullanıcı SLA'sı değildir. Üretim sayfasının 500 KB kabul kapısı entegrasyon ortamında ayrıca ölçülmelidir. Not/brief listede taşınmaz. Testler sayfa sınırı, kararlı sıra, filtre/sayaç uyumu, Türkçe arama, parametre güvenliği, aktif ekip erişimi, kişisel hedef ayrımı, arşiv/planlama sınırı ve dönüş adresi/kaydırma davranışını kapsar.
+Bu ilk ölçüm repository DTO'sudur. 6 Eylül 2026'da ayrı SQLite veritabanı ve webpack üretim derlemesiyle yerel HTTP yanıtı da ölçüldü:
+
+| Görev | Dönen satır | Sıkıştırılmamış HTML + React yanıtı | Isınmış HTTP yanıt süresi |
+|---:|---:|---:|---:|
+| 2.000 | 50 | 316.400 bayt | 60 ms |
+| 10.000 | 50 | 316.413 bayt | 152 ms |
+
+Her iki sayfa yanıtı da 500 KB sınırının altında kaldı. Bu ölçüm ayrı indirilen JavaScript, CSS ve fontları kapsamaz; yerel makine ölçümüdür, ağ performansı veya kullanıcı SLA'sı değildir. Not/brief listede taşınmaz. Testler sayfa sınırı, kararlı sıra, filtre/sayaç uyumu, Türkçe arama, parametre güvenliği, aktif ekip erişimi, kişisel hedef ayrımı, arşiv/planlama sınırı ve dönüş adresi/kaydırma davranışını kapsar.
