@@ -328,7 +328,7 @@ export default function IdeaBankExplorer({
         </div>
       </aside>
 
-      <main className="min-w-0 space-y-5">
+      <section aria-label="Fikir çalışma alanı" className="min-w-0 space-y-5">
         <div className="flex min-w-0 items-end gap-2 lg:hidden">
           <label className="grid min-w-0 flex-1 gap-1 text-xs font-medium text-secondary">
             Fikir alanı
@@ -462,7 +462,7 @@ export default function IdeaBankExplorer({
           ))}
         </div>
       )}
-      </main>
+      </section>
       </div>
     </>
   );

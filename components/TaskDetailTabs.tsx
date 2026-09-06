@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { taskDetailTabFromHash } from "@/lib/taskDetailNavigation";
 
 // Görev detayı 2026-08-29'a kadar ALTI sekmeydi (ayrıntılar / iş akışı / teslim
 // / revize / yorumlar / hareketler). İş akışını görmek için sekme değiştirmek,
@@ -24,8 +25,7 @@ type TabId = (typeof TABS)[number]["id"];
 type AsideId = "workflow" | "comments" | "activity";
 
 function tabFromHash(hash: string): TabId | null {
-  const normalizedHash = hash.replace(/^#/, "");
-  return TABS.find((tab) => tab.hash === normalizedHash)?.id ?? null;
+  return taskDetailTabFromHash(hash);
 }
 
 export default function TaskDetailTabs({
@@ -57,6 +57,16 @@ export default function TaskDetailTabs({
     window.addEventListener("hashchange", syncFromHash);
     return () => window.removeEventListener("hashchange", syncFromHash);
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "delivery") return;
+    const id = window.location.hash.slice(1);
+    if (!id.startsWith("delivery-")) return;
+    const target = document.getElementById(id);
+    const history = target?.closest("details");
+    if (history) history.open = true;
+    target?.scrollIntoView({ block: "start" });
+  }, [activeTab]);
 
   function selectTab(tabId: TabId, focus = false) {
     const tab = TABS.find((candidate) => candidate.id === tabId);

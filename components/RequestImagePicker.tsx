@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { validateImageFiles, IMAGE_UPLOAD_HINT, imageUploadCapacity } from "@/lib/imageUploadPolicy";
 
@@ -11,8 +11,18 @@ interface PendingImage {
 
 export default function RequestImagePicker() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const urls = useRef(new Set<string>());
   const [images, setImages] = useState<PendingImage[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const form = inputRef.current?.form;
+    const currentUrls = urls.current;
+    const release = () => { currentUrls.forEach(url => URL.revokeObjectURL(url)); currentUrls.clear(); };
+    const reset = () => { release(); setImages([]); setError(null); };
+    form?.addEventListener("reset", reset);
+    return () => { form?.removeEventListener("reset", reset); release(); };
+  }, []);
 
   function syncInput(next: PendingImage[]) {
     const transfer = new DataTransfer();
@@ -27,7 +37,7 @@ export default function RequestImagePicker() {
     setError(null);
     const next = [
       ...images,
-      ...Array.from(fileList).map((file) => ({ file, url: URL.createObjectURL(file) })),
+      ...Array.from(fileList).map((file) => { const url = URL.createObjectURL(file); urls.current.add(url); return { file, url }; }),
     ];
     setImages(next);
     syncInput(next);
@@ -35,7 +45,7 @@ export default function RequestImagePicker() {
 
   function removeImage(index: number) {
     const image = images[index];
-    if (image) URL.revokeObjectURL(image.url);
+    if (image) { URL.revokeObjectURL(image.url); urls.current.delete(image.url); }
     const next = images.filter((_, current) => current !== index);
     setImages(next);
     syncInput(next);
@@ -59,6 +69,7 @@ export default function RequestImagePicker() {
         ref={inputRef}
         type="file"
         name="images"
+        aria-label="Yüklenecek görseller"
         accept="image/png,image/jpeg,image/gif,image/webp"
         multiple
         className="sr-only"

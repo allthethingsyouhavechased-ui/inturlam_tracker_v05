@@ -214,10 +214,10 @@ export default function TaskDeliveryPanel({
                 Teslim bağlantısı <span className="font-normal text-muted">(opsiyonel)</span>
                 <input name="externalUrl" type="url" maxLength={2000} placeholder="https://…" className={inputClass} />
               </label>
-              <label className="grid gap-1.5 text-xs font-medium text-secondary">
+              <div className="grid gap-1.5 text-xs font-medium text-secondary">
                 Önizleme görselleri <span className="font-normal text-muted">(opsiyonel)</span>
                 <RequestImagePicker />
-              </label>
+              </div>
             </div>
             <label className="grid gap-1.5 text-xs font-medium text-secondary">
               Teslim notu <span className="font-normal text-muted">(bağlantı veya görsel yoksa zorunlu)</span>

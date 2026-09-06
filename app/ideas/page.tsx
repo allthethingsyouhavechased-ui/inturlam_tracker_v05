@@ -45,7 +45,7 @@ export default async function IdeasPage({
               <Icon name="archive" className="size-4" />
               {archived ? "Aktif fikirler" : `Arşiv · ${archivedCount}`}
             </Link>
-            {!archived && <IdeaCreateButton />}
+            {!archived && <span className="hidden lg:inline-flex"><IdeaCreateButton /></span>}
           </>
         }
       />

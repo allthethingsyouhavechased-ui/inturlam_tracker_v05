@@ -24,7 +24,7 @@ export default function ContentStatusSelect({
     <div>
     <select
       aria-label="İçerik durumu"
-      aria-describedby={status === "IptalEdildi" ? noteId : undefined}
+      aria-describedby={noteId}
       value={status}
       disabled={pending}
       onChange={(e) => {
@@ -43,7 +43,7 @@ export default function ContentStatusSelect({
         </option>
       ))}
     </select>
-    {status === "IptalEdildi" && <p id={noteId} className="mt-1 max-w-sm text-xs text-warning">İçerik iptal edildi. Alt görevlerin durumu ve puanları değişmedi; açık görevleri ayrıca gözden geçirin.</p>}
+    <p id={noteId} className={`mt-1 max-w-sm text-xs ${status === "IptalEdildi" ? "text-warning" : "text-muted"}`}>{status === "IptalEdildi" ? "İçerik iptal edildi. Alt görevlerin durumu ve puanları değişmedi; açık görevleri ayrıca gözden geçirin." : "İptal seçimi alt görevleri ve puanlarını değiştirmez."}</p>
     {error && <p role="alert" className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
