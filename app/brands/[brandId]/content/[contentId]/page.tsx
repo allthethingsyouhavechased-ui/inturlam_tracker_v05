@@ -9,6 +9,7 @@ import DeleteContentButton from "@/components/DeleteContentButton";
 import EditContentForm from "@/components/EditContentForm";
 import KanbanBoard from "@/components/KanbanBoard";
 import NewTaskForm from "@/components/NewTaskForm";
+import ContentTaskCreateDialog from "@/components/ContentTaskCreateDialog";
 import PageHeader from "@/components/ui/PageHeader";
 import { CONTENT_TYPE_LABEL } from "@/lib/constants";
 import { formatDateShort } from "@/lib/date";
@@ -64,6 +65,10 @@ export default async function ContentPage({
         ]}
         actions={
           <>
+            <ContentTaskCreateDialog>
+              <ApplyTemplateForm contentItemId={content.id} templates={templates} defaultAssigneeId={content.assignee_id ?? me.id} hasTargetDate={Boolean(content.target_date)} />
+              <NewTaskForm compact contentItemId={content.id} defaultContentType={content.type} canSetWeight={me.is_manager === 1} people={people} defaultAssigneeId={me.id} />
+            </ContentTaskCreateDialog>
             <ContentStatusSelect contentId={content.id} status={content.status} />
             <EditContentForm content={content} people={people} />
             <ArchiveContentButton contentId={content.id} archived={content.archived === 1} />
@@ -73,28 +78,6 @@ export default async function ContentPage({
       />
 
       <div className="space-y-6">
-      <section className="space-y-3 rounded-xl border border-border-default bg-surface p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Görev oluştur</h2>
-            <p className="mt-0.5 text-xs text-muted">Tek görev ekle veya standart bir iş akışını şablondan getir.</p>
-          </div>
-          <ApplyTemplateForm
-            contentItemId={content.id}
-            templates={templates}
-            defaultAssigneeId={content.assignee_id ?? me.id}
-            hasTargetDate={Boolean(content.target_date)}
-          />
-        </div>
-        <NewTaskForm
-          contentItemId={content.id}
-          defaultContentType={content.type}
-          canSetWeight={me.is_manager === 1}
-          people={people}
-          defaultAssigneeId={me?.id ?? null}
-        />
-      </section>
-
       <section>
         <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
           Bir kartı tutup başka bir sütuna sürükleyerek durumunu değiştirebilirsin.

@@ -80,6 +80,9 @@ export default async function TaskPage({
         eyebrow={CONTENT_TYPE_LABEL[task.content_type].toLocaleUpperCase("tr-TR")}
         title={task.title}
         description={`${task.brand_name} · ${task.content_title}`}
+        actions={<>
+          {me.is_manager === 1 && <TaskSharingPanel taskId={task.id} title={task.title} brandName={task.brand_name} initialBrief={task.guest_brief ?? ""} initialDate={task.requested_date ?? ""} shared={customerShared} publicItems={<div className="space-y-2 text-xs"><p>{sharedComments.length} paylaşılan yorum · {sharedAttachments.length} paylaşılan ek · {deliveries.filter(d=>d.guest_visible===1).length} müşteri teslimi</p>{sharedComments.map(c=><p key={c.id} className="whitespace-pre-wrap">{c.author_name}: {c.body}</p>)}{sharedAttachments.map(a=><a key={a.id} href={a.file_path} className="block underline">{a.original_name ?? "Paylaşılan ek"}</a>)}{deliveries.filter(d=>d.guest_visible===1).map(d=><div key={d.id}><p>V{d.version_number} · {d.note}</p>{d.external_url&&<p className="break-all">{d.external_url}</p>}{d.attachments.map(a=><a key={a.id} className="block underline" href={a.file_path}>{a.original_name ?? "Teslim eki"}</a>)}</div>)}</div>} />}
+        </>}
         breadcrumb={[
           { label: "Markalar", href: "/brands" },
           { label: task.brand_name, href: `/brands/${task.brand_id}` },
@@ -112,7 +115,7 @@ export default async function TaskPage({
         </div>
       )}
 
-      {me.is_manager === 1 && <TaskSharingPanel taskId={task.id} title={task.title} brandName={task.brand_name} initialBrief={task.guest_brief ?? ""} initialDate={task.requested_date ?? ""} shared={customerShared} publicItems={<div className="space-y-2 text-xs"><p>{sharedComments.length} paylaşılan yorum · {sharedAttachments.length} paylaşılan ek · {deliveries.filter(d=>d.guest_visible===1).length} müşteri teslimi</p>{sharedComments.map(c=><p key={c.id} className="whitespace-pre-wrap">{c.author_name}: {c.body}</p>)}{sharedAttachments.map(a=><a key={a.id} href={a.file_path} className="block underline">{a.original_name ?? "Paylaşılan ek"}</a>)}{deliveries.filter(d=>d.guest_visible===1).map(d=><div key={d.id}><p>V{d.version_number} · {d.note}</p>{d.external_url&&<p className="break-all">{d.external_url}</p>}{d.attachments.map(a=><a key={a.id} className="block underline" href={a.file_path}>{a.original_name ?? "Teslim eki"}</a>)}</div>)}</div>} />}
+
       <TaskDetailTabs
         details={
           <form key="details" action={updateTaskDetailsAction} className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">

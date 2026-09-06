@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { controlClass } from "@/components/ui/Input";
 import { createTaskAction } from "@/lib/actions/tasks";
 import {
@@ -24,30 +24,36 @@ export default function NewTaskForm({
   canSetWeight = false,
   people,
   defaultAssigneeId,
+  compact = false,
 }: {
   contentItemId: string;
   defaultContentType: ContentType;
   canSetWeight?: boolean;
   people: Person[];
   defaultAssigneeId?: string | null;
+  compact?: boolean;
 }) {
-  const ref = useRef<HTMLFormElement>(null);
+  const [formVersion, setFormVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState(false);
   const [difficulty, setDifficulty] = useState<TaskDifficulty>("Orta");
   return (
     <form
-      ref={ref}
+      key={formVersion}
       action={async (fd) => {
         setError(null);
+        setCreated(false);
         try {
           await createTaskAction(fd);
-          ref.current?.reset();
+          setDifficulty("Orta");
+          setFormVersion(version => version + 1);
+          setCreated(true);
         } catch (e) {
           setError(getActionErrorMessage(e));
         }
       }}
       className={`grid gap-3 sm:grid-cols-2 sm:items-end ${
-        canSetWeight
+        compact ? "" : canSetWeight
           ? "xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto_auto_auto_auto]"
           : "xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto_auto_auto]"
       }`}
@@ -125,7 +131,8 @@ export default function NewTaskForm({
         </label>
       )}
       <SubmitButton>Ekle</SubmitButton>
-      {error && <p role="alert" className={`text-xs text-danger sm:col-span-2 ${canSetWeight ? "xl:col-span-8" : "xl:col-span-7"}`}>{error}</p>}
+      {created && <p role="status" className="col-span-full text-xs text-brand-600 dark:text-brand-300">Görev eklendi. Pencereyi kapatarak panoda görebilirsin.</p>}
+      {error && <p role="alert" className="col-span-full text-xs text-danger">{error}</p>}
     </form>
   );
 }

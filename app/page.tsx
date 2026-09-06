@@ -130,7 +130,7 @@ export default async function HomePage({
         eyebrow="OPERASYON ÖZETİ"
         title="Bugün"
         description={`${formatDateLong(today)} · Güncel operasyon metrikleri ve ${monthLabel} marka ilerlemesi.`}
-        actions={<MonthNavigator month={month} basePath="/" ariaLabel="Ana sayfa analiz ayı" />}
+        actions={<>{me.is_manager === 1 && <DecisionQueue items={listPendingDecisions(me.id)} />}<MonthNavigator month={month} basePath="/" ariaLabel="Ana sayfa analiz ayı" /></>}
       />
 
       <div className="space-y-6">
@@ -150,7 +150,7 @@ export default async function HomePage({
         reviewTasks={reviewTasks}
       />
 
-      {me.is_manager === 1 && <DecisionQueue items={listPendingDecisions(me.id)} />}
+
 
       <section aria-label="Operasyon göstergeleri" className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
         <Metric href="/brands" label="Aktif marka" value={brands.length} icon="brands" tone="brand" />

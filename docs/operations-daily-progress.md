@@ -19,6 +19,12 @@
 
 Aylık kişisel hedefler ve %100 üzeri ilerleme korunur. Geliştirme; görev yaşam döngüsü, hızlı oluşturma ve liste/arayüz işleri için ayrı ajan çalışma kopyalarında yürütülüp tek dalda bütünleştirildi.
 
+### Günlük ekranlarda alan kullanımı — 6 Eylül takip düzenlemesi
+
+Görev detayında müşteri paylaşımı, başlığın sağındaki durum gösteren butona taşındı. Önizleme, brief/tarih ve paylaşımı geri alma aynı pencerede açılır. Bugün ve Panom'daki bekleyen onaylar da sayılı bir başlık butonundan açılır; içerik detayındaki görev ve şablon oluşturma formu başlıktaki “Görev oluştur” penceresine alındı. Böylece görev panosu ve teslim alanı daha yukarıda başlar. Açılır pencereler klavye odağını içeride tutar, Escape ile kapanır ve odağı açan butona döndürür. Yeni görev kaydından sonra formun zorluk/puan varsayılanları birlikte sıfırlanır ve başarı mesajı gösterilir.
+
+Bu takip düzenlemesinde ilgili 24 test, üretim derlemesi, tür kontrolü ve lint çalıştırıldı. Tarayıcıda masaüstü başlık yerleşimi, onay bağlantısından doğru teslim sekmesine geçiş, mobil pencere taşması ve sentetik veriyle görev oluşturma kontrol edildi.
+
 ## Doğrulama
 
 - Tam otomatik paket: 538 test, 537 başarılı, 0 başarısız, 1 atlanan. Atlanan mevcut test gerçek veritabanı anlık görüntüsü gerektirir; gerçek veri test amacıyla değiştirilmedi.
