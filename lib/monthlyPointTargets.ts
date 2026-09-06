@@ -1,4 +1,5 @@
 import type { MonthlyProgress } from "@/lib/types";
+import { assertMonthPeriod } from "@/lib/periodValidation";
 
 export interface PointTargetProgress {
   month: string;
@@ -11,8 +12,7 @@ export interface PointTargetProgress {
 }
 
 export function assertTargetMonth(month: string): string {
-  if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("Geçerli bir ay seçin.");
-  return month;
+  return assertMonthPeriod(month);
 }
 
 export function assertTargetPoints(value: number): number {

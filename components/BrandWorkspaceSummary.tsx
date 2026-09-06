@@ -46,7 +46,7 @@ export default function BrandWorkspaceSummary({
           {responsibles}
         </div>
         <div data-brand-info="shoots" className="min-w-0">
-          <p className="text-eyebrow text-brand-600 dark:text-brand-300">ÇEKİM HAKLARI</p>
+          <p className="text-eyebrow text-brand-600 dark:text-brand-300">ÇEKİM KULLANIMI / HAK</p>
           {shoots}
         </div>
       </div>

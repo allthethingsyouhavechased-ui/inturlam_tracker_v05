@@ -20,6 +20,7 @@ import {
 } from "@/lib/repositories/brandAssignments";
 import { deleteUploadedFile, deleteUploadedFiles, replaceBrandLogo } from "@/lib/uploads";
 import { listUploadPathsForBrand } from "@/lib/repositories/uploadReferences";
+import { assertMonthPeriod, assertYearPeriod } from "@/lib/periodValidation";
 
 function extractLogoFile(formData: FormData): File | null {
   const value = formData.get("logo");
@@ -51,9 +52,9 @@ function cleanNonNegativeInt(value: FormDataEntryValue | null, label: string): n
 
 // Dönem gizli form alanından geliyor; biçimi doğrulanmazsa kullanıcı başka bir
 // dönemin (ya da hiç var olmayan bir dönemin) sayacını yazabilirdi.
-function cleanPeriod(value: FormDataEntryValue | null, pattern: RegExp): string | null {
+function cleanPeriod(value: FormDataEntryValue | null, validate: (value: string) => string): string | null {
   const text = String(value ?? "").trim();
-  return pattern.test(text) ? text : null;
+  return text ? validate(text) : null;
 }
 
 function sameIds(left: string[], right: string[]): boolean {
@@ -118,8 +119,8 @@ export async function updateBrandAction(formData: FormData) {
   );
   // Kullanılan çekim sayısı markaya değil DÖNEME yazılır (aylık kota her ay
   // sıfırlanır). Dönem alanları yoksa sayaçlara hiç dokunulmaz.
-  const usageMonth = cleanPeriod(formData.get("shootUsageMonth"), /^\d{4}-\d{2}$/);
-  const usageYear = cleanPeriod(formData.get("shootUsageYear"), /^\d{4}$/);
+  const usageMonth = cleanPeriod(formData.get("shootUsageMonth"), assertMonthPeriod);
+  const usageYear = cleanPeriod(formData.get("shootUsageYear"), assertYearPeriod);
   const monthlyShootUsed = usageMonth
     ? cleanNonNegativeInt(formData.get("monthlyShootUsed"), "Kullanılan aylık çekim")
     : null;
@@ -171,8 +172,8 @@ export async function updateBrandAction(formData: FormData) {
       await replaceBrandLogo(logo, current.logo_path, (logoPath) => update(logoPath));
     } else update();
   }
-  if (monthlyUsageChanged && usageMonth) setBrandShootUsage(id, usageMonth, monthlyShootUsed);
-  if (annualUsageChanged && usageYear) setBrandShootUsage(id, usageYear, annualShootUsed);
+  if (monthlyUsageChanged && usageMonth) setBrandShootUsage(id, usageMonth, monthlyShootUsed, actor.person.id);
+  if (annualUsageChanged && usageYear) setBrandShootUsage(id, usageYear, annualShootUsed, actor.person.id);
   if (assignmentsChanged) {
     replaceBrandPersonAssignments(id, responsiblePersonIds, actor.person.id);
   }

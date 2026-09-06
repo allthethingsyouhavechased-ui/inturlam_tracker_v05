@@ -1,6 +1,7 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
 import { calculateMonthlyProgress, TASK_STATUS_COEFFICIENT } from "@/lib/progress";
 import type { MonthlyProgress, TaskStatus } from "@/lib/types";
+import { assertMonthPeriod } from "@/lib/periodValidation";
 
 interface ProgressTaskRow {
   id: string;
@@ -25,8 +26,7 @@ export interface BrandMonthlyProgressRow {
 }
 
 function validMonth(month: string): string {
-  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error("Geçersiz ay.");
-  return month;
+  return assertMonthPeriod(month);
 }
 
 // Puanlanabilir durumlar TEK kaynaktan: TASK_STATUS_COEFFICIENT'in anahtarları.

@@ -716,3 +716,14 @@ CREATE INDEX IF NOT EXISTS idx_activity_entity  ON activity_log(entity_type, ent
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_read ON notifications(recipient_id, read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created        ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_calendar_event ON notifications(calendar_event_id);
+
+CREATE TABLE IF NOT EXISTS brand_shoot_usage_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  period TEXT NOT NULL,
+  used_count INTEGER CHECK (used_count IS NULL OR used_count >= 0),
+  actor_id TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_shoot_usage_history_period
+  ON brand_shoot_usage_history(brand_id, period, id DESC);

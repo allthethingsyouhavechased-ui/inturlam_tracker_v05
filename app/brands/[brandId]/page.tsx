@@ -31,7 +31,7 @@ import { listBrandSocialRows } from "@/lib/repositories/social";
 import { classifySocial, SOCIAL_HEALTH_LABEL } from "@/lib/socialSilence";
 import { requirePageSession } from "@/lib/identity";
 import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
-import { getBrand, getBrandShootUsage } from "@/lib/repositories/brands";
+import { getBrand, getBrandShootUsageDetails } from "@/lib/repositories/brands";
 import { countIdeasForBrand } from "@/lib/repositories/ideas";
 import { listActivityForBrand } from "@/lib/repositories/activity";
 import { clusterLabelMap, listClusters } from "@/lib/repositories/clusters";
@@ -99,8 +99,10 @@ export default async function BrandPage({
   // bir dönem kaydı varsa onun yerine o geçer (uygulamaya işlenmemiş çekimler).
   const monthlyShootsFromCalendar = monthlyEvents.filter((event) => event.type === "Cekim").length;
   const annualShootsFromCalendar = annualEvents.filter((event) => event.type === "Cekim").length;
-  const monthlyShootsUsedManual = getBrandShootUsage(brandId, month);
-  const annualShootsUsedManual = getBrandShootUsage(brandId, String(year));
+  const monthlyUsage = getBrandShootUsageDetails(brandId, month);
+  const annualUsage = getBrandShootUsageDetails(brandId, String(year));
+  const monthlyShootsUsedManual = monthlyUsage.used;
+  const annualShootsUsedManual = annualUsage.used;
   const monthlyShootsUsed = monthlyShootsUsedManual ?? monthlyShootsFromCalendar;
   const annualShootsUsed = annualShootsUsedManual ?? annualShootsFromCalendar;
   // Instagram kullanıcı adı girilmemiş markalar takip listesinde yok; o zaman
@@ -199,19 +201,31 @@ export default async function BrandPage({
       shoots={
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="shrink-0 text-xs text-muted">
-            Aylık{" "}
+            {formatMonthLabel(monthParamToDate(month))}{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {monthlyShootsUsed}
               {brand.monthly_shoot_allowance !== null && <span className="font-medium text-muted"> / {brand.monthly_shoot_allowance}</span>}
             </span>
           </span>
           <span className="shrink-0 text-xs text-muted">
-            Yıllık{" "}
+            {year}{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {annualShootsUsed}
               {brand.annual_shoot_allowance !== null && <span className="font-medium text-muted"> / {brand.annual_shoot_allowance}</span>}
             </span>
           </span>
+          <details className="w-full text-xs text-muted">
+            <summary className="cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-brand-500">Sayaç kaynakları</summary>
+            <div className="mt-1 space-y-1">
+              {[{ label: month, usage: monthlyUsage }, { label: String(year), usage: annualUsage }].map(({ label, usage }) => (
+                <p key={label}>{label}: {usage.source === "manual" ? "Elle girilen kullanım" : "Takvimdeki çekim etkinlikleri"}
+                  {usage.updated_at && <> · Son değişiklik: {formatIsoDateTime(usage.updated_at)} · {usage.actor_name ?? "Kişi bilgisi yok"}</>}
+                </p>
+              ))}
+              <p>Aylık ve yıllık sayaçlar ayrı tutulur. Elle girilen aylık sayılar yıllık sayaca eklenmez.</p>
+              {monthlyShootsUsed > annualShootsUsed && <p className="text-warning">Aylık kullanım yıllık kullanımdan yüksek; dönem kayıtlarını kontrol edin.</p>}
+            </div>
+          </details>
         </div>
       }
     />

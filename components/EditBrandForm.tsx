@@ -298,7 +298,7 @@ export default function EditBrandForm({
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wider text-secondary">Kullanılan çekimler</h4>
               <p className="mt-1 text-xs text-muted">
-                Boş bırakırsan takvimdeki çekim etkinlikleri sayılır ({shootUsage.monthLabel}: {shootUsage.monthlyFromCalendar}, {shootUsage.year}: {shootUsage.annualFromCalendar}). Sayı yazarsan o dönem için takvim yerine bu sayı gösterilir.
+                Boş bırakırsan takvimdeki çekim etkinlikleri sayılır ({shootUsage.monthLabel}: {shootUsage.monthlyFromCalendar}, {shootUsage.year}: {shootUsage.annualFromCalendar}). Sayı yazarsan o dönem için takvim yerine bu sayı gösterilir. Aylık ve yıllık sayaçlar ayrıdır; aylık giriş yıllık toplamı değiştirmez.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">

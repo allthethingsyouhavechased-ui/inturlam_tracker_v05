@@ -2,6 +2,7 @@ import { getDb, plainList, plainOne } from "@/lib/db/client";
 import { chooseBrandAccentHue } from "@/lib/brandAccent";
 import type { Brand, BrandWithCount, Cluster } from "@/lib/types";
 import { plannedTaskCondition } from "@/lib/taskPlanning";
+import { assertShootPeriod } from "@/lib/periodValidation";
 
 export function listBrands(): Brand[] {
   return plainList<Brand>(
@@ -105,6 +106,7 @@ export function updateBrand(input: {
 // takvimindeki 'Cekim' etkinliklerini saymalı. `period` aylık için 'YYYY-MM',
 // yıllık için 'YYYY'.
 export function getBrandShootUsage(brandId: string, period: string): number | null {
+  assertShootPeriod(period);
   const row = plainOne<{ used_count: number }>(
     getDb()
       .prepare("SELECT used_count FROM brand_shoot_usage WHERE brand_id = ? AND period = ?")
@@ -114,18 +116,47 @@ export function getBrandShootUsage(brandId: string, period: string): number | nu
 }
 
 // `used = null` satırı SİLER — sayaç o dönem için takvimden saymaya geri döner.
-export function setBrandShootUsage(brandId: string, period: string, used: number | null): void {
-  const db = getDb();
-  if (used === null) {
-    db.prepare("DELETE FROM brand_shoot_usage WHERE brand_id = ? AND period = ?").run(brandId, period);
-    return;
+export function setBrandShootUsage(brandId: string, period: string, used: number | null, actorId: string | null = null): void {
+  assertShootPeriod(period);
+  if (used !== null && (!Number.isSafeInteger(used) || used < 0)) {
+    throw new Error("Kullanılan çekim sıfır veya pozitif tam sayı olmalı.");
   }
-  db.prepare(
-    `INSERT INTO brand_shoot_usage (brand_id, period, used_count, updated_at)
-     VALUES (?, ?, ?, datetime('now'))
-     ON CONFLICT (brand_id, period) DO UPDATE SET
-       used_count = excluded.used_count, updated_at = excluded.updated_at`,
-  ).run(brandId, period, used);
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    if (getBrandShootUsage(brandId, period) !== used) {
+      if (used === null) {
+        db.prepare("DELETE FROM brand_shoot_usage WHERE brand_id = ? AND period = ?").run(brandId, period);
+      } else {
+        db.prepare(
+          `INSERT INTO brand_shoot_usage (brand_id, period, used_count, updated_at)
+           VALUES (?, ?, ?, datetime('now'))
+           ON CONFLICT (brand_id, period) DO UPDATE SET
+             used_count = excluded.used_count, updated_at = excluded.updated_at`,
+        ).run(brandId, period, used);
+      }
+      db.prepare(`INSERT INTO brand_shoot_usage_history (brand_id, period, used_count, actor_id)
+        VALUES (?, ?, ?, ?)`).run(brandId, period, used, actorId);
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function getBrandShootUsageDetails(brandId: string, period: string) {
+  const used = getBrandShootUsage(brandId, period);
+  const audit = plainOne<{ updated_at: string; actor_name: string | null }>(getDb().prepare(
+    `SELECT h.created_at AS updated_at, p.name AS actor_name
+     FROM brand_shoot_usage_history h LEFT JOIN people p ON p.id = h.actor_id
+     WHERE h.brand_id = ? AND h.period = ? ORDER BY h.id DESC LIMIT 1`,
+  ).get(brandId, period));
+  const legacy = audit ? null : plainOne<{ updated_at: string }>(getDb().prepare(
+    "SELECT updated_at FROM brand_shoot_usage WHERE brand_id = ? AND period = ?",
+  ).get(brandId, period));
+  return { used, source: used === null ? "calendar" as const : "manual" as const,
+    updated_at: audit?.updated_at ?? legacy?.updated_at ?? null, actor_name: audit?.actor_name ?? null };
 }
 
 export function deleteBrand(id: string): boolean {
