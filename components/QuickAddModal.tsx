@@ -5,8 +5,8 @@ import { createPortal } from "react-dom";
 import Icon from "@/components/ui/Icon";
 import { buttonClass } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Input";
-import { createContentItemAction } from "@/lib/actions/content";
-import { createTaskAction } from "@/lib/actions/tasks";
+import { quickCreateTaskAction } from "@/lib/actions/quickCreate";
+import { quickCreateDefaults, type QuickCreateField, type QuickCreateFieldErrors } from "@/lib/quickCreate";
 import { loadQuickAddOptionsAction, type QuickAddOptions } from "@/lib/actions/quickAdd";
 import {
   CONTENT_TYPES,
@@ -87,6 +87,9 @@ export default function QuickAddModal({
   const [pending, startTransition] = useTransition();
   const pendingRef = useRef(pending);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<QuickCreateFieldErrors>({});
+  const requestIdRef = useRef<string | null>(null);
+  const defaults = quickCreateDefaults(defaultAssigneeId, defaultDueDate);
   const loadingOptions = !options && !fetched && error === null;
 
   useEffect(() => {
@@ -102,15 +105,15 @@ export default function QuickAddModal({
   const effectiveBrandId = brands.some((brand) => brand.id === brandId)
     ? brandId
     : (brands.find((brand) => brand.id === defaultBrandId)?.id ?? brands[0]?.id ?? "");
-  const [contentId, setContentId] = useState<string>(NEW_CONTENT);
-  const [newContentTitle, setNewContentTitle] = useState("");
-  const [taskType, setTaskType] = useState(CONTENT_TYPES[0]);
-  const [taskTitle, setTaskTitle] = useState("");
-  const [priority, setPriority] = useState(TASK_PRIORITIES[1]);
-  const [difficulty, setDifficulty] = useState(TASK_DIFFICULTIES[1]);
-  const [weightPoints, setWeightPoints] = useState("");
-  const [assigneeId, setAssigneeId] = useState(defaultAssigneeId ?? "");
-  const [dueDate, setDueDate] = useState(defaultDueDate);
+  const [contentId, setContentId] = useState<string>(defaults.contentId);
+  const [newContentTitle, setNewContentTitle] = useState(defaults.newContentTitle);
+  const [taskType, setTaskType] = useState(defaults.taskType);
+  const [taskTitle, setTaskTitle] = useState(defaults.taskTitle);
+  const [priority, setPriority] = useState(defaults.priority);
+  const [difficulty, setDifficulty] = useState(defaults.difficulty);
+  const [weightPoints, setWeightPoints] = useState(defaults.weightPoints);
+  const [assigneeId, setAssigneeId] = useState(defaults.assigneeId);
+  const [dueDate, setDueDate] = useState(defaults.dueDate);
 
   const contentsForBrand = useMemo(
     () => contents.filter((c) => c.brand_id === effectiveBrandId),
@@ -194,52 +197,54 @@ export default function QuickAddModal({
   }, [open]);
 
   function reset() {
-    setContentId(NEW_CONTENT);
-    setNewContentTitle("");
-    setTaskType(CONTENT_TYPES[0]);
-    setTaskTitle("");
-    setPriority(TASK_PRIORITIES[1]);
-    setDifficulty(TASK_DIFFICULTIES[1]);
-    setWeightPoints("1");
-    setAssigneeId(defaultAssigneeId ?? "");
-    setDueDate(defaultDueDate);
+    setContentId(defaults.contentId);
+    setNewContentTitle(defaults.newContentTitle);
+    setTaskType(defaults.taskType);
+    setTaskTitle(defaults.taskTitle);
+    setPriority(defaults.priority);
+    setDifficulty(defaults.difficulty);
+    setWeightPoints(defaults.weightPoints);
+    setAssigneeId(defaults.assigneeId);
+    setDueDate(defaults.dueDate);
     setError(null);
+    setFieldErrors({});
+    requestIdRef.current = null;
+  }
+
+  function fieldError(field: QuickCreateField) {
+    return fieldErrors[field] ? <span id={`quickadd-${field}-error`} className="text-xs font-normal text-danger">{fieldErrors[field]}</span> : null;
+  }
+
+  function fieldA11y(field: QuickCreateField) {
+    return { "aria-invalid": Boolean(fieldErrors[field]), "aria-describedby": fieldErrors[field] ? `quickadd-${field}-error` : undefined };
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setError(null);
-    if (!taskTitle.trim()) {
-      setError("Görev başlığı zorunlu.");
-      return;
-    }
+    setFieldErrors({});
+    requestIdRef.current ??= crypto.randomUUID();
+    const data = new FormData();
+    for (const [name, value] of Object.entries({ requestId: requestIdRef.current, brandId: effectiveBrandId,
+      contentItemId: effectiveContentId, newContentTitle, title: taskTitle, contentType: taskType,
+      priority, difficulty, weightPoints, assigneeId, dueDate })) data.set(name, value);
     startTransition(async () => {
       try {
-        let targetContentId = effectiveContentId;
-        if (targetContentId === NEW_CONTENT) {
-          const fd = new FormData();
-          fd.set("brandId", effectiveBrandId);
-          fd.set("title", newContentTitle.trim() || taskTitle.trim());
-          fd.set("type", taskType);
-          targetContentId = await createContentItemAction(fd);
+        const result = await quickCreateTaskAction(data);
+        if (!result.ok) {
+          setFieldErrors(result.fieldErrors);
+          setError(result.formError);
+          return;
         }
-
-        const fd2 = new FormData();
-        fd2.set("contentItemId", targetContentId);
-        fd2.set("title", taskTitle.trim());
-        fd2.set("contentType", taskType);
-        fd2.set("priority", priority);
-        fd2.set("difficulty", difficulty);
-        fd2.set("weightPoints", weightPoints);
-        if (assigneeId) fd2.set("assigneeId", assigneeId);
-        if (dueDate) fd2.set("dueDate", dueDate);
-        await createTaskAction(fd2);
-
         reset();
         setOpen(false);
         setInstant(false);
-      } catch (e) {
-        setError(getActionErrorMessage(e));
+      } catch {
+        setError("Sunucuya ulaşılamadı. Bilgileriniz korundu; aynı işlemi güvenle tekrar deneyebilirsiniz.");
+      } finally {
+        pendingRef.current = false;
       }
     });
   }
@@ -277,7 +282,8 @@ export default function QuickAddModal({
               </div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => !pendingRef.current && setOpen(false)}
+                disabled={pending}
                 className="ui-press inline-flex size-9 items-center justify-center rounded-[9px] text-muted hover:bg-surface-hover hover:text-foreground"
                 aria-label="Kapat"
               >
@@ -285,11 +291,13 @@ export default function QuickAddModal({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit}>
+              <fieldset disabled={pending} className="min-w-0 space-y-3">
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Marka
                 <select
-                  value={effectiveBrandId}
+                  {...fieldA11y("brandId")}
+                    value={effectiveBrandId}
                   disabled={loadingOptions}
                   onChange={(e) => {
                     setBrandId(e.target.value);
@@ -305,12 +313,14 @@ export default function QuickAddModal({
                     </option>
                   ))}
                 </select>
+              {fieldError("brandId")}
               </label>
 
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Bağlı çalışma
                 <select
-                  value={effectiveContentId}
+                  {...fieldA11y("contentItemId")}
+                    value={effectiveContentId}
                   onChange={(e) => {
                     const nextContentId = e.target.value;
                     setContentId(nextContentId);
@@ -326,6 +336,7 @@ export default function QuickAddModal({
                   ))}
                   <option value={NEW_CONTENT}>+ Yeni çalışma oluştur</option>
                 </select>
+              {fieldError("contentItemId")}
               </label>
 
               {effectiveContentId === NEW_CONTENT && (
@@ -333,12 +344,14 @@ export default function QuickAddModal({
                   <label className="grid gap-1.5 text-xs font-medium text-secondary">
                     Çalışma / proje başlığı
                     <input
-                      value={newContentTitle}
+                      {...fieldA11y("newContentTitle")}
+                    value={newContentTitle}
                       onChange={(e) => setNewContentTitle(e.target.value)}
                       placeholder="Boşsa görev başlığı kullanılır"
                       className={inputClass}
                     />
-                  </label>
+                  {fieldError("newContentTitle")}
+              </label>
                 </div>
               )}
 
@@ -346,16 +359,19 @@ export default function QuickAddModal({
                 <label className="grid gap-1.5 text-xs font-medium text-secondary">
                   Görev başlığı
                   <input
+                    {...fieldA11y("title")}
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
                     placeholder="Örn. Kapak görseli hazırla"
                     className={inputClass}
                     autoFocus
                   />
-                </label>
+                {fieldError("title")}
+              </label>
                 <label className="grid gap-1.5 text-xs font-medium text-secondary">
                   Görev türü
                   <select
+                    {...fieldA11y("contentType")}
                     value={taskType}
                     onChange={(e) => setTaskType(e.target.value as ContentType)}
                     className={inputClass}
@@ -364,13 +380,15 @@ export default function QuickAddModal({
                       <option key={type} value={type}>{CONTENT_TYPE_LABEL[type]}</option>
                     ))}
                   </select>
-                </label>
+                {fieldError("contentType")}
+              </label>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-6">
                 <label className={`min-w-0 grid gap-1.5 text-xs font-medium text-secondary ${canSetWeight ? "sm:col-span-2" : "sm:col-span-3"}`}>
                   Öncelik
                   <select
+                    {...fieldA11y("priority")}
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as (typeof TASK_PRIORITIES)[number])}
                     className={inputClass}
@@ -381,10 +399,12 @@ export default function QuickAddModal({
                       </option>
                     ))}
                   </select>
-                </label>
+                {fieldError("priority")}
+              </label>
                 <label className={`min-w-0 grid gap-1.5 text-xs font-medium text-secondary ${canSetWeight ? "sm:col-span-2" : "sm:col-span-3"}`}>
                   Zorluk
                   <select
+                    {...fieldA11y("difficulty")}
                     value={difficulty}
                     onChange={(e) => setDifficulty(e.target.value as (typeof TASK_DIFFICULTIES)[number])}
                     className={inputClass}
@@ -395,7 +415,8 @@ export default function QuickAddModal({
                       </option>
                     ))}
                   </select>
-                </label>
+                {fieldError("difficulty")}
+              </label>
                 {canSetWeight && (
                   <label className="min-w-0 grid gap-1.5 text-xs font-medium text-secondary sm:col-span-2">
                     Puan
@@ -405,20 +426,23 @@ export default function QuickAddModal({
                       min={1}
                       max={100}
                       step={1}
-                      value={weightPoints}
+                      {...fieldA11y("weightPoints")}
+                    value={weightPoints}
                       placeholder={String(DIFFICULTY_DEFAULT_WEIGHT[difficulty])}
                       onChange={(event) => setWeightPoints(event.target.value)}
                       className={inputClass}
-                      aria-describedby="quickadd-weight-help"
+                      aria-describedby={fieldErrors.weightPoints ? "quickadd-weight-help quickadd-weightPoints-error" : "quickadd-weight-help"}
                     />
                     <span id="quickadd-weight-help" className="text-[10px] font-normal leading-4 text-muted">
                       Boşsa zorluğa göre {DIFFICULTY_DEFAULT_WEIGHT[difficulty]} puan
                     </span>
-                  </label>
+                  {fieldError("weightPoints")}
+              </label>
                 )}
                 <label className="min-w-0 grid gap-1.5 text-xs font-medium text-secondary sm:col-span-3">
                   Atanan
                   <select
+                    {...fieldA11y("assigneeId")}
                     value={assigneeId}
                     onChange={(e) => setAssigneeId(e.target.value)}
                     className={inputClass}
@@ -430,17 +454,20 @@ export default function QuickAddModal({
                       </option>
                     ))}
                   </select>
-                </label>
+                {fieldError("assigneeId")}
+              </label>
                 <label className="min-w-0 grid gap-1.5 text-xs font-medium text-secondary sm:col-span-3">
                   Teslim tarihi
                   <input
                     type="date"
                     required
+                    {...fieldA11y("dueDate")}
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                     className={inputClass}
                   />
-                </label>
+                {fieldError("dueDate")}
+              </label>
               </div>
 
               {error && <p role="alert" className="text-xs text-danger">{error}</p>}
@@ -448,7 +475,8 @@ export default function QuickAddModal({
               <div className="flex justify-end gap-2 border-t border-border-subtle pt-4">
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
+                  onClick={() => !pendingRef.current && setOpen(false)}
+                disabled={pending}
                   className={buttonClass({ variant: "ghost" })}
                 >
                   Vazgeç
@@ -461,6 +489,7 @@ export default function QuickAddModal({
                   {pending ? "Oluşturuluyor…" : "Oluştur"}
                 </button>
               </div>
+              </fieldset>
             </form>
           </div>
           </div>,

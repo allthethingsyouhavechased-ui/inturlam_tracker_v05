@@ -736,3 +736,13 @@ CREATE TABLE IF NOT EXISTS task_recurrence_occurrences (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_task_recurrence_series ON task_recurrence_occurrences(series_id);
+-- Atomic quick creation receipts; intentionally no task FK (retain after deletion).
+CREATE TABLE IF NOT EXISTS quick_create_requests (
+  actor_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  payload_hash TEXT NOT NULL,
+  task_id TEXT NOT NULL,
+  content_item_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (actor_id, request_id)
+);
