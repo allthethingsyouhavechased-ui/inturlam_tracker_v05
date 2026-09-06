@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import TaskBoard, { type SortKey } from "@/components/TaskBoard";
 import TaskListView, {
   ALL_TASK_LIST_COLUMNS,
@@ -16,6 +16,16 @@ import {
   type WorkspaceView,
 } from "@/lib/uiPreferences";
 import { useTaskListColumns } from "@/lib/useTaskListColumns";
+import { matchesPersonalFocus, personalFocusCounts, PERSONAL_FOCUS_LABELS, type PersonalFocus } from "@/lib/workQueues";
+
+function subscribeViewport(callback: () => void) {
+  const query = window.matchMedia("(max-width: 767px)");
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+const readNarrow = () => window.matchMedia("(max-width: 767px)").matches;
+const serverNarrow = () => false;
+const noSubscribe = () => () => {};
 
 type View = WorkspaceView;
 
@@ -33,15 +43,31 @@ export default function PanomViews({
   people,
   hasIdentity,
   initialView,
+  hasViewPreference = true,
+  personId,
+  today,
   canDeleteTasks = false,
 }: {
   myTasks: TaskWithContext[];
   people: Person[];
   hasIdentity: boolean;
   initialView: View;
+  hasViewPreference?: boolean;
+  personId: string;
+  today: string;
   canDeleteTasks?: boolean;
 }) {
-  const [view, setView] = useState<View>(initialView);
+  const [chosenView, setView] = useState<View | null>(hasViewPreference ? initialView : null);
+  const narrow = useSyncExternalStore(subscribeViewport, readNarrow, serverNarrow);
+  const view = chosenView ?? (narrow ? "liste" : "pano");
+  const preferenceKey = `inturlam.ui.panomFocus.${personId}`;
+  const storedFocus = useSyncExternalStore(noSubscribe, () => {
+    try { return window.localStorage.getItem(preferenceKey); } catch { return null; }
+  }, () => null);
+  const [chosenFocus, setFocus] = useState<PersonalFocus | null>(null);
+  const focus: PersonalFocus = chosenFocus ?? (storedFocus && Object.hasOwn(PERSONAL_FOCUS_LABELS, storedFocus) ? storedFocus as PersonalFocus : "all");
+  const counts = personalFocusCounts(myTasks, today);
+  const visibleTasks = myTasks.filter((task) => matchesPersonalFocus(task, focus, today));
   const [sortKey, setSortKey] = useState<SortKey>("varsayilan");
   const [taskListColumns, setTaskListColumns, taskListLayout] = useTaskListColumns(
     "panom",
@@ -51,13 +77,24 @@ export default function PanomViews({
 
   function changeView(next: View) {
     setView(next);
-    rememberWorkspaceView(PANOM_VIEW_PREFERENCE, next);
+    rememberWorkspaceView({ cookie: `${PANOM_VIEW_PREFERENCE.cookie}_${personId}`, storage: `${PANOM_VIEW_PREFERENCE.storage}.${personId}` }, next);
+  }
+
+  function changeFocus(next: PersonalFocus) {
+    setFocus(next);
+    try { window.localStorage.setItem(preferenceKey, next); } catch { /* Selection remains usable without storage. */ }
   }
 
   return (
     <div>
       {hasIdentity && (
         <section className="space-y-3">
+          <div role="group" aria-label="Kişisel iş kuyrukları" className="flex min-w-0 flex-wrap gap-2">
+            {(Object.keys(PERSONAL_FOCUS_LABELS) as PersonalFocus[]).map((key) => <button key={key} type="button" aria-pressed={focus === key} onClick={() => changeFocus(key)}
+              className={`min-h-11 rounded-lg border px-3 py-2 text-xs font-medium ${focus === key ? "border-brand-500 bg-brand-600 text-white" : "border-border-default bg-surface text-secondary hover:bg-surface-hover"}`}>
+              {PERSONAL_FOCUS_LABELS[key]} <span className="ml-1 tabular-nums">{counts[key]}</span>
+            </button>)}
+          </div>
           <div
             role="group"
             aria-label="Kişisel görev görünümü araçları"
@@ -96,11 +133,11 @@ export default function PanomViews({
           {/* Yayınlananlar da burada: “Yayınlandı” sütununda bir süre daha
               durup sonra arşive düşerler; yanlışlıkla oraya sürüklenen kart
               geri sürüklenebilsin. */}
-          {myTasks.length === 0 ? (
-            <p className="py-3 text-sm text-muted">Sana atanmış görev yok. 🎉</p>
+          {visibleTasks.length === 0 ? (
+            <p className="py-3 text-sm text-muted">Bu görünümde görev yok.</p>
           ) : view === "pano" ? (
             <TaskBoard
-              tasks={myTasks}
+              tasks={visibleTasks}
               people={people}
               canDeleteTasks={canDeleteTasks}
               sortKey={sortKey}
@@ -109,7 +146,7 @@ export default function PanomViews({
           ) : (
             <>
               <TaskListView
-                tasks={myTasks}
+                tasks={visibleTasks}
                 people={people}
                 canDeleteTasks={canDeleteTasks}
                 visibleColumns={taskListColumns}

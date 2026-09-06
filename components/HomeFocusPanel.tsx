@@ -9,7 +9,7 @@ import { brandAccentStyle } from "@/lib/brandAccent";
 
 function TaskRow({ task, detail }: { task: TaskWithContext; detail: string }) {
   return (
-    <Link href={`/tasks/${task.id}`} data-brand-accent style={brandAccentStyle(task.brand_accent_hue)} className="brand-stripe group flex min-w-0 items-center gap-3 px-4 py-3 hover:bg-surface-hover sm:px-5">
+    <Link href={`/tasks/${task.id}${task.pending_delivery_id ? `#delivery-${task.pending_delivery_id}` : ""}`} data-brand-accent style={brandAccentStyle(task.brand_accent_hue)} className="brand-stripe group flex min-w-0 items-center gap-3 px-4 py-3 hover:bg-surface-hover sm:px-5">
       <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-border-subtle bg-surface-subtle text-muted group-hover:border-brand-300 group-hover:text-brand-600">
         <Icon name="tasks" className="size-4" />
       </span>
@@ -44,7 +44,7 @@ function FocusColumn({
         </div>
         <span className="text-xl font-semibold tabular-nums text-foreground">{count}</span>
       </div>
-      {count > 0 ? <div className="divide-y divide-border-subtle">{children}</div> : <p className="px-5 py-8 text-center text-xs text-muted">{empty}</p>}
+      {count > 0 ? <div className="max-h-72 overflow-y-auto divide-y divide-border-subtle">{children}</div> : <p className="px-5 py-8 text-center text-xs text-muted">{empty}</p>}
     </section>
   );
 }
@@ -61,13 +61,13 @@ export default function HomeFocusPanel({
   return (
     <section aria-label="Günün çalışma odağı" className="grid overflow-hidden rounded-xl border border-border-default bg-surface xl:grid-cols-3">
       <FocusColumn eyebrow="KİŞİSEL ODAK" title="Yakın teslimlerim" count={personalDeadlines.length} empty="Yaklaşan kişisel teslimin yok.">
-        {personalDeadlines.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={task.due_date ? `Teslim ${formatDateShort(task.due_date)}` : "Tarih bekliyor"} />)}
+        {personalDeadlines.map((task) => <TaskRow key={task.id} task={task} detail={task.due_date ? `Teslim ${formatDateShort(task.due_date)}` : "Tarih bekliyor"} />)}
       </FocusColumn>
       <FocusColumn eyebrow="KARAR BEKLİYOR" title="İncelemedeki işlerim" count={reviewTasks.length} empty="Sana ait incelemede bekleyen iş yok.">
-        {reviewTasks.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={`${task.difficulty ? TASK_DIFFICULTY_LABEL[task.difficulty] : "Zorluk belirsiz"} · ${task.weight_points} puan`} />)}
+        {reviewTasks.map((task) => <TaskRow key={task.id} task={task} detail={`${task.difficulty ? TASK_DIFFICULTY_LABEL[task.difficulty] : "Zorluk belirsiz"} · ${task.weight_points} puan`} />)}
       </FocusColumn>
       <FocusColumn eyebrow="REVİZE ODAĞIM" title="Aktif revizelerim" count={revisionTasks.length} empty="Sana ait aktif revize turu yok.">
-        {revisionTasks.slice(0, 4).map((task) => <TaskRow key={task.id} task={task} detail={`R${task.revision_count} · ${formatRevisionDuration(task.active_revision_elapsed_minutes)}${isRevisionOverTarget(task.active_revision_elapsed_minutes, task.active_revision_target_minutes) ? " · süre aşıldı" : ""}`} />)}
+        {revisionTasks.map((task) => <TaskRow key={task.id} task={task} detail={`R${task.revision_count} · ${formatRevisionDuration(task.active_revision_elapsed_minutes)}${isRevisionOverTarget(task.active_revision_elapsed_minutes, task.active_revision_target_minutes) ? " · süre aşıldı" : ""}`} />)}
       </FocusColumn>
     </section>
   );

@@ -290,7 +290,7 @@ export default function TaskBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div tabIndex={0} role="region" aria-label="Görev panosu, durum sütunları yatay kaydırılabilir" className="grid min-w-0 max-w-full grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-3 overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-brand-500">
           {TASK_STATUSES.map((s) => (
             <Column
               key={s}

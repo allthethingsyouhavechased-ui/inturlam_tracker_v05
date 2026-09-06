@@ -192,7 +192,7 @@ export default function TaskDeliveryPanel({
       </div>
 
       {pending && (
-        <div className="border-b border-border-subtle bg-brand-50/40 px-4 py-4 dark:bg-brand-950/10 sm:px-5">
+        <div id={`delivery-${pending.id}`} className="scroll-mt-24 border-b border-border-subtle bg-brand-50/40 px-4 py-4 dark:bg-brand-950/10 sm:px-5">
           <p className="mb-3 text-xs font-semibold text-brand-700 dark:text-brand-300">Karar bekleyen teslim</p>
           <DeliverySummary delivery={pending} />
           {canDecide ? <PendingDecision delivery={pending} /> : <p className="mt-3 text-xs text-muted">Teslim için yönetici kararı bekleniyor.</p>}
@@ -251,7 +251,7 @@ export default function TaskDeliveryPanel({
             <summary className="cursor-pointer py-1 text-xs font-semibold text-secondary">Teslim geçmişi · {history.length}</summary>
             <ol className="mt-2 divide-y divide-border-subtle">
               {history.map((delivery) => (
-                <li key={delivery.id} className="py-4"><DeliverySummary delivery={delivery} /></li>
+                <li id={`delivery-${delivery.id}`} key={delivery.id} className="scroll-mt-24 py-4"><DeliverySummary delivery={delivery} /></li>
               ))}
             </ol>
           </details>

@@ -279,7 +279,7 @@ export default function KanbanBoard({
       onDragCancel={() => setActiveId(null)}
     >
       {statusError && <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">{statusError}</p>}
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div tabIndex={0} role="region" aria-label="Çalışma panosu, durum sütunları yatay kaydırılabilir" className="grid min-w-0 max-w-full grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-4 overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-brand-500">
         {TASK_STATUSES.map((status) => (
           <Column
             key={status}

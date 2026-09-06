@@ -2,6 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import AutoRefresh from "@/components/AutoRefresh";
 import PanomViews from "@/components/PanomViews";
+import DecisionQueue from "@/components/DecisionQueue";
+import { listPendingDecisions } from "@/lib/repositories/decisionQueue";
 import {
   PersonalDeadlineRadarPanel,
   PersonalDeadlineRadarTrigger,
@@ -46,8 +48,9 @@ export default async function PanomPage() {
   const me = await requirePageSession();
   const cookieStore = await cookies();
   const initialView = parseWorkspaceView(
-    cookieStore.get(PANOM_VIEW_PREFERENCE.cookie)?.value,
+    cookieStore.get(`${PANOM_VIEW_PREFERENCE.cookie}_${me.id}`)?.value ?? cookieStore.get(PANOM_VIEW_PREFERENCE.cookie)?.value,
   );
+  const hasViewPreference = Boolean(cookieStore.get(`${PANOM_VIEW_PREFERENCE.cookie}_${me.id}`)?.value ?? cookieStore.get(PANOM_VIEW_PREFERENCE.cookie)?.value);
   const today = todayISO();
   const weekEnd = currentWeekRange().end;
 
@@ -130,6 +133,8 @@ export default async function PanomPage() {
         horizonDays={PERSONAL_DEADLINE_HORIZON_DAYS}
       />
 
+      {me.is_manager === 1 && <DecisionQueue items={listPendingDecisions(me.id)} />}
+
       {!me && (
         <section className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-default bg-surface px-5 py-4">
           <div>
@@ -150,6 +155,9 @@ export default async function PanomPage() {
         people={people}
         hasIdentity={Boolean(me)}
         initialView={initialView}
+        hasViewPreference={hasViewPreference}
+        personId={me.id}
+        today={today}
         canDeleteTasks={canDeleteTasks(me)}
       />
     </div>

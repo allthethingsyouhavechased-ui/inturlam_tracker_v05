@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getPersonPointTargetProgress } from "@/lib/repositories/monthlyPointTargets";
 import HomeBrandProgress from "@/components/HomeBrandProgress";
 import HomeFocusPanel from "@/components/HomeFocusPanel";
+import DecisionQueue from "@/components/DecisionQueue";
+import { listPendingDecisions } from "@/lib/repositories/decisionQueue";
 import MonthNavigator from "@/components/MonthNavigator";
 import SilentAccountsCard from "@/components/SilentAccountsCard";
 import Icon from "@/components/ui/Icon";
@@ -147,6 +149,8 @@ export default async function HomePage({
         revisionTasks={revisionTasks}
         reviewTasks={reviewTasks}
       />
+
+      {me.is_manager === 1 && <DecisionQueue items={listPendingDecisions(me.id)} />}
 
       <section aria-label="Operasyon göstergeleri" className="grid grid-cols-2 divide-x divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-default bg-surface lg:grid-cols-4 lg:divide-y-0">
         <Metric href="/brands" label="Aktif marka" value={brands.length} icon="brands" tone="brand" />

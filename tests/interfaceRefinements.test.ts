@@ -113,16 +113,12 @@ describe("On talep karari", () => {
 });
 
 describe("Uygulama kabugu", () => {
-  it("ana aramayi masaustunde viewport merkezine sabitler", () => {
+  it("ana aramayi hedef ve aksiyonlarla ayni esnek satirda tutar", () => {
     const header = source("components/Header.tsx");
-    const css = source("app/globals.css");
-
-    // Sidebar açılıp kapandığında arama kutusunun gözle kaymaması bu iki kuralın
-    // birlikte durmasına bağlı — mekanizma, stil tercihi değil.
-    assert.match(header, /header-search-center/);
-    assert.match(css, /\.header-search-center/);
-    assert.match(css, /left: calc\(50% - var\(--sidebar-expanded\) \/ 2\)/);
-    assert.match(css, /html\[data-sidebar="collapsed"\] \.header-search-center/);
+    // G21 hedef göstergesi eklendiğinde mutlak merkezleme aramayı aksiyonlarla
+    // üst üste bindiriyordu. Daralabilen normal akış bunu önler.
+    assert.doesNotMatch(header, /header-search-center/);
+    assert.match(header, /flex min-w-0 flex-1[^\n]*[\s\S]*?<GlobalSearch/);
   });
 });
 

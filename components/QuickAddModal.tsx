@@ -82,6 +82,7 @@ export default function QuickAddModal({
   const [fetched, setFetched] = useState<QuickAddOptions | null>(null);
   const requestedOptionsRef = useRef(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const isClient = useIsClient();
   const [pending, startTransition] = useTransition();
@@ -129,6 +130,7 @@ export default function QuickAddModal({
   useEffect(() => {
     if (!listenForShortcut) return;
     function openFromShortcut() {
+      returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setInstant(true);
       setOpen(true);
     }
@@ -171,13 +173,16 @@ export default function QuickAddModal({
         return;
       }
       if (e.key !== "Tab") return;
-      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button, input, select, textarea, [tabindex]',
+      ) ?? []).filter((element) => !element.matches(':disabled, [tabindex="-1"]') && element.getClientRects().length > 0);
       if (!focusable || focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      if (!dialogRef.current?.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -186,13 +191,13 @@ export default function QuickAddModal({
       }
     }
     document.addEventListener("keydown", onKey);
-    const triggerElement = triggerRef.current;
+    const triggerElement = returnFocusRef.current ?? triggerRef.current;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
-      triggerElement?.focus();
+      if (triggerElement?.isConnected) triggerElement.focus();
     };
   }, [open]);
 
@@ -251,7 +256,7 @@ export default function QuickAddModal({
 
   return (
     <>
-      <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={triggerClassName}>
+      <button ref={triggerRef} type="button" aria-label={triggerLabel} onClick={() => { returnFocusRef.current = triggerRef.current; setOpen(true); }} className={triggerClassName}>
         <Icon name="plus" className="size-4" />
         <span className="quick-add-label">{triggerLabel}</span>
       </button>
