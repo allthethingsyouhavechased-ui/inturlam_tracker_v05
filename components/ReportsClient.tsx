@@ -77,6 +77,7 @@ export interface BrandReportView extends BrandReportRow {
 
 type AnalysisView = "workload" | "workflow" | "quality" | "score";
 type DetailView = "department" | "people" | "brands";
+const SUMMARY_METRICS: Record<string,string> = { "Dönemde açılan": "opened", "Tamamlanan": "completed", "Açık iş": "open", "Geciken": "overdue" };
 
 export default function ReportsClient({
   summary,
@@ -313,7 +314,9 @@ export default function ReportsClient({
           ].map(([label, value, note, tone]) => (
             <div key={String(label)} className="min-w-0 px-4 py-3">
               <dt className="text-eyebrow text-brand-600 dark:text-brand-300">{label}</dt>
-              <dd className={`mt-1 text-2xl font-semibold tabular-nums ${tone}`}>{value}</dd>
+              <dd className={`mt-1 text-2xl font-semibold tabular-nums ${tone}`}>
+                {SUMMARY_METRICS[String(label)] ? <Link className="underline decoration-current/30 underline-offset-4 hover:decoration-current" aria-label={`${label}: ${value} görev, ayrıntıları aç`} href={`/reports/tasks${rangeQuery || '?range=all'}&metric=${SUMMARY_METRICS[String(label)]}`}>{value}</Link> : value}
+              </dd>
               <p className="mt-1 truncate text-[11px] text-muted">{note}</p>
             </div>
           ))}

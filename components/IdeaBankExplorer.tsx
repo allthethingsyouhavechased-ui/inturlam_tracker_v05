@@ -279,7 +279,7 @@ export default function IdeaBankExplorer({
         onClose={closeIdeaDialog}
       />
       <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
-      <aside aria-labelledby="idea-spaces-title" className="overflow-hidden rounded-xl border border-border-default bg-surface lg:sticky lg:top-20">
+      <aside aria-labelledby="idea-spaces-title" className="hidden overflow-hidden rounded-xl border border-border-default bg-surface lg:sticky lg:top-20 lg:block">
         <div className="border-b border-border-subtle px-3.5 py-3">
           <h2 id="idea-spaces-title" className="text-sm font-semibold text-foreground">Fikir alanları</h2>
           <p className="mt-0.5 text-[11px] text-muted">Marka veya genel alan seç.</p>
@@ -329,6 +329,17 @@ export default function IdeaBankExplorer({
       </aside>
 
       <main className="min-w-0 space-y-5">
+        <div className="flex min-w-0 items-end gap-2 lg:hidden">
+          <label className="grid min-w-0 flex-1 gap-1 text-xs font-medium text-secondary">
+            Fikir alanı
+            <Select value={scope} onChange={(event) => chooseScope(event.target.value)}>
+              <option value={ALL}>Tüm fikirler · {ideas.length}</option>
+              <option value={OFFICE}>Ofis geneli · {officeIdeaCount}</option>
+              {sortedBrands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name} · {ideaCountByBrand.get(brand.id) ?? 0}</option>)}
+            </Select>
+          </label>
+          {!archived && <button type="button" onClick={() => setIdeaDialogOpen(true)} className="min-h-11 shrink-0 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white">Fikir yakala</button>}
+        </div>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.09em] text-brand-600 dark:text-brand-300">SEÇİLİ ALAN</p>
@@ -366,14 +377,6 @@ export default function IdeaBankExplorer({
               <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
               <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Başlık, açıklama, marka veya etiket…" className="pl-9" />
             </div>
-          </label>
-          <label className="grid gap-1.5 text-xs font-medium text-secondary lg:hidden">
-            Kapsam
-            <Select value={scope} onChange={(event) => setScope(event.target.value)}>
-              <option value={ALL}>Tüm kapsamlar</option>
-              <option value={OFFICE}>Ofis geneli</option>
-              {sortedBrands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
-            </Select>
           </label>
           <label className="grid gap-1.5 text-xs font-medium text-secondary">
             Kategori
