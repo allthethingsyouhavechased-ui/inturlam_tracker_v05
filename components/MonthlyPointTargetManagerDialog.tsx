@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MonthlyPointTargetEditor from "@/components/MonthlyPointTargetEditor";
 import PageActionDialog from "@/components/ui/PageActionDialog";
 import { formatIsoDateTime } from "@/lib/date";
@@ -19,7 +19,13 @@ export default function MonthlyPointTargetManagerDialog({
   isPast: boolean;
   initialOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(initialOpen);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!initialOpen) return;
+    const timeout = window.setTimeout(() => setOpen(true), 0);
+    return () => window.clearTimeout(timeout);
+  }, [initialOpen]);
 
   return (
     <PageActionDialog
