@@ -49,7 +49,7 @@ function calendarHref(input: {
 
 // SQLite NOCASE Türkçe İ/ı karakterlerini katlamadığı için ayın küçük etkinlik
 // kümesini uygulama katmanında süzüyoruz.
-export function matchesCalendarQuery(
+function matchesCalendarQuery(
   event: { title: string; location?: string | null; brand_name?: string | null },
   query: string,
 ): boolean {

@@ -91,7 +91,7 @@ describe("v03 marka operasyon özeti", () => {
     const editBrand = fs.readFileSync(path.join(process.cwd(), "components/EditBrandForm.tsx"), "utf8");
     const brandsPage = fs.readFileSync(path.join(process.cwd(), "app/brands/page.tsx"), "utf8");
     const teamManagement = fs.readFileSync(path.join(process.cwd(), "app/team/manage/page.tsx"), "utf8");
-    assert.match(workspace, /ÇEKİM HAKLARI/);
+    assert.match(workspace, /ÇEKİM KULLANIMI \/ HAK/);
     assert.match(brandPage, /aria-label="Marka sorumluları"/);
     assert.match(brandPage, /<BrandOperationsOverview[\s\S]*targets=\{/);
     assert.match(overview, /AYLIK İŞ İLERLEMESİ/);
@@ -100,7 +100,7 @@ describe("v03 marka operasyon özeti", () => {
     assert.match(overview, /Çekimler/);
     assert.match(overview, /Etkinlik raporları/);
     assert.match(panom, /href="\/panom\/markalar"/);
-    assert.match(panom, /href="\/panom\/katkim"/);
+    assert.match(panom, /href="\/panom\/katkim(?:#aylik-hedefim)?"/);
     assert.doesNotMatch(panom, /PanomInsightStrip/);
     assert.match(card, /task\.weight_points/);
     assert.match(list, /t\.weight_points/);
