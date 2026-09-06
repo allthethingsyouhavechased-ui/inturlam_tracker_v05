@@ -64,13 +64,17 @@ describe("kapsam açıklamaları", () => {
   it("ana sayfa metriklerini gerçek görev filtrelerine bağlar", () => {
     const home = source("app/page.tsx");
     const tasks = source("app/tasks/page.tsx");
-    const explorer = source("components/TaskExplorer.tsx");
+    const listing = source("lib/repositories/taskListing.ts");
 
     assert.match(home, /href="\/tasks\?focus=open"/);
     assert.match(home, /href="\/tasks\?focus=overdue"/);
     assert.match(home, /href="\/tasks\?focus=week"/);
     assert.match(tasks, /parseTaskFilterParams\(sp\)/);
-    assert.match(explorer, /matchesTaskFocus/);
+    // G07 filters the full collection before pagination on the server.
+    assert.match(tasks, /listTaskPage\(me\.id, initialFilters/);
+    assert.match(listing, /if \(f\.focus\) add\("t\.status!='Yayinlandi'"\)/);
+    assert.match(listing, /f\.focus === "overdue"[\s\S]*?add\("t\.due_date<\?", options\.today\)/);
+    assert.match(listing, /f\.focus === "week"[\s\S]*?add\("t\.due_date>=\?", options\.today\); add\("t\.due_date<=\?", options\.weekEnd\)/);
   });
 
   it("guest marka toplamı ile bu hesabın görevlerini açıkça ayırır", () => {

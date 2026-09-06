@@ -82,7 +82,11 @@ describe("görev oluşturma paneli sözleşmesi", () => {
 
     assert.match(quick, /canSetWeight/);
     assert.match(quick, /name="weightPoints"/);
-    assert.match(quick, /fd2\.set\("weightPoints", weightPoints\)/);
+    assert.match(quick, /Object\.entries\(\{[\s\S]*?difficulty, weightPoints, assigneeId/);
+    assert.match(quick, /data\.set\(name, value\)/);
+    assert.match(quick, /quickCreateTaskAction\(data\)/);
+    const quickRepository = fs.readFileSync(path.join(process.cwd(), "lib", "repositories", "quickCreate.ts"), "utf8");
+    assert.match(quickRepository, /resolveTaskCreationWeight\(values\.weightPoints, actor\.is_manager === 1, values\.difficulty/);
     assert.match(header, /canSetWeight=\{person\.is_manager === 1\}/);
     assert.match(contentForm, /name="weightPoints"/);
     assert.match(action, /resolveTaskCreationWeight/);

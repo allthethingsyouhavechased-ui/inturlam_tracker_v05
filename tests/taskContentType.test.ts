@@ -105,7 +105,11 @@ describe("görev türü arayüz sözleşmesi", () => {
     const detail = fs.readFileSync(path.join(process.cwd(), "app", "tasks", "[taskId]", "page.tsx"), "utf8");
     const actions = fs.readFileSync(path.join(process.cwd(), "lib", "actions", "tasks.ts"), "utf8");
 
-    assert.match(quickAdd, /fd2\.set\("contentType", taskType\)/);
+    // Content and task now travel in one atomic request; preserve the type
+    // mapping and the server-side creation boundary, not the old fd2 variable.
+    assert.match(quickAdd, /Object\.entries\(\{[\s\S]*?contentType: taskType/);
+    assert.match(quickAdd, /data\.set\(name, value\)/);
+    assert.match(quickAdd, /quickCreateTaskAction\(data\)/);
     assert.match(newTask, /name="contentType"/);
     assert.match(detail, /name="contentType"/);
     assert.match(actions, /CONTENT_TYPES\.includes\(contentType\)/);
