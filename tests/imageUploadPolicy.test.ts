@@ -19,10 +19,11 @@ it("yedinci dosyayı sessizce kırpmaz, bütün isteği reddeder", () => {
   assert.throws(() => validateImageFiles(extractImageFiles(form)), /6 görsel/);
 });
 it("boş, sahte MIME, tek dosya ve toplam boyut sınırlarını uygular", () => {
-  const file = { name: "a.png", type: "image/png", size: MAX_IMAGE_SIZE };
+  const file = { name: "a.png", type: "image/png", size: 8 * 1024 * 1024 };
   assert.doesNotThrow(() => validateImageFiles([file, file, { ...file, size: 4 * 1024 * 1024 }]));
+  assert.doesNotThrow(() => validateImageFiles([{ ...file, size: MAX_IMAGE_SIZE }]));
   assert.throws(() => validateImageFiles([file, file, file]), /20 MB/);
-  assert.throws(() => validateImageFiles([{ ...file, size: MAX_IMAGE_SIZE + 1 }]), /8 MB/);
+  assert.throws(() => validateImageFiles([{ ...file, size: MAX_IMAGE_SIZE + 1 }]), /20 MB/);
   assert.throws(() => validateImageFiles([{ ...file, size: 0 }]), /boş/);
   assert.throws(() => validateImageFiles([{ ...file, type: "toString" }]), /yalnız/);
 });
