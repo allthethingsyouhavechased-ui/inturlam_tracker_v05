@@ -1,0 +1,19 @@
+[Unit]
+Description=INTracker Google Calendar sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=intracker
+Group=intracker
+WorkingDirectory=/srv/intracker/app
+Environment=NODE_ENV=production
+Environment=TZ=Europe/Istanbul
+Environment=NEXT_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node --import ./scripts/register.mjs db/sync-calendar.mts --scheduled
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+UMask=0027

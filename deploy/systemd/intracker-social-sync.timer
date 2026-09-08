@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily INTracker Instagram account sync at 09:00
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+AccuracySec=1m
+Unit=intracker-social-sync.service
+
+[Install]
+WantedBy=timers.target
