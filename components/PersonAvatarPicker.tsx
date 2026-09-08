@@ -57,7 +57,7 @@ export default function PersonAvatarPicker({
           {currentAvatarPath ? "Fotoğrafı değiştir" : "Profil fotoğrafı ekle"}
         </button>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          PNG, JPG, GIF veya WEBP · en fazla 8 MB
+          PNG, JPG, GIF veya WEBP · en fazla 20 MB
         </p>
       </div>
 
