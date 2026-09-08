@@ -15,7 +15,7 @@ import {
   weekIndexForDate,
   WEEKDAY_LABELS,
 } from "@/lib/date";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { groupBrandsByCluster, listClusters } from "@/lib/repositories/clusters";
 import { listBrandContentTargets, listPlanEntriesInRange } from "@/lib/repositories/socialPlan";
 import {
@@ -59,7 +59,7 @@ export default async function SocialTakvimPage({
   // içinde Türkçe alfabetik sıralı. Yeni eklenen bir marka (arşivlenmemiş
   // olduğu sürece) otomatik olarak kendi kategorisinin altına düşer — burada
   // elle bir liste tutulmuyor.
-  const brands = [...listBrands()].sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  const brands = listBrandsAlphabetically();
   const brandGroups = groupBrandsByCluster(brands, listClusters()).filter(
     (group) => group.items.length > 0,
   );

@@ -2,6 +2,7 @@ import TaskListReturnLink from "@/components/TaskListReturnLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ActivityFeed from "@/components/ActivityFeed";
+import ActionForm from "@/components/ActionForm";
 import ArchiveTaskButton from "@/components/ArchiveTaskButton";
 import AssigneeSelect from "@/components/AssigneeSelect";
 import AutoRefresh from "@/components/AutoRefresh";
@@ -118,7 +119,7 @@ export default async function TaskPage({
 
       <TaskDetailTabs
         details={
-          <form key="details" action={updateTaskDetailsAction} className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
+          <ActionForm key="details" action={updateTaskDetailsAction} successMessage="Görev ayrıntıları kaydedildi." className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
             <div className="border-b border-border-subtle pb-4">
               <h2 className="text-base font-semibold text-foreground">Görev ayrıntıları</h2>
               <p className="mt-1 text-xs text-muted">Brief, teslim tarihi ve ekip bildirimini tek yerde güncelle.</p>
@@ -156,7 +157,7 @@ export default async function TaskPage({
               <SubmitButton>Değişiklikleri kaydet</SubmitButton>
               {canDeleteTask && <DeleteTaskButton taskId={task.id} />}
             </div>
-          </form>
+          </ActionForm>
         }
         delivery={
           <TaskDeliveryPanel

@@ -17,7 +17,7 @@ import { departmentLabel } from "@/lib/departments";
 import { formatDateLong, formatDateTime } from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
 import { canReviewClientRequests } from "@/lib/requestAccess";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import {
   countArchivedClientRequests,
   listClientRequestsForPerson,
@@ -43,7 +43,7 @@ export default async function ClientRequestsPage({
   const showArchive = sp.view === "archive";
   const allRequests = listClientRequestsForPerson(person.id, true, showArchive);
   const archivedCount = countArchivedClientRequests();
-  const brands = listBrands();
+  const brands = listBrandsAlphabetically();
   const selectedStatus = isRequestStatus(sp.status)
     ? (sp.status as ClientRequestStatus)
     : null;
@@ -123,29 +123,34 @@ export default async function ClientRequestsPage({
             {requests.map((request, index) => (
               <div
                 key={request.id}
-                className={`group grid min-h-[82px] gap-3 px-4 py-3.5 transition-colors hover:bg-surface-hover sm:grid-cols-[minmax(0,1fr)_11rem_9rem_1.5rem] sm:items-center sm:px-5 ${index > 0 ? "border-t border-border-subtle" : ""}`}
+                className={`group relative grid min-h-[82px] gap-3 px-4 py-3.5 transition-colors hover:bg-surface-hover sm:grid-cols-[minmax(0,1fr)_11rem_9rem_1.5rem] sm:items-center sm:px-5 ${index > 0 ? "border-t border-border-subtle" : ""}`}
               >
-                <div className="min-w-0">
+                <Link
+                  href={`/requests/${request.id}`}
+                  aria-label={`${request.title} talebini aç`}
+                  className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600"
+                />
+                <div className="pointer-events-none relative z-10 min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className={`size-2 shrink-0 rounded-full ${CLIENT_REQUEST_STATUS_DOT[request.status]}`} />
-                    <h3 className="truncate text-[13px] font-semibold text-foreground"><Link href={`/requests/${request.id}`} className="hover:underline">{request.title}</Link></h3>
+                    <h3 className="truncate text-[13px] font-semibold text-foreground group-hover:underline">{request.title}</h3>
                   </div>
                   <p className="mt-1 truncate pl-4 text-xs text-muted">
                     <span className="font-medium text-secondary">{request.brand_name}</span>
                     <span aria-hidden="true"> · </span>{CONTENT_TYPE_LABEL[request.content_type]}
                     <span aria-hidden="true"> · </span>{request.created_by_name}
                   </p>
-                  {request.converted_task_id && <Link href={`/tasks/${request.converted_task_id}`} className="mt-2 inline-flex min-h-9 items-center pl-4 text-xs font-semibold text-success hover:underline">Göreve dönüştürüldü · Görevi aç →</Link>}
+                  {request.converted_task_id && <Link href={`/tasks/${request.converted_task_id}`} className="pointer-events-auto relative z-20 mt-2 inline-flex min-h-9 items-center pl-4 text-xs font-semibold text-success hover:underline">Göreve dönüştürüldü · Görevi aç →</Link>}
                 </div>
-                <div className="pl-4 text-xs sm:pl-0">
+                <div className="pointer-events-none relative z-10 pl-4 text-xs sm:pl-0">
                   <span className="block text-[10px] font-semibold tracking-wide text-faint">DEPARTMAN</span>
                   <span className="mt-1 block font-medium text-secondary">{departmentLabel(request.department)}</span>
                 </div>
-                <div className="flex items-center justify-between gap-2 pl-4 sm:block sm:pl-0">
+                <div className="pointer-events-none relative z-10 flex items-center justify-between gap-2 pl-4 sm:block sm:pl-0">
                   <Badge tone={CLIENT_REQUEST_STATUS_TONE[request.status]}>{CLIENT_REQUEST_STATUS_LABEL[request.status]}</Badge>
                   <span className="text-[11px] text-muted sm:mt-1.5 sm:block">{request.due_date ? formatDateLong(request.due_date) : formatDateTime(request.created_at)}</span>
                 </div>
-                <Icon name="chevron-right" className="hidden size-4 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-secondary sm:block" />
+                <Icon name="chevron-right" className="pointer-events-none relative z-10 hidden size-4 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-secondary sm:block" />
               </div>
             ))}
           </div>

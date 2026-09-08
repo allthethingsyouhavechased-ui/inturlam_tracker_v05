@@ -43,6 +43,14 @@ describe("form geri bildirimi", () => {
     assert.match(dialog, /getActionErrorMessage/);
     assert.match(dialog, /router\.refresh\(\)/);
   });
+
+  it("görev ayrıntısı kaydetme hatasını sayfayı düşürmeden form içinde gösterir", () => {
+    const page = source("app/tasks/[taskId]/page.tsx");
+
+    assert.match(page, /<ActionForm[\s\S]*action=\{updateTaskDetailsAction\}/);
+    assert.match(page, /successMessage="Görev ayrıntıları kaydedildi\."/);
+    assert.doesNotMatch(page, /<form key="details" action=\{updateTaskDetailsAction\}/);
+  });
 });
 
 describe("klavye ve hata erişilebilirliği", () => {

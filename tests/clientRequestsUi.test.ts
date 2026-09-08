@@ -30,4 +30,13 @@ describe("Talepler sayfası oluşturma akışı", () => {
     assert.match(page, /selectedStatus === status/);
     assert.match(page, /allRequests\.filter\(\(request\) => request\.status === selectedStatus\)/);
   });
+
+  it("talep kartının tamamını detay bağlantısı yapar ve görev bağlantısını ayrı tutar", () => {
+    const page = source("app/requests/page.tsx");
+
+    assert.match(page, /aria-label=\{`\$\{request\.title\} talebini aç`\}/);
+    assert.match(page, /absolute inset-0/);
+    assert.match(page, /pointer-events-none/);
+    assert.match(page, /pointer-events-auto/);
+  });
 });

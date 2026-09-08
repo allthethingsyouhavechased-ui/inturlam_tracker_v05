@@ -11,7 +11,7 @@ import {
   listPersonTaskPreviews,
   listPersonTaskWorkSummaries,
 } from "@/lib/repositories/activeWork";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function TeamPage() {
   const currentPerson = await requirePageSession();
   const people = listActivePeople();
-  const brands = listBrands();
+  const brands = listBrandsAlphabetically();
   const selections = listActiveWorkSelections();
   const taskSummaries = listPersonTaskWorkSummaries(todayISO());
   const taskPreviews = listPersonTaskPreviews();

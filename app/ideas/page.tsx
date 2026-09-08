@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
 import PageHeader from "@/components/ui/PageHeader";
 import { requirePageSession } from "@/lib/identity";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { countArchivedIdeas, listIdeas } from "@/lib/repositories/ideas";
 
 export const dynamic = "force-dynamic";
@@ -18,9 +18,7 @@ export default async function IdeasPage({
   await requirePageSession();
   const sp = await searchParams;
   const archived = sp.view === "archive";
-  const brands = [...listBrands()].sort((left, right) =>
-    left.name.localeCompare(right.name, "tr", { sensitivity: "base" }),
-  );
+  const brands = listBrandsAlphabetically();
   const ideas = listIdeas(archived);
   const archivedCount = countArchivedIdeas();
   const initialBrandId = brands.some((brand) => brand.id === sp.brand) ? sp.brand : "";

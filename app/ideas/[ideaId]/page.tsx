@@ -23,7 +23,7 @@ import {
   ideaTags,
 } from "@/lib/ideas";
 import { listActivityForEntity } from "@/lib/repositories/activity";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { getIdea } from "@/lib/repositories/ideas";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +33,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ ideaId: s
   const { ideaId } = await params;
   const idea = getIdea(ideaId);
   if (!idea) notFound();
-  const brands = [...listBrands()].sort((left, right) =>
-    left.name.localeCompare(right.name, "tr", { sensitivity: "base" }),
-  );
+  const brands = listBrandsAlphabetically();
   const activity = listActivityForEntity("idea", idea.id);
   const brandStillAvailable = idea.brand_id && brands.some((brand) => brand.id === idea.brand_id);
   const defaultScope = idea.scope_type === "office"

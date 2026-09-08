@@ -4,7 +4,7 @@ import Icon from "@/components/ui/Icon";
 import { buttonClass } from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
 import { requirePageSession } from "@/lib/identity";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listArchivedTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
 
@@ -14,7 +14,7 @@ export default async function TaskArchivePage() {
   await requirePageSession();
   sweepArchivablePublishedTasks();
   const tasks = listArchivedTasks();
-  const brands = listBrands();
+  const brands = listBrandsAlphabetically();
   const people = listActivePeople();
 
   return (

@@ -14,7 +14,7 @@ import {
 } from "@/lib/taskFilterParams";
 import { canDeleteTasks } from "@/lib/auth/authorization";
 import { requirePageSession } from "@/lib/identity";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 import { countArchivedTasks, sweepArchivablePublishedTasks } from "@/lib/repositories/tasks";
 import { archiveCountdownBadge } from "@/lib/taskArchive";
@@ -42,7 +42,7 @@ export default async function AllTasksPage({
   // kart bileşeni istemci tarafında, orada `new Date()` çağırmak gün sınırında
   // hydration uyuşmazlığı üretebilirdi.
   const archivedCount = countArchivedTasks();
-  const brands = listBrands();
+  const brands = listBrandsAlphabetically();
   const people = listActivePeople();
 
   const parsedFilters = parseTaskFilterParams(sp);

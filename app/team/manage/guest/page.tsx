@@ -7,7 +7,7 @@ import {
   saveGuestAccountAction,
   setGuestAccountActiveAction,
 } from "@/lib/actions/people";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listGuestAccounts } from "@/lib/repositories/accounts";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function GuestAccountsPage() {
   const currentPerson = await requirePageSession();
   if (currentPerson.is_manager !== 1) notFound();
 
-  const brands = listBrands();
+  const brands = listBrandsAlphabetically();
   const guestAccounts = listGuestAccounts();
 
   return (

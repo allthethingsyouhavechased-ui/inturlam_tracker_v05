@@ -20,7 +20,7 @@ import {
   validISODateParam,
 } from "@/lib/date";
 import { requirePageSession } from "@/lib/identity";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { getCalendarEvent, listCalendarEvents } from "@/lib/repositories/calendarEvents";
 import type { CalendarEventType } from "@/lib/types";
 
@@ -72,9 +72,7 @@ export default async function CalendarPage({
   const monthDate = monthParamToDate(sp.month);
   const month = monthParamISO(monthDate);
   const gridDays = calendarGridDays(monthDate);
-  const brands = [...listBrands()].sort((left, right) =>
-    left.name.localeCompare(right.name, "tr", { sensitivity: "base" }),
-  );
+  const brands = listBrandsAlphabetically();
   const brandId = brands.some((brand) => brand.id === sp.brand) ? sp.brand! : null;
   const type = TYPES.some((item) => item.value === sp.type) ? sp.type as CalendarEventType : null;
   const query = (sp.q ?? "").trim();

@@ -50,7 +50,7 @@ describe("Fikir Bankası ürün bağlantıları", () => {
 
   it("ana ekran ve detay seçicisi markaları Türkçe alfabetik sırada sunar", () => {
     for (const file of ["app/ideas/page.tsx", "app/ideas/[ideaId]/page.tsx"]) {
-      assert.match(source(file), /name\.localeCompare\(right\.name, "tr", \{ sensitivity: "base" \}\)/);
+      assert.match(source(file), /listBrandsAlphabetically\(\)/);
     }
   });
 

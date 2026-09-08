@@ -27,7 +27,7 @@ import {
   listClientRequestAttachments,
   listClientRequestComments,
 } from "@/lib/repositories/clientRequests";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +47,7 @@ export default async function ClientRequestDetailPage({
   const attachments = listClientRequestAttachments(requestId);
   const activity = listActivityForEntity("request", requestId);
   const people = listActivePeople();
-  const brands = listBrands();
+  const brands = listBrandsAlphabetically();
   const isOpen = (request.status === "Beklemede" || request.status === "Incelemede") && !request.archived_at;
   const canEdit = !request.converted_task_id && !request.archived_at;
 

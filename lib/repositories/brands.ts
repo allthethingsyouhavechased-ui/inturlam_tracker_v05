@@ -12,6 +12,17 @@ export function listBrands(): Brand[] {
   );
 }
 
+export function sortBrandsAlphabetically<T extends Pick<Brand, "id" | "name">>(brands: T[]): T[] {
+  return [...brands].sort((left, right) =>
+    left.name.localeCompare(right.name, "tr-TR", { sensitivity: "base" }) ||
+    left.id.localeCompare(right.id),
+  );
+}
+
+export function listBrandsAlphabetically(): Brand[] {
+  return sortBrandsAlphabetically(listBrands());
+}
+
 export function listArchivedBrands(): Brand[] {
   return plainList<Brand>(
     getDb()

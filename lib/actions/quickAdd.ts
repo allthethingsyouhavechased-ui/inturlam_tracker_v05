@@ -2,7 +2,7 @@
 
 import { requireSession } from "@/lib/identity";
 import { listAllContentSummaries } from "@/lib/repositories/content";
-import { listBrands } from "@/lib/repositories/brands";
+import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 import type { ContentType, Person } from "@/lib/types";
 
@@ -31,7 +31,7 @@ export interface QuickAddOptions {
 export async function loadQuickAddOptionsAction(): Promise<QuickAddOptions> {
   await requireSession();
   return {
-    brands: listBrands().map((brand) => ({ id: brand.id, name: brand.name })),
+    brands: listBrandsAlphabetically().map((brand) => ({ id: brand.id, name: brand.name })),
     contents: listAllContentSummaries().map((content) => ({
       id: content.id,
       brand_id: content.brand_id,
