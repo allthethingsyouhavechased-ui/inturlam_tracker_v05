@@ -14,6 +14,8 @@ export const TASK_STATUS_COEFFICIENT: Readonly<Record<TaskStatus, number>> = {
   MusteriIncelemede: 0.93,
   MusteriOnayladi: 0.97,
   Yayinlandi: 1,
+  // Eski v02 "iptal edildi": iş hiç tamamlanmadı, ilerlemeye katkısı yok.
+  IptalEdildi: 0,
 };
 
 export const DIFFICULTY_DEFAULT_WEIGHT: Readonly<Record<TaskDifficulty, number>> = {

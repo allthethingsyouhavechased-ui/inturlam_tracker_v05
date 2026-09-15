@@ -84,6 +84,13 @@ export const TASK_STATUSES: TaskStatus[] = [
 /** Müşteri onayı gerekmeyen işlerde ekip onayından sonra doğrudan yayına gidilir. */
 export const CUSTOMER_TASK_STATUSES: TaskStatus[] = ["MusteriIncelemede", "MusteriOnayladi"];
 
+// ESKİ (v02) durum. Yeni bir göreve ATANAMAZ ve pano sütunu/seçim listesi
+// üretmez — ama canlı veritabanında kayıtları var, bu yüzden etiket ve renk
+// sözlüklerinde karşılığı bulunmalı. Sayaç/rapor gibi TÜM durumları gezen
+// yerler TASK_STATUSES değil bunu kullanır.
+export const LEGACY_TASK_STATUSES: TaskStatus[] = ["IptalEdildi"];
+export const ALL_TASK_STATUSES: TaskStatus[] = [...TASK_STATUSES, ...LEGACY_TASK_STATUSES];
+
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   Beklemede: "Beklemede",
   DevamEdiyor: "Devam Ediyor",
@@ -93,6 +100,7 @@ export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   MusteriIncelemede: "İncelemede (Müşteri)",
   MusteriOnayladi: "Onaylandı (Müşteri)",
   Yayinlandi: "Yayınlandı",
+  IptalEdildi: "İptal edildi (eski)",
 };
 
 export const TASK_STATUS_BADGE: Record<TaskStatus, string> = {
@@ -112,6 +120,8 @@ export const TASK_STATUS_BADGE: Record<TaskStatus, string> = {
     "bg-teal-100 text-teal-900 ring-1 ring-inset ring-teal-300 dark:bg-teal-950 dark:text-teal-200 dark:ring-teal-800",
   Yayinlandi:
     "bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800",
+  IptalEdildi:
+    "bg-zinc-200 text-zinc-600 ring-1 ring-inset ring-zinc-300 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-700",
 };
 
 // Onaylandı yeşil, Yayınlandı amber (2026-08-29'da yer değiştirdiler).
@@ -127,6 +137,7 @@ export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
   MusteriIncelemede: "bg-cyan-600",
   MusteriOnayladi: "bg-teal-600",
   Yayinlandi: "bg-amber-500",
+  IptalEdildi: "bg-zinc-500",
 };
 
 // Kanban sütunlarının semantik renklerini metin üzerinde kullanan yüzeyler.
@@ -143,6 +154,7 @@ export const TASK_STATUS_TEXT: Record<TaskStatus, string> = {
   MusteriIncelemede: "text-cyan-600",
   MusteriOnayladi: "text-teal-600",
   Yayinlandi: "text-amber-500",
+  IptalEdildi: "text-zinc-500",
 };
 
 // Kanban kolon başlıklarının üst çizgisi — TASK_STATUS_DOT ile aynı renk
@@ -158,6 +170,7 @@ export const TASK_STATUS_BORDER_TOP: Record<TaskStatus, string> = {
   MusteriIncelemede: "border-t-cyan-600",
   MusteriOnayladi: "border-t-teal-600",
   Yayinlandi: "border-t-amber-500",
+  IptalEdildi: "border-t-zinc-500",
 };
 
 // Rapor çubukları ve diğer dolu durum göstergeleri de yukarıdaki semantik
@@ -171,6 +184,7 @@ export const TASK_STATUS_PROGRESS: Record<TaskStatus, string> = {
   MusteriIncelemede: "bg-cyan-600",
   MusteriOnayladi: "bg-teal-600",
   Yayinlandi: "bg-amber-500",
+  IptalEdildi: "bg-zinc-500",
 };
 
 // Ağırlık puanı rozetinin rengi: sayıya bakmadan da işin ne kadar ağır

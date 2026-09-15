@@ -3,12 +3,14 @@ import { describe, it } from "node:test";
 import { calculateMonthlyProgress, combineMonthlyProgress, TASK_STATUS_COEFFICIENT } from "@/lib/progress";
 
 describe("v03 ağırlıklı aylık ilerleme", () => {
-  it("sekiz durumun operasyonel ilerleme katsayısını sabit tutar", () => {
+  it("durumların operasyonel ilerleme katsayısını sabit tutar", () => {
     // Bu katsayılar KAZANILMIŞ PUAN değil, yalnızca iş ilerlemesi. Revizede,
-    // İncelemede'den geri düşen bir iş olduğu için ondan düşük.
+    // İncelemede'den geri düşen bir iş olduğu için ondan düşük. "IptalEdildi"
+    // eski (v02) bir değer: iş hiç tamamlanmadı, katkısı 0.
     assert.deepEqual(TASK_STATUS_COEFFICIENT, {
       Beklemede: 0, DevamEdiyor: 0.25, Incelemede: 0.6, Revizede: 0.4,
       Onaylandi: 0.9, MusteriIncelemede: 0.93, MusteriOnayladi: 0.97, Yayinlandi: 1,
+      IptalEdildi: 0,
     });
   });
 

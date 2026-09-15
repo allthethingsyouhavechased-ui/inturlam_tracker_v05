@@ -39,7 +39,7 @@ describe("v03 ilerleme aylık kapsamı", () => {
     // eksik kalmıyor (eksik anahtar `counts[status] += 1` ile NaN üretirdi).
     assert.deepEqual(listMonthlyTaskStatusCounts("2026-08"), {
       Beklemede: 0, DevamEdiyor: 1, Incelemede: 0, Revizede: 0, Onaylandi: 0,
-      MusteriIncelemede: 0, MusteriOnayladi: 0, Yayinlandi: 1,
+      MusteriIncelemede: 0, MusteriOnayladi: 0, Yayinlandi: 1, IptalEdildi: 0,
     });
   });
 });

@@ -20,6 +20,13 @@ const { recordCustomerApproval, listTaskCustomerApprovals } =
   await import("@/lib/repositories/customerApprovals");
 const { createTask, getTask, setTaskCustomerApprovalRequirement } =
   await import("@/lib/repositories/tasks");
+const {
+  ALL_TASK_STATUSES,
+  TASK_STATUSES,
+  TASK_STATUS_BADGE,
+  TASK_STATUS_DOT,
+  TASK_STATUS_LABEL,
+} = await import("@/lib/constants");
 
 function resetDb(): void {
   globalThis.__inturlamDb?.close();
@@ -247,5 +254,31 @@ describe("Revizede durumu", () => {
       () => changeTaskStatuses([taskId], "Revizede", "mgr"),
       /açık bir revize turu gerekli/,
     );
+  });
+});
+
+describe("eski v02 durumu", () => {
+  it("'IptalEdildi' kaydı korunuyor ama yeni göreve atanamıyor", () => {
+    // CANLI veritabanında bu değere sahip görevler var (v02 kalıntısı).
+    // CHECK'ten çıkarılırsa göç "constraint failed" ile patlar; bu yüzden
+    // değer şemada KALIYOR, uygulama ise onu yeni bir göreve atamıyor.
+    const taskId = seed(0);
+    const db = getDb();
+    db.prepare("UPDATE tasks SET status = 'IptalEdildi' WHERE id = ?").run(taskId);
+    assert.equal(getTask(taskId)?.status, "IptalEdildi");
+
+    assert.throws(
+      () => changeTaskStatuses([taskId], "IptalEdildi" as never, "mgr"),
+      /Geçersiz durum/,
+    );
+  });
+
+  it("etiket ve renk sözlüklerinde karşılığı var (arayüzde boş görünmesin)", () => {
+    assert.equal(TASK_STATUS_LABEL.IptalEdildi, "İptal edildi (eski)");
+    assert.ok(TASK_STATUS_BADGE.IptalEdildi);
+    assert.ok(TASK_STATUS_DOT.IptalEdildi);
+    // Seçilebilir durum listesinde YOK: pano sütunu ya da select seçeneği üretmez.
+    assert.equal(TASK_STATUSES.includes("IptalEdildi"), false);
+    assert.equal(ALL_TASK_STATUSES.includes("IptalEdildi"), true);
   });
 });

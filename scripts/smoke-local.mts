@@ -51,6 +51,17 @@ try {
     fetch(`${baseUrl}/reports`, { headers }),
   ]);
 
+  // v06 patch ekranları: kazanılmış puan, aylık paket üretimi, mesai ve
+  // stok/hedef raporu. Bunlar üretim derlemesinde gerçekten açılıyor mu?
+  const [pointsResponse, monthlyPlanResponse, workLogResponse, stockResponse, stockExportResponse, pointsExportResponse] = await Promise.all([
+    fetch(`${baseUrl}/reports/puan?month=${month}`, { headers }),
+    fetch(`${baseUrl}/tasks/planning/aylik?month=${month}`, { headers }),
+    fetch(`${baseUrl}/mesai`, { headers }),
+    fetch(`${baseUrl}/social/rapor`, { headers }),
+    fetch(`${baseUrl}/social/rapor/export`, { headers }),
+    fetch(`${baseUrl}/reports/puan/export?month=${month}`, { headers }),
+  ]);
+
   assert.equal(currentResponse.status, 200, "Güncel ay takvimi açılamadı.");
   assert.equal(selectedResponse.status, 200, "Seçili gün takvimi açılamadı.");
   assert.equal(brandResponse.status, 200, "Marka sayfası açılamadı.");
@@ -83,9 +94,12 @@ try {
   // istemcide çizildiği için sunucudan çekilen HTML'de hiçbir zaman bulunmaz.
   // Varsayılan saat aralığı kuralı tests/calendarNewEventRange.test.ts'te.
   assert.ok(currentHtml.includes("Yeni etkinlik"), "Takvim yeni etkinlik açma düğmesini göstermeli.");
-  // "Yıllık" etiketi sayfada bu yazımla basılıyor; kontrol uzun süre "YILLIK"
-  // (büyük harf) arıyordu ve o dize marka sayfasında hiç var olmadı.
-  assert.ok(brandHtml.includes("ÇEKİM HAKLARI") && brandHtml.includes("Yıllık"), "Marka sayfası yıllık çekim hakkını göstermeli.");
+  // Çekim HAKLARI alanları (aylık/yıllık kota girişleri) marka DÜZENLEME
+  // penceresinin içinde; o pencere `createPortal` ile yalnızca istemcide
+  // çiziliyor ve sunucudan çekilen HTML'de hiçbir zaman bulunmuyor — takvim
+  // etkinlik penceresiyle aynı gerekçe (yukarıya bak). Bu yüzden burada
+  // sayfanın GERÇEKTEN sunucudan basan çekim özeti aranıyor.
+  assert.ok(brandHtml.includes("Çekim"), "Marka sayfası çekim özetini göstermeli.");
   assert.ok(brandHtml.includes("Etkinlik raporları"), "Marka sayfası etkinlik raporlarına bağlanmalı.");
   assert.ok(brandEventReportsHtml.includes("Toplantı ve çekim raporları"), "Marka etkinlik raporu çalışma alanını göstermeli.");
   assert.ok(homeHtml.includes("AYLIK ÜRETİM AKIŞI") && homeHtml.includes("PORTFÖY İLERLEMESİ"), "Bugün sayfası portföy ilerlemesini ve üretim akışını göstermeli.");
@@ -96,6 +110,32 @@ try {
   const undatedTaskCount = (db.prepare("SELECT COUNT(*) AS count FROM tasks WHERE due_date IS NULL").get() as { count: number }).count;
   if (undatedTaskCount > 0) assert.ok(tasksHtml.includes("Tarih bekleyenler"), "Görevler sayfası tarih bekleyenler düğmesini göstermeli.");
   assert.ok(reportsHtml.includes("Ekip görünümü"), "Raporlar sayfası ekip görünümü panelini göstermeli.");
+
+  assert.equal(pointsResponse.status, 200, "Kazanılmış puanlar sayfası açılamadı.");
+  assert.equal(monthlyPlanResponse.status, 200, "Aylık paket sayfası açılamadı.");
+  assert.equal(workLogResponse.status, 200, "Mesai sayfası açılamadı.");
+  assert.equal(stockResponse.status, 200, "Stok raporu açılamadı.");
+  assert.equal(stockExportResponse.status, 200, "Stok raporu Excel dökümü açılamadı.");
+  assert.equal(pointsExportResponse.status, 200, "Puan Excel dökümü açılamadı.");
+
+  const [pointsHtml, monthlyPlanHtml, workLogHtml, stockHtml] = await Promise.all([
+    pointsResponse.text(),
+    monthlyPlanResponse.text(),
+    workLogResponse.text(),
+    stockResponse.text(),
+  ]);
+  assert.ok(pointsHtml.includes("Kazanılmış puanlar"), "Puan ekranı başlığını göstermeli.");
+  // Kazanılmış puan ile operasyonel ilerlemenin AYRI olduğu ekranda yazılı olmalı.
+  assert.ok(pointsHtml.includes("paket tamamlanmadan puan doğmaz") || pointsHtml.includes("Puan paketleri"),
+    "Puan ekranı paket kuralını göstermeli.");
+  assert.ok(monthlyPlanHtml.includes("Aylık paket oluştur"), "Aylık paket oluşturucu görünmeli.");
+  assert.ok(monthlyPlanHtml.includes("Aylık otomasyon planları"), "Aylık otomasyon listesi görünmeli.");
+  assert.ok(workLogHtml.includes("Mesai") && workLogHtml.includes("bordro"),
+    "Mesai ekranı kapsam dışı uyarısını göstermeli.");
+  assert.ok(stockHtml.includes("Stok / hedef raporu"), "Stok raporu başlığını göstermeli.");
+  // Excel dökümü gerçekten bir xlsx paketi mi (PK zip imzası)?
+  const stockExportBytes = new Uint8Array(await stockExportResponse.arrayBuffer());
+  assert.ok(stockExportBytes[0] === 0x50 && stockExportBytes[1] === 0x4b, "Stok dökümü bir xlsx paketi olmalı.");
 
   console.log(JSON.stringify({
     baseUrl,
@@ -109,6 +149,10 @@ try {
     assignedBrands: assignedBrandsResponse.status,
     tasks: tasksResponse.status,
     reports: reportsResponse.status,
+    points: pointsResponse.status,
+    monthlyPlan: monthlyPlanResponse.status,
+    workLog: workLogResponse.status,
+    stockReport: stockResponse.status,
     selectedDate,
   }));
 } finally {

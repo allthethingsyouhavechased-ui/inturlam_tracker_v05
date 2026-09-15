@@ -121,6 +121,8 @@ export function assertTaskTransition(db: DatabaseSync, task: Pick<Task, "id" | "
 
 /** All entry points select current state after acquiring the same SQLite write lock. */
 export function changeTaskStatuses(ids: string[], status: TaskStatus, actorId: string | null): number {
+  // Eski (v02) "IptalEdildi" TASK_STATUSES'ta yok: kayıtları okunabilir ama
+  // yeni bir göreve ATANAMAZ — iptal artık `archived_at` ile modelleniyor.
   if (!TASK_STATUSES.includes(status)) throw new TaskTransitionError("Geçersiz durum.");
   if (ids.length === 0) return 0;
   const db = getDb();

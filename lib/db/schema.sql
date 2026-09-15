@@ -206,7 +206,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   id              TEXT PRIMARY KEY,
   content_item_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
   title           TEXT NOT NULL,
-  status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Revizede','Onaylandi','MusteriIncelemede','MusteriOnayladi','Yayinlandi')),
+  -- 'IptalEdildi' ESKİ (v02) bir değer: canlı veritabanında kayıtları var,
+  -- bu yüzden CHECK'ten çıkarılamaz (çıkarılırsa göç "constraint failed" ile
+  -- patlar). Uygulama bu değeri yeni bir göreve ATAMAZ; iptal artık
+  -- `archived_at` ile modelleniyor.
+  status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Revizede','Onaylandi','MusteriIncelemede','MusteriOnayladi','Yayinlandi','IptalEdildi')),
   priority        TEXT NOT NULL DEFAULT 'Normal' CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
   -- NULL yalnızca migration öncesi görevler ve henüz ekipçe planlanmamış guest
   -- talepleri içindir. Yeni ekip görevleri uygulama katmanında seçim ister.

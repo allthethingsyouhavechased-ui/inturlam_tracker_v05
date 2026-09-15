@@ -1,5 +1,5 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
-import { TASK_STATUSES } from "@/lib/constants";
+import { ALL_TASK_STATUSES } from "@/lib/constants";
 import { calculateMonthlyProgress, TASK_STATUS_COEFFICIENT } from "@/lib/progress";
 import type { MonthlyProgress, TaskStatus } from "@/lib/types";
 import { assertMonthPeriod } from "@/lib/periodValidation";
@@ -93,7 +93,7 @@ export function listMonthlyTaskStatusCounts(month: string): Record<TaskStatus, n
   // burada sessizce eksik kalmasın (eksik anahtar `counts[status] += 1` ile
   // NaN üretirdi).
   const counts = Object.fromEntries(
-    TASK_STATUSES.map((status) => [status, 0]),
+    ALL_TASK_STATUSES.map((status) => [status, 0]),
   ) as Record<TaskStatus, number>;
   for (const task of listProgressTasks(validMonth(month))) counts[task.status] += 1;
   return counts;

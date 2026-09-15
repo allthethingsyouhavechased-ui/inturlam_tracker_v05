@@ -924,7 +924,7 @@ function migrateTaskCustomerApprovalStatusesIfNeeded(db: DatabaseSync): void {
         id              TEXT PRIMARY KEY,
         content_item_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
         title           TEXT NOT NULL,
-        status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Revizede','Onaylandi','MusteriIncelemede','MusteriOnayladi','Yayinlandi')),
+        status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Revizede','Onaylandi','MusteriIncelemede','MusteriOnayladi','Yayinlandi','IptalEdildi')),
         priority        TEXT NOT NULL DEFAULT 'Normal' CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
         difficulty      TEXT CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel')),
         type_override   TEXT CHECK (type_override IN ('Reel','Post','Story','Foto','Kampanya','Video','Carousel','KurumsalKimlik','Diger')),

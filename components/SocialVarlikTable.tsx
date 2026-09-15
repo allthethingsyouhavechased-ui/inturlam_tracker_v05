@@ -49,10 +49,11 @@ export default function SocialVarlikTable({
     const copy = [...rows];
     copy.sort((left, right) => {
       const result = compareRows(left, right, sort.key);
-      // Eşitlikte marka adı ikinci anahtar: aynı sayıya sahip markalar her
-      // render'da yer değiştirmesin.
-      const tie = result !== 0 ? result : left.brand_name.localeCompare(right.brand_name, "tr", { sensitivity: "base" });
-      return sort.direction === "asc" ? tie : -tie;
+      if (result !== 0) return sort.direction === "asc" ? result : -result;
+      // Eşitlikte marka adı ikinci anahtar ve HER ZAMAN A→Z: yön çevrilseydi
+      // aynı sayıya sahip markalar azalan sıralamada ters alfabetik dizilir,
+      // kullanıcı da listeyi gözle takip edemezdi.
+      return left.brand_name.localeCompare(right.brand_name, "tr", { sensitivity: "base" });
     });
     return copy;
   }, [rows, sort]);

@@ -23,6 +23,12 @@ export type ContentStatus = "Planlandi" | "Uretimde" | "Tamamlandi" | "IptalEdil
 // Ekip aşamalarının TEKNİK değerleri korundu ("Incelemede"/"Onaylandi" =
 // EKİP incelemesi/onayı); müşteri aşamaları ve revize ayrı değerler olarak
 // eklendi. Eski kayıtlar olduğu gibi geçerli kalıyor.
+//
+// "IptalEdildi" ESKİ (v02) bir değerdir ve canlı veritabanında hâlâ kayıtları
+// var. Yeni bir göreve ATANAMAZ — iptal artık `archived_at` ile modelleniyor
+// (bkz. components/ArchiveTaskButton) — ama tipe dahil, çünkü o satırlar
+// gerçekten var ve etiket/rozet sözlüklerinde karşılığı olmazsa arayüzde
+// boş görünürler. Seçilebilir durum listesi TASK_STATUSES'tır, bu değil.
 export type TaskStatus =
   | "Beklemede"
   | "DevamEdiyor"
@@ -31,7 +37,8 @@ export type TaskStatus =
   | "Revizede"
   | "MusteriIncelemede"
   | "MusteriOnayladi"
-  | "Yayinlandi";
+  | "Yayinlandi"
+  | "IptalEdildi";
 
 /** Müşteri onayının nasıl alındığı — kayıtta kanal ve kişi tutulur. */
 export type CustomerApprovalChannel =
