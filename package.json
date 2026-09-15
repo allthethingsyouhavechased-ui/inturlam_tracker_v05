@@ -21,6 +21,7 @@
     "calendar:sync": "node --import ./scripts/register.mjs db/sync-calendar.mts",
     "plans:run": "node --import ./scripts/register.mjs db/run-monthly-plans.mts",
     "smoke:local": "node --import ./scripts/register.mjs scripts/smoke-local.mts",
+    "deploy:preflight": "node scripts/preflight-deploy.mts",
     "db:backup": "node db/backup.mts",
     "db:restore": "node db/restore.mts",
     "uploads:audit": "node db/audit-uploads.mts"
