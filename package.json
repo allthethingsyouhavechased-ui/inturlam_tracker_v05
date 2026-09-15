@@ -19,6 +19,7 @@
     "db:set-password": "node --import ./scripts/register.mjs db/set-password.mts",
     "social:sync": "node --import ./scripts/register.mjs db/sync-instagram.mts",
     "calendar:sync": "node --import ./scripts/register.mjs db/sync-calendar.mts",
+    "plans:run": "node --import ./scripts/register.mjs db/run-monthly-plans.mts",
     "smoke:local": "node --import ./scripts/register.mjs scripts/smoke-local.mts",
     "db:backup": "node db/backup.mts",
     "db:restore": "node db/restore.mts",

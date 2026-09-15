@@ -57,7 +57,12 @@ describe("sayfa oturum sınırı", () => {
       );
       const page = defaultPageFunction(sourceFile);
       const guard = page ? firstGuardName(page) : null;
-      if (guard !== "requirePageSession" && guard !== "requireReportAccess" && guard !== "requireGuestSession") {
+      // `requireManager` daha DAR bir kapı: oturum + yönetici yetkisi.
+      // Yalnız yöneticiye açık sayfalar (ör. aylık paket üretimi) bunu kullanır.
+      if (
+        guard !== "requirePageSession" && guard !== "requireReportAccess"
+        && guard !== "requireGuestSession" && guard !== "requireManager"
+      ) {
         unguarded.push(path.relative(process.cwd(), filePath));
       }
     }

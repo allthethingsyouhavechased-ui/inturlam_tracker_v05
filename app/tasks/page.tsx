@@ -82,6 +82,13 @@ export default async function AllTasksPage({
               Şablonlar
             </Link>
             <Link href="/tasks/planning" className={buttonClass({ variant: "secondary" })}><Icon name="calendar" className="size-4" />Tarih bekleyenler</Link>
+            {/* Toplu üretim yalnızca yöneticide: paketler yönetici önizlemesiyle açılır. */}
+            {me.is_manager === 1 && (
+              <Link href="/tasks/planning/aylik" className={buttonClass({ variant: "secondary" })}>
+                <Icon name="board" className="size-4" />
+                Aylık paket
+              </Link>
+            )}
           </>
         }
       />

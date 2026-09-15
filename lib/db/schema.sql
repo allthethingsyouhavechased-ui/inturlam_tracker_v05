@@ -932,3 +932,42 @@ CREATE TABLE IF NOT EXISTS point_ledger (
 );
 CREATE INDEX IF NOT EXISTS idx_point_ledger_person_period ON point_ledger(person_id, period);
 CREATE INDEX IF NOT EXISTS idx_point_ledger_source ON point_ledger(source_type, source_id);
+
+-- ————— Aylık görev otomasyonu —————
+-- Toplu oluşturma ayarları İSTEĞE BAĞLI bir plan olarak saklanır. Plan
+-- duraklatılabilir; değişiklik yalnızca GELECEKTEKİ paketleri etkiler.
+-- `tasks.repeat_days` bu görevlerde ayrıca çalışmaz: paket üretimi ile tekrar
+-- eden görev iki ayrı mekanizmadır, üst üste binerse aynı ay iki kez iş açılır.
+CREATE TABLE IF NOT EXISTS monthly_task_plans (
+  id              TEXT PRIMARY KEY,
+  label           TEXT NOT NULL,
+  brand_id        TEXT REFERENCES brands(id) ON DELETE CASCADE,
+  profile         TEXT NOT NULL,
+  item_key        TEXT NOT NULL,
+  assignee_id     TEXT REFERENCES people(id) ON DELETE SET NULL,
+  content_type    TEXT NOT NULL DEFAULT 'Reel',
+  item_count      INTEGER NOT NULL CHECK (item_count BETWEEN 1 AND 60),
+  title_pattern   TEXT NOT NULL,
+  start_month     TEXT NOT NULL,
+  generation_day  INTEGER NOT NULL DEFAULT 1 CHECK (generation_day BETWEEN 1 AND 28),
+  paused          INTEGER NOT NULL DEFAULT 0 CHECK (paused IN (0,1)),
+  created_by      TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Plan + ay kimliği BENZERSİZ: otomasyon aynı ayı tekrar üretemez, elle
+-- oluşturulan paket de aynı aya ikinci kez bağlanamaz.
+CREATE TABLE IF NOT EXISTS monthly_task_plan_runs (
+  id         TEXT PRIMARY KEY,
+  plan_id    TEXT NOT NULL REFERENCES monthly_task_plans(id) ON DELETE CASCADE,
+  plan_month TEXT NOT NULL,
+  status     TEXT NOT NULL CHECK (status IN ('ok','error','skipped')),
+  package_id TEXT REFERENCES point_packages(id) ON DELETE SET NULL,
+  task_count INTEGER NOT NULL DEFAULT 0,
+  error      TEXT,
+  source     TEXT NOT NULL DEFAULT 'auto' CHECK (source IN ('auto','manual')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (plan_id, plan_month)
+);
+CREATE INDEX IF NOT EXISTS idx_plan_runs_plan ON monthly_task_plan_runs(plan_id, created_at DESC);
