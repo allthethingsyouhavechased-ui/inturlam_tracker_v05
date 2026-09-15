@@ -227,14 +227,24 @@ describe("saf yardımcı fonksiyonlar (lib/socialPlan.ts)", () => {
   it("marka ve varlık arayüzü canlı stok ile aylık teslimi açıkça ayırır", () => {
     const brandSection = fs.readFileSync(path.join(process.cwd(), "components/BrandContentTargetsSection.tsx"), "utf8");
     const assetPage = fs.readFileSync(path.join(process.cwd(), "app/social/varlik/page.tsx"), "utf8");
+    // Tablo, sütun başlığından sıralanabilmesi için istemci bileşenine taşındı;
+    // canlı stok / aylık teslim ayrımı ikisinde birden aranıyor.
+    const assetTable = fs.readFileSync(path.join(process.cwd(), "components/SocialVarlikTable.tsx"), "utf8");
     assert.match(brandSection, /Aylık içerikler tamamlandı/);
     assert.match(brandSection, /aria-pressed/);
     assert.match(assetPage, /canlı stok/);
     assert.match(assetPage, /eksik teslim anlamına gelmez/);
-    assert.match(assetPage, /monthly_content_completed/);
+    assert.match(assetTable, /monthly_content_completed/);
     assert.match(assetPage, /Hazır içerik varlığı[\s\S]*Yayına hazır canlı stok/);
     assert.doesNotMatch(assetPage, /max-w-4xl/);
     assert.doesNotMatch(assetPage, /role="note"/);
+  });
+
+  it("varlık tablosu sütun başlıklarından sıralanabiliyor", () => {
+    const assetTable = fs.readFileSync(path.join(process.cwd(), "components/SocialVarlikTable.tsx"), "utf8");
+    // Erişilebilirlik sözleşmesi: sıralama düğmesi ve aria-sort durumu.
+    assert.match(assetTable, /aria-sort/);
+    assert.match(assetTable, /onClick=\{\(\) => toggle\(key\)\}/);
   });
 
   it("hafta ve ay seçicilerini tek araç satırında tutar", () => {
