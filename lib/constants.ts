@@ -84,6 +84,38 @@ export const TASK_STATUSES: TaskStatus[] = [
 /** Müşteri onayı gerekmeyen işlerde ekip onayından sonra doğrudan yayına gidilir. */
 export const CUSTOMER_TASK_STATUSES: TaskStatus[] = ["MusteriIncelemede", "MusteriOnayladi"];
 
+// PANO SÜTUNLARI. Durum listesinin tamamı değil: eski beş sütuna yalnızca
+// "Revizede" eklendi. Müşteri aşamaları ayrı sütun AÇMAZ — sekiz sütun panoyu
+// okunmaz hâle getiriyordu ve o iki aşama ekip onayının ÜSTÜNE gelen bir alt
+// durum. Kartlar "Onaylandı" sütununda, üzerlerinde müşteri rozetiyle durur
+// (bkz. boardColumnFor).
+export const BOARD_STATUSES: TaskStatus[] = [
+  "Beklemede",
+  "DevamEdiyor",
+  "Incelemede",
+  "Revizede",
+  "Onaylandi",
+  "Yayinlandi",
+];
+
+/**
+ * Bir durumun hangi pano sütununda görüneceği. Müşteri aşamaları ekip
+ * onayının devamı olduğu için "Onaylandı" sütununa düşer; aksi hâlde o
+ * görevler panodan tamamen kaybolurdu.
+ */
+export function boardColumnFor(status: TaskStatus): TaskStatus | null {
+  if (BOARD_STATUSES.includes(status)) return status;
+  if (CUSTOMER_TASK_STATUSES.includes(status)) return "Onaylandi";
+  // Eski v02 "IptalEdildi": panoda sütunu yok (patch öncesinde de yoktu).
+  return null;
+}
+
+/** Kartta gösterilecek müşteri alt durumu rozeti; yoksa null. */
+export const CUSTOMER_STAGE_BADGE: Partial<Record<TaskStatus, string>> = {
+  MusteriIncelemede: "Müşteride",
+  MusteriOnayladi: "Müşteri onayladı",
+};
+
 // ESKİ (v02) durum. Yeni bir göreve ATANAMAZ ve pano sütunu/seçim listesi
 // üretmez — ama canlı veritabanında kayıtları var, bu yüzden etiket ve renk
 // sözlüklerinde karşılığı bulunmalı. Sayaç/rapor gibi TÜM durumları gezen
@@ -94,11 +126,11 @@ export const ALL_TASK_STATUSES: TaskStatus[] = [...TASK_STATUSES, ...LEGACY_TASK
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   Beklemede: "Beklemede",
   DevamEdiyor: "Devam Ediyor",
-  Incelemede: "İncelemede (Ekip)",
+  Incelemede: "İncelemede",
   Revizede: "Revizede",
-  Onaylandi: "Onaylandı (Ekip)",
-  MusteriIncelemede: "İncelemede (Müşteri)",
-  MusteriOnayladi: "Onaylandı (Müşteri)",
+  Onaylandi: "Onaylandı",
+  MusteriIncelemede: "Müşteri incelemesinde",
+  MusteriOnayladi: "Müşteri onayladı",
   Yayinlandi: "Yayınlandı",
   IptalEdildi: "İptal edildi (eski)",
 };

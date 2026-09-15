@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it } from "node:test";
 import {
   NAV_GROUPS,
@@ -20,10 +22,9 @@ describe("visibleNavGroups", () => {
     const withoutHrefs = allHrefs(withoutReports);
     assert.ok(withHrefs.includes("/reports"));
     assert.ok(!withoutHrefs.includes("/reports"));
-    // Alt rotalar da (ör. /reports/puan) aynı yetkiye bağlı; nav'da sızmamalı.
-    assert.ok(withHrefs.includes("/reports/puan"));
+    // Rapor bölümünün alt rotaları da aynı yetkiye bağlı; nav'a sızmamalı.
     assert.ok(!withoutHrefs.some((href) => href.startsWith("/reports")));
-    assert.equal(withoutHrefs.length, withHrefs.length - 2);
+    assert.equal(withoutHrefs.length, withHrefs.length - 1);
     assert.equal(withoutReports.length, withReports.length);
   });
 
@@ -56,13 +57,22 @@ describe("NAV_GROUPS bilgi mimarisi", () => {
     assert.equal(hrefs.indexOf("/calendar"), hrefs.indexOf("/team") + 1);
   });
 
-  it("Puanlar ve Talepler organizasyonda Raporlar'ın hemen altındadır", () => {
+  it("Talepler organizasyonda Raporlar'ın hemen altındadır", () => {
     const organizasyon = NAV_GROUPS.find((group) => group.id === "organizasyon");
     assert.ok(organizasyon);
     assert.deepEqual(
       organizasyon.items.map((item) => item.href),
-      ["/team", "/calendar", "/reports", "/reports/puan", "/requests", "/activity"],
+      ["/team", "/calendar", "/reports", "/requests", "/activity"],
     );
+  });
+
+  it("Puan ekranı global menüde DEĞİL, ekip sayfasından açılıyor", () => {
+    // Aylık hedefle birlikte okunan bir ölçü; üst menüde ayrı satır tutmuyor.
+    assert.equal(allHrefs(NAV_GROUPS).includes("/reports/puan"), false);
+    const team = fs.readFileSync(path.join(process.cwd(), "app/team/page.tsx"), "utf8");
+    const targets = team.indexOf('href="/team/targets"');
+    const points = team.indexOf('href="/reports/puan"');
+    assert.ok(points > targets, "Puanlar düğmesi Aylık hedefler'in hemen yanında olmalı");
   });
 
   it("Markalar, Sosyal ve Fikir Bankası portföydedir; marka ağacı global navda değildir", () => {

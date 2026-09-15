@@ -8,6 +8,8 @@ import Icon from "@/components/ui/Icon";
 import { brandAccentStyle } from "@/lib/brandAccent";
 import {
   CONTENT_TYPE_LABEL,
+  CUSTOMER_STAGE_BADGE,
+  TASK_STATUS_BADGE,
   TASK_DIFFICULTY_BADGE,
   TASK_DIFFICULTY_LABEL,
   TASK_PRIORITY_BADGE,
@@ -72,6 +74,13 @@ export default function TaskGridCard({
         </span>
         {task.archived_at !== null && (
           <span className={`${metaBadgeClass} bg-surface-muted text-secondary`}>ARŞİV</span>
+        )}
+        {/* Müşteri aşaması ayrı pano sütunu açmıyor; kart "Onaylandı"
+            sütununda dururken hangi aşamada olduğu bu rozetten okunuyor. */}
+        {CUSTOMER_STAGE_BADGE[task.status] && (
+          <span className={`${metaBadgeClass} ${TASK_STATUS_BADGE[task.status]}`}>
+            {CUSTOMER_STAGE_BADGE[task.status]!.toLocaleUpperCase("tr-TR")}
+          </span>
         )}
         {badges?.map((badge) => (
           <span key={badge.label} className={`${metaBadgeClass} ${badge.className}`}>

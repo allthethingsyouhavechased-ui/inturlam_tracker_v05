@@ -5,6 +5,7 @@ import MobileMenuButton from "@/components/MobileMenuButton";
 import NotificationBell from "@/components/NotificationBell";
 import QuickAddModal from "@/components/QuickAddModal";
 import ThemeToggle from "@/components/ThemeToggle";
+import WorkLogHeaderWidget from "@/components/WorkLogHeaderWidget";
 import { getCurrentPerson } from "@/lib/identity";
 import { todayISO } from "@/lib/date";
 import { formatPoints } from "@/lib/progress";
@@ -35,6 +36,9 @@ export default async function Header() {
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          {/* Mesai göstergesi arama çubuğunun hemen sağında. Verisini kendisi
+              çekiyor: Header layout'ta, her istekte çalışıyor. */}
+          {person && <WorkLogHeaderWidget />}
           {person && monthlyProgress && (
             <Link
               href={`/panom/katkim?month=${month}`}

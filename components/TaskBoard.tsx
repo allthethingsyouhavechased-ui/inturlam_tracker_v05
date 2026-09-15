@@ -24,7 +24,8 @@ import {
   TASK_STATUS_BORDER_TOP,
   TASK_STATUS_DOT,
   TASK_STATUS_LABEL,
-  TASK_STATUSES,
+  BOARD_STATUSES,
+  boardColumnFor,
 } from "@/lib/constants";
 import type { TaskSortKey } from "@/lib/taskFilterParams";
 import type { Person, TaskStatus, TaskWithContext } from "@/lib/types";
@@ -236,7 +237,9 @@ export default function TaskBoard({
     const newStatus = over.id as TaskStatus;
     const taskId = active.id as string;
     const task = taskList.find((t) => t.id === taskId);
-    if (!task || task.status === newStatus) return;
+    // Kart zaten o sütunda duruyorsa hiçbir şey yazma: müşteri aşamasındaki bir
+    // kartı "Onaylandı" sütunu içinde oynatmak onu ekip onayına geri düşürürdü.
+    if (!task || boardColumnFor(task.status) === newStatus) return;
 
     setTaskList((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
@@ -291,12 +294,14 @@ export default function TaskBoard({
         onDragCancel={() => setActiveId(null)}
       >
         <div tabIndex={0} role="region" aria-label="Görev panosu, durum sütunları yatay kaydırılabilir" className="grid min-w-0 max-w-full grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-3 overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-brand-500">
-          {TASK_STATUSES.map((s) => (
+          {BOARD_STATUSES.map((s) => (
             <Column
               key={s}
               status={s}
               tasks={sortTasks(
-                taskList.filter((t) => t.status === s),
+                // Müşteri aşamasındaki kartlar da "Onaylandı" sütununda görünür;
+                // aksi hâlde panodan tamamen kaybolurlardı.
+                taskList.filter((t) => boardColumnFor(t.status) === s),
                 sortKey,
               )}
               onOpenComments={(task) => setOpenComments({ id: task.id, title: task.title })}

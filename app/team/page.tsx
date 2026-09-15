@@ -27,6 +27,8 @@ export default async function TeamPage() {
   // Kalıcı marka sorumlulukları marka sayfasıyla AYNI tablodan okunuyor.
   const assignments = listAllPersonBrandAssignments();
   const canManageAccounts = currentPerson.is_manager === 1;
+  // Puan ekranı rapor yetkisine bağlı; düğme yalnızca açabilecek kişiye görünür.
+  const canViewPoints = currentPerson.is_manager === 1;
 
   return (
     <div className="w-full">
@@ -41,6 +43,15 @@ export default async function TeamPage() {
               <Icon name="reports" className="size-4" />
               Aylık hedefler
             </Link>
+            {/* Kazanılmış puan ekranı global menüde değil, ekibin yanında:
+                aylık hedefle birlikte okunan bir ölçü. Sayfanın kendisi
+                yönetici kapısını (requireReportAccess) koruyor. */}
+            {canViewPoints && (
+              <Link href="/reports/puan" className={buttonClass({ variant: "secondary" })}>
+                <Icon name="reports" className="size-4" />
+                Puanlar
+              </Link>
+            )}
             {canManageAccounts && (
             <Link
               href="/team/manage"

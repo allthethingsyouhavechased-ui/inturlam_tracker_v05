@@ -28,7 +28,8 @@ import {
   TASK_STATUS_BORDER_TOP,
   TASK_STATUS_DOT,
   TASK_STATUS_LABEL,
-  TASK_STATUSES,
+  BOARD_STATUSES,
+  boardColumnFor,
 } from "@/lib/constants";
 import { formatDateShort, isOverdue } from "@/lib/date";
 import type { Person, TaskStatus, TaskWithContext } from "@/lib/types";
@@ -250,7 +251,8 @@ export default function KanbanBoard({
     const newStatus = over.id as TaskStatus;
     const taskId = active.id as string;
     const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.status === newStatus) return;
+    // Kart zaten o sütunda duruyorsa durum yazılmaz (bkz. TaskBoard'daki not).
+    if (!task || boardColumnFor(task.status) === newStatus) return;
 
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
@@ -280,11 +282,11 @@ export default function KanbanBoard({
     >
       {statusError && <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">{statusError}</p>}
       <div tabIndex={0} role="region" aria-label="Çalışma panosu, durum sütunları yatay kaydırılabilir" className="grid min-w-0 max-w-full grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-4 overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-brand-500">
-        {TASK_STATUSES.map((status) => (
+        {BOARD_STATUSES.map((status) => (
           <Column
             key={status}
             status={status}
-            tasks={tasks.filter((t) => t.status === status)}
+            tasks={tasks.filter((t) => boardColumnFor(t.status) === status)}
             people={people}
           />
         ))}
