@@ -12,11 +12,14 @@ import {
 import { requireTeamSession } from "@/lib/identity";
 import {
   createIdea,
+  deleteIdea,
   getIdea,
   setIdeaArchived,
   updateIdea,
   updateIdeaStatus,
 } from "@/lib/repositories/ideas";
+import { ExpectedActionError, runAction, type ActionResult } from "@/lib/actionResult";
+import { canDeleteIdea } from "@/lib/ideas";
 
 function requiredText(formData: FormData, key: string, label: string, max: number): string {
   const value = String(formData.get(key) ?? "").trim();
@@ -130,4 +133,38 @@ export async function setIdeaArchivedAction(
     summary: `“${idea.title}” fikrini ${archived ? "arşivledi" : "aktif bankaya geri aldı"}`,
   });
   revalidateIdeaPaths(id, idea.brand_id);
+}
+
+/**
+ * Fikri KALICI siler. Yetki: yönetici tüm fikirleri, sahibi kendi fikrini.
+ * Arşivleme AYRI bir işlem (setIdeaArchivedAction) — bu ikisi karıştırılmıyor.
+ * Bağlı göreve dönüşmüş fikir bu sürümde silinmez, yalnızca arşivlenebilir.
+ * Gerçek silme, arayüzdeki geri alma süresi dolmadan ÇAĞRILMIYOR
+ * (lib/undoQueue.ts deseni) — burada ikinci bir gecikme yok.
+ */
+export async function deleteIdeaAction(id: string): Promise<ActionResult> {
+  const actor = await requireTeamSession();
+  return runAction("idea.delete", async () => {
+    const idea = getIdea(id);
+    if (!idea) throw new ExpectedActionError("Fikir bulunamadı.", "notFound");
+    if (!canDeleteIdea(actor.person, idea)) {
+      throw new ExpectedActionError("Bu fikri yalnızca sahibi veya bir yönetici silebilir.", "forbidden");
+    }
+    const result = deleteIdea(id, { id: actor.person.id, name: actor.person.name });
+    if (!result.deleted && result.reason === "linked") {
+      throw new ExpectedActionError(
+        "Bu fikir bir göreve bağlandığı için silinemez; arşivleyebilirsin. Bağlı görev etkilenmez.",
+      );
+    }
+    if (!result.deleted) throw new ExpectedActionError("Fikir bulunamadı.", "notFound");
+    await recordActivity({
+      action: "idea.delete",
+      entityType: "idea",
+      entityId: id,
+      brandId: idea.brand_id,
+      summary: `“${idea.title}” fikrini sildi`,
+    });
+    revalidateIdeaPaths(id, idea.brand_id);
+    return { ok: true as const };
+  });
 }

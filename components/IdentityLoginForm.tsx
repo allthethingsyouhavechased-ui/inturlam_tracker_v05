@@ -50,6 +50,14 @@ export default function IdentityLoginForm() {
           className={inputClass}
         />
       </label>
+      {/* Varsayılan KAPALI: ortak ofis bilgisayarında unutulmuş oturum
+          riskini kullanıcı bilerek üstlensin. Seçilmezse mevcut 12 saatlik
+          tarayıcı-oturumu davranışı korunur. */}
+      <label className="flex items-center gap-2 text-sm text-secondary">
+        <input name="remember" type="checkbox" value="1" className="size-4" />
+        Beni bu cihazda hatırla
+        <span className="text-xs text-muted">(30 gün)</span>
+      </label>
       {state.error && (
         <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-danger dark:bg-rose-950/30">
           {state.error}

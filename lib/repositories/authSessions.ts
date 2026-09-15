@@ -10,9 +10,12 @@ function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function issueSession(accountId: string): string {
+// `ttlSeconds` çağıranın ("beni hatırla" seçildi mi) kararı; çerez Max-Age'i
+// AYNI değerle yazılıyor (bkz. lib/actions/identity.ts). Süre her istekte
+// uzatılmıyor: sonsuza kayan oturum, "30 gün" sözünü anlamsız kılardı.
+function issueSession(accountId: string, ttlSeconds: number = SESSION_TTL_SECONDS): string {
   const token = randomBytes(32).toString("base64url");
-  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
+  const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
   const db = getDb();
   db.prepare("DELETE FROM account_sessions WHERE expires_at <= unixepoch()").run();
   db.prepare(
@@ -21,7 +24,7 @@ function issueSession(accountId: string): string {
   return token;
 }
 
-export function createAuthSession(personId: string): string {
+export function createAuthSession(personId: string, ttlSeconds?: number): string {
   const db = getDb();
   db.prepare(
     `INSERT OR IGNORE INTO accounts
@@ -34,7 +37,7 @@ export function createAuthSession(personId: string): string {
       .get(personId),
   );
   if (!account) throw new Error("Aktif ekip hesabı bulunamadı.");
-  return issueSession(account.id);
+  return issueSession(account.id, ttlSeconds);
 }
 
 export function createGuestAuthSession(accountId: string): string {

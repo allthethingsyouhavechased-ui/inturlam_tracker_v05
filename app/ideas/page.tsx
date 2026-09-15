@@ -15,7 +15,7 @@ export default async function IdeasPage({
 }: {
   searchParams: Promise<{ view?: string; brand?: string; new?: string }>;
 }) {
-  await requirePageSession();
+  const me = await requirePageSession();
   const sp = await searchParams;
   const archived = sp.view === "archive";
   const brands = listBrandsAlphabetically();
@@ -54,6 +54,7 @@ export default async function IdeasPage({
         archived={archived}
         initialBrandId={initialBrandId}
         newOpen={sp.new === "1"}
+        viewer={{ id: me.id, is_manager: me.is_manager }}
       />
     </div>
   );

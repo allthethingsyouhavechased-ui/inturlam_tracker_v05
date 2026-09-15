@@ -20,16 +20,18 @@ import {
   IDEA_STATUSES,
   IDEA_STATUS_LABEL,
   IDEA_STATUS_TONE,
+  canDeleteIdea,
   ideaTags,
 } from "@/lib/ideas";
 import { listActivityForEntity } from "@/lib/repositories/activity";
 import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { getIdea } from "@/lib/repositories/ideas";
+import DeleteIdeaButton from "@/components/DeleteIdeaButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function IdeaPage({ params }: { params: Promise<{ ideaId: string }> }) {
-  await requirePageSession();
+  const me = await requirePageSession();
   const { ideaId } = await params;
   const idea = getIdea(ideaId);
   if (!idea) notFound();
@@ -63,6 +65,9 @@ export default async function IdeaPage({ params }: { params: Promise<{ ideaId: s
                 {idea.archived_at ? "Arşivden çıkar" : "Arşivle"}
               </SubmitButton>
             </ActionForm>
+            {/* Silme ile arşivleme AYRI: arşiv kaydı korur, silme kaldırır.
+                Bağlı göreve dönüşmüş fikirde düğme hiç çıkmaz. */}
+            {canDeleteIdea(me, idea) && <DeleteIdeaButton ideaId={idea.id} title={idea.title} />}
           </>
         }
       />

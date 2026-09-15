@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import ActionForm from "@/components/ActionForm";
 import BrandLogo from "@/components/BrandLogo";
 import EmptyState from "@/components/EmptyState";
+import DeleteIdeaButton from "@/components/DeleteIdeaButton";
 import { OPEN_IDEA_DIALOG_EVENT } from "@/components/IdeaCreateButton";
 import SubmitButton from "@/components/SubmitButton";
 import Badge from "@/components/ui/Badge";
@@ -23,6 +24,7 @@ import {
   IDEA_STATUSES,
   IDEA_STATUS_LABEL,
   IDEA_STATUS_TONE,
+  canDeleteIdea,
   ideaTags,
 } from "@/lib/ideas";
 import type { Brand, IdeaCategory, IdeaStatus, IdeaWithContext } from "@/lib/types";
@@ -187,12 +189,15 @@ export default function IdeaBankExplorer({
   archived,
   initialBrandId = "",
   newOpen = false,
+  viewer,
 }: {
   ideas: IdeaWithContext[];
   brands: Brand[];
   archived: boolean;
   initialBrandId?: string;
   newOpen?: boolean;
+  /** Silme düğmesinin görünürlüğü için; sunucu action aynı kuralı YENİDEN doğrular. */
+  viewer: { id: string; is_manager: number };
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -442,11 +447,14 @@ export default function IdeaBankExplorer({
               </div>
 
               {archived ? (
-                <ActionForm action={setIdeaArchivedAction.bind(null, idea.id, false)} successMessage="Fikir aktif bankaya geri alındı." className="lg:justify-self-end">
-                  <SubmitButton pendingLabel="Geri alınıyor…" className="min-h-9 rounded-[9px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover">
-                    Arşivden çıkar
-                  </SubmitButton>
-                </ActionForm>
+                <div className="flex flex-wrap items-start gap-2 lg:justify-self-end">
+                  <ActionForm action={setIdeaArchivedAction.bind(null, idea.id, false)} successMessage="Fikir aktif bankaya geri alındı.">
+                    <SubmitButton pendingLabel="Geri alınıyor…" className="min-h-9 rounded-[9px] border border-border-default bg-surface px-3 text-xs font-semibold text-secondary hover:bg-surface-hover">
+                      Arşivden çıkar
+                    </SubmitButton>
+                  </ActionForm>
+                  {canDeleteIdea(viewer, idea) && <DeleteIdeaButton ideaId={idea.id} title={idea.title} />}
+                </div>
               ) : (
                 <ActionForm action={updateIdeaStatusAction} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 lg:justify-self-end">
                   <input type="hidden" name="ideaId" value={idea.id} />
@@ -457,6 +465,11 @@ export default function IdeaBankExplorer({
                     Kaydet
                   </SubmitButton>
                 </ActionForm>
+              )}
+              {!archived && canDeleteIdea(viewer, idea) && (
+                <div className="flex justify-end lg:justify-self-end">
+                  <DeleteIdeaButton ideaId={idea.id} title={idea.title} />
+                </div>
               )}
             </article>
           ))}

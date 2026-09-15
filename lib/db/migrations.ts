@@ -889,6 +889,19 @@ function migrateSocialPostsUniqueIfNeeded(db: DatabaseSync): void {
     db.exec("PRAGMA foreign_keys = ON");
   }
 }
+// Fikir, hayata geçtiğinde bir göreve bağlanabiliyor. Silme kuralı ("bağlı
+// fikir silinmez, arşivlenir") ve "uygulanan fikir" ek puanı bu sütundan
+// okunuyor; eski fikirlerde NULL kalır (geriye dönük bağ ÜRETİLMİYOR).
+function migrateIdeasLinkedTaskIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='ideas'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(ideas)`).all() as { name: string }[];
+  if (columns.some((column) => column.name === "linked_task_id")) return;
+  db.exec(`ALTER TABLE ideas ADD COLUMN linked_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL`);
+}
+
 // SIRA BURADA BAĞLAYICI. Kimlikler kayıtlı olduğu için ASLA değiştirilmemeli:
 // bir kimliği yeniden adlandırmak o göçü üretimde bir kez daha çalıştırır.
 // Yeni göç her zaman SONA eklenir.
@@ -921,6 +934,7 @@ const MIGRATIONS: readonly { id: string; run: (db: DatabaseSync) => void }[] = [
   { id: "023-brands-operations", run: migrateBrandsOperationsIfNeeded },
   { id: "024-brands-accent-hue", run: migrateBrandAccentHueIfNeeded },
   { id: "025-calendar-event-palette", run: migrateCalendarEventPaletteIfNeeded },
+  { id: "026-ideas-linked-task", run: migrateIdeasLinkedTaskIfNeeded },
 ];
 
 /** Yalnızca test/teşhis için: kayıtlı göç kimlikleri, uygulanma sırasıyla. */

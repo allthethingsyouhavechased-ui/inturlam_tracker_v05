@@ -11,7 +11,7 @@ import {
   teamThrottleKey,
 } from "@/lib/auth/loginGate";
 import { SECURE_COOKIE_ENV, shouldUseSecureCookie } from "@/lib/auth/cookieSecurity";
-import { IDENTITY_COOKIE } from "@/lib/auth/constants";
+import { IDENTITY_COOKIE, sessionTtlSeconds } from "@/lib/auth/constants";
 import { getCurrentPerson } from "@/lib/identity";
 import {
   createAuthSession,
@@ -39,7 +39,10 @@ export interface IdentityActionState {
   error?: string;
 }
 
-async function replaceSession(createToken: () => string): Promise<void> {
+async function replaceSession(
+  createToken: () => string,
+  cookieMaxAgeSeconds?: number,
+): Promise<void> {
   const store = await cookies();
   const previousToken = store.get(IDENTITY_COOKIE)?.value;
   if (previousToken) deleteAuthSession(previousToken);
@@ -59,6 +62,10 @@ async function replaceSession(createToken: () => string): Promise<void> {
     sameSite: "strict",
     path: "/",
     secure,
+    // Max-Age verilmezse çerez tarayıcı oturumuyla sınırlı kalır (mevcut
+    // davranış). "Beni hatırla" seçildiğinde sunucudaki oturum süresiyle
+    // BİREBİR aynı değer yazılır.
+    ...(cookieMaxAgeSeconds === undefined ? {} : { maxAge: cookieMaxAgeSeconds }),
   });
 }
 
@@ -84,7 +91,11 @@ export async function loginPerson(
   }
 
   loginThrottle.reset(throttleKey);
-  await replaceSession(() => createAuthSession(usable.id));
+  // Varsayılan KAPALI: kutu işaretlenmediyse 12 saatlik tarayıcı-oturumu
+  // davranışı aynen korunuyor. Guest oturumları bu patch'te değişmiyor.
+  const remember = String(formData.get("remember") ?? "") === "1";
+  const ttl = sessionTtlSeconds(remember);
+  await replaceSession(() => createAuthSession(usable.id, ttl), remember ? ttl : undefined);
   revalidatePath("/", "layout");
   redirect("/");
 }

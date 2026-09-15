@@ -163,10 +163,21 @@ describe("rapor ağ geçidi", () => {
 });
 
 describe("giriş cookie politikası", () => {
-  it("kalıcı cookie üretmez ve SameSite strict kullanır", () => {
+  // Güvenlik sözleşmesi: çerez varsayılan olarak tarayıcı oturumuyla sınırlı
+  // kalır. "Beni hatırla" seçildiğinde kalıcı çerez yazılır ama ömrü
+  // SUNUCUDAKİ oturum süresiyle AYNI değerden gelir — ikisi ayrışırsa ya ölü
+  // çerez ya da çerezden uzun yaşayan oturum kalır.
+  it("SameSite strict kullanıyor ve Max-Age'i yalnızca seçim yapılınca yazıyor", () => {
     const source = fs.readFileSync(path.join(process.cwd(), "lib/actions/identity.ts"), "utf8");
 
-    assert.doesNotMatch(source, /maxAge\s*:/);
     assert.match(source, /sameSite:\s*["']strict["']/);
+    // Max-Age tek bir yerde ve yalnızca çağıran süre verdiğinde yazılıyor.
+    assert.match(
+      source,
+      /cookieMaxAgeSeconds === undefined \? \{\} : \{ maxAge: cookieMaxAgeSeconds \}/,
+    );
+    assert.equal(source.match(/maxAge/g)?.length, 1);
+    // Sunucu oturumu ve çerez AYNI ttl değişkeninden besleniyor.
+    assert.match(source, /createAuthSession\(usable\.id, ttl\), remember \? ttl : undefined/);
   });
 });

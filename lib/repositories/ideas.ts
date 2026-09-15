@@ -151,3 +151,55 @@ export function setIdeaArchived(id: string, archived: boolean): void {
   ).run(archived ? 1 : 0, id);
   if (result.changes !== 1) throw new Error("Fikir bulunamadı.");
 }
+
+/**
+ * Fikri KALICI siler ve ne silindiğini `idea_deletions`'a yazar. Bağlı bir
+ * göreve dönüşmüş fikir silinmez (çağıran taraf bunu önceden kontrol etmeli,
+ * burada ikinci güvenlik ağı olarak da duruyor): bağlı görev ve ona yazılmış
+ * "uygulanan fikir" puanı sahipsiz kalırdı.
+ */
+export function deleteIdea(
+  id: string,
+  actor: { id: string; name: string },
+): { deleted: boolean; reason?: "linked" | "missing" } {
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const idea = db
+      .prepare("SELECT id, title, scope_type, brand_id, linked_task_id FROM ideas WHERE id = ?")
+      .get(id) as
+      | { id: string; title: string; scope_type: string; brand_id: string | null; linked_task_id: string | null }
+      | undefined;
+    if (!idea) { db.exec("COMMIT"); return { deleted: false, reason: "missing" }; }
+    if (idea.linked_task_id) { db.exec("COMMIT"); return { deleted: false, reason: "linked" }; }
+    db.prepare(
+      `INSERT INTO idea_deletions (id, idea_id, title, scope_type, brand_id, actor_id, actor_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(crypto.randomUUID(), idea.id, idea.title, idea.scope_type, idea.brand_id, actor.id, actor.name);
+    db.prepare("DELETE FROM ideas WHERE id = ?").run(id);
+    db.exec("COMMIT");
+    return { deleted: true };
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export interface IdeaDeletionRow {
+  id: string;
+  idea_id: string;
+  title: string;
+  actor_name: string;
+  created_at: string;
+}
+
+export function listIdeaDeletions(limit = 50): IdeaDeletionRow[] {
+  return plainList<IdeaDeletionRow>(
+    getDb()
+      .prepare(
+        `SELECT id, idea_id, title, actor_name, created_at
+           FROM idea_deletions ORDER BY created_at DESC, id LIMIT ?`,
+      )
+      .all(limit),
+  );
+}

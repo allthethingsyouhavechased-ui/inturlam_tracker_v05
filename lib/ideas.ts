@@ -110,3 +110,15 @@ export function isIdeaCategory(value: unknown): value is IdeaCategory {
 export function isIdeaStatus(value: unknown): value is IdeaStatus {
   return IDEA_STATUSES.includes(value as IdeaStatus);
 }
+
+// Fikir silme yetkisi: yönetici tüm fikirleri, sahibi yalnız kendi fikrini
+// silebilir. Arayüz ve Server Action AYNI yardımcıyı çağırıyor; sayfada
+// `is_manager === 1` satır içi tekrarı yazma (canDeleteTasks ile aynı desen).
+export function canDeleteIdea(
+  actor: { id: string; is_manager: number } | null | undefined,
+  idea: { created_by_id: string | null; linked_task_id?: string | null },
+): boolean {
+  if (!actor) return false;
+  if (idea.linked_task_id) return false;
+  return actor.is_manager === 1 || actor.id === idea.created_by_id;
+}

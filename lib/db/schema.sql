@@ -453,6 +453,10 @@ CREATE TABLE IF NOT EXISTS ideas (
   tags_text           TEXT,
   created_by_id       TEXT REFERENCES people(id) ON DELETE SET NULL,
   created_by_name     TEXT NOT NULL,
+  -- Fikir hayata geçtiğinde bağlandığı görev. Silme kuralı buna bakar
+  -- (bağlı fikir SİLİNMEZ, yalnızca arşivlenir) ve "uygulanan fikir" ek
+  -- puanı da bu bağdan doğar — fikir bankasına satır eklemek puan üretmez.
+  linked_task_id      TEXT REFERENCES tasks(id) ON DELETE SET NULL,
   archived_at         TEXT,
   created_at          TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
@@ -760,3 +764,19 @@ CREATE TABLE IF NOT EXISTS task_customer_sharing_events (
   enabled INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ————— Fikir silme geçmişi —————
+-- Kayıt SİLİNİYOR (ideas satırı gidiyor) ama "ne silindi, kim sildi" burada
+-- kalıyor: fikir bankasından bir başlık sessizce kaybolmasın. Fikre FK YOK —
+-- silinen satıra referans tutulamaz.
+CREATE TABLE IF NOT EXISTS idea_deletions (
+  id          TEXT PRIMARY KEY,
+  idea_id     TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  scope_type  TEXT NOT NULL,
+  brand_id    TEXT,
+  actor_id    TEXT REFERENCES people(id) ON DELETE SET NULL,
+  actor_name  TEXT NOT NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_idea_deletions_created ON idea_deletions(created_at DESC);
