@@ -7,6 +7,7 @@ import fs from "node:fs";
 import {
   runPendingMigrations,
   seedClustersIfNeeded,
+  seedPointCatalogIfNeeded,
   seedTaskTemplatesIfNeeded,
 } from "./migrations.ts";
 
@@ -50,6 +51,9 @@ function createConnection(): DatabaseSync {
   seedClustersIfNeeded(db);
   db.exec(schemaSql);
   seedTaskTemplatesIfNeeded(db);
+  // Puan kataloğu v1: YALNIZCA hiç sürüm yoksa yazılır (seedTaskTemplates ile
+  // aynı gerekçe — yönetici bir kalemi düzeltmişse geri gelmesin).
+  seedPointCatalogIfNeeded(db);
   return db;
 }
 

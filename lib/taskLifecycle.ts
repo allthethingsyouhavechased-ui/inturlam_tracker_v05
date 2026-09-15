@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { getDb } from "@/lib/db/client";
 import { TASK_STATUSES } from "@/lib/constants";
+import { settlePackagesForTask } from "@/lib/repositories/pointPackages";
 import type { Task, TaskStatus } from "@/lib/types";
 
 export class TaskTransitionError extends Error {}
@@ -135,6 +136,9 @@ export function changeTaskStatuses(ids: string[], status: TaskStatus, actorId: s
       db.prepare(`UPDATE tasks SET status = ?, completed_at = CASE WHEN ? = 'Yayinlandi' THEN datetime('now') ELSE NULL END,
         completed_by = CASE WHEN ? = 'Yayinlandi' THEN ? ELSE NULL END, archived_at = NULL, updated_at = datetime('now') WHERE id = ?`).run(status, status, status, actorId, task.id);
       db.prepare("INSERT INTO task_status_events (id, task_id, from_status, to_status, actor_id) VALUES (?, ?, ?, ?, ?)").run(crypto.randomUUID(), task.id, task.status, status, actorId);
+      // Puan yazımı ve onay AYNI transaction'da: tekrar onay, yeniden deneme
+      // ve eşzamanlı istek çift kayıt üretemesin (entry_key UNIQUE).
+      settlePackagesForTask(db, task.id);
       if (status === "Yayinlandi") {
         db.prepare("DELETE FROM task_personal_targets WHERE task_id = ?").run(task.id);
         if ((task.repeat_days ?? 0) > 0) ensureSuccessor(db, task);

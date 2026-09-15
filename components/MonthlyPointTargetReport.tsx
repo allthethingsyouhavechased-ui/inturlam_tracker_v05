@@ -20,8 +20,19 @@ export default function MonthlyPointTargetReport({ month, basePath, personId, de
     <section aria-label="Aylık kişisel hedefler" className="my-5 overflow-hidden rounded-xl border border-border-default bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle p-4">
         <div>
-          <h2 className="text-base font-semibold">Aylık kişisel hedefler</h2>
-          <p className="mt-1 text-xs text-muted">{month} · Tam ayın katkısı; atanan iş miktarından bağımsız hedef.</p>
+          <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold">
+            Aylık kişisel hedefler
+            {/* Bu kart İŞ İLERLEMESİNİ gösterir: ağırlık × durum katsayısı.
+                Kazanılmış puan (paket onayına bağlı hak ediş) ayrı ekranda —
+                iki ölçü karışmasın diye etiket kalıcı. */}
+            <span className="rounded-md bg-surface-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              eski hesaplama
+            </span>
+          </h2>
+          <p className="mt-1 text-xs text-muted">
+            {month} · İş ağırlığı ve durum katsayısıyla hesaplanan operasyonel ilerleme.
+            Kazanılmış puan için <Link href={`/reports/puan?month=${month}`} className="underline decoration-dotted">Kazanılmış puanlar</Link>.
+          </p>
           {rows.length > 1 && <p className="mt-2 text-sm font-medium">{summary.percent === null ? "Hedef tanımlanmadı" : `Toplam ${formatPoints(summary.earned_points)} / ${formatPoints(summary.target_points)} puan · %${summary.percent}`}
             <span className="ml-2 text-xs text-muted">{summary.reached_count} kişi hedefini tamamladı{summary.missing_count > 0 ? ` · ${summary.missing_count} kişinin hedefi eksik (toplam orana dahil değil)` : ""}</span>
           </p>}

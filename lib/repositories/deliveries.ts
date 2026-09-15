@@ -1,4 +1,5 @@
 import { assertTaskTransition, TaskTransitionError } from "@/lib/taskLifecycle";
+import { settlePackagesForTask } from "@/lib/repositories/pointPackages";
 import { isTaskShared, TASK_SHARED_SQL } from "@/lib/taskSharing";
 import type { DatabaseSync } from "node:sqlite";
 import { getDb, plainList, plainOne } from "@/lib/db/client";
@@ -183,6 +184,8 @@ export function createTaskDelivery(
     // Aktif revize kapanır ve iş EKİP incelemesine döner — müşteri aşamasına
     // değil: yeni sürümü önce ekip görür.
     writeTaskStatus(db, input.taskId, task.status, "Incelemede", input.submittedByPersonId);
+    // Yeni sürüm eski onayı düşürdüğü için paket hak edişi de terslenebilir.
+    settlePackagesForTask(db, input.taskId);
     db.exec("COMMIT");
     return listTaskDeliveries(input.taskId).find((delivery) => delivery.id === id)!;
   } catch (error) {
@@ -295,6 +298,9 @@ export function decideTaskDelivery(input: {
       nextStatus,
       input.actorPersonId ?? input.actorAccountId,
     );
+    // Teslim kararı da bir ekip onayıdır: paketin hak edişi aynı
+    // transaction'da yeniden değerlendiriliyor.
+    settlePackagesForTask(db, row.task_id);
     db.exec("COMMIT");
     return listTaskDeliveries(row.task_id).find((delivery) => delivery.id === input.deliveryId)!;
   } catch (error) {

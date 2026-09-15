@@ -3,7 +3,10 @@ import ReportsClient, {
   type PersonReportView,
   type RangeKey,
 } from "@/components/ReportsClient";
+import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
+import Icon from "@/components/ui/Icon";
+import { buttonClass } from "@/components/ui/Button";
 import MonthlyPointTargetReport from "@/components/MonthlyPointTargetReport";
 import { monthParamISO, monthParamToDate } from "@/lib/date";
 import { currentMonthRange, currentWeekRange, todayISO } from "@/lib/date";
@@ -140,7 +143,17 @@ export default async function ReportsPage({
         eyebrow="OPERASYON ANALİTİĞİ"
         title="Raporlar"
         description="İş yükünü, teslim sağlığını, çevrim süresini ve ekip performansını karşılaştır."
-        actions={<p className="text-xs font-semibold text-secondary">{reportLabel}</p>}
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs font-semibold text-secondary">{reportLabel}</p>
+            {/* Kazanılmış puan AYRI bir ekran: bu sayfadaki ilerleme ölçüleri
+                iş ağırlığı ve durum katsayısından gelir, hak edişten değil. */}
+            <Link href="/reports/puan" className={buttonClass({ variant: "secondary", size: "sm" })}>
+              <Icon name="reports" className="size-4" />
+              Kazanılmış puanlar
+            </Link>
+          </div>
+        }
         className="print:hidden"
       />
       <ReportsClient

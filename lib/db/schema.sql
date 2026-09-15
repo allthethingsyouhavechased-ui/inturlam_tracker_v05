@@ -832,3 +832,103 @@ CREATE TABLE IF NOT EXISTS idea_deletions (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_idea_deletions_created ON idea_deletions(created_at DESC);
+
+-- ————— Puanlama —————
+-- Bu blok, `tasks.weight_points` (1-100 tam sayı İŞ AĞIRLIĞI) ve durum
+-- katsayılarından TAMAMEN ayrıdır. Ağırlık/katsayı operasyonel ilerlemeyi
+-- gösterir; buradaki kayıtlar KAZANILMIŞ PUANDIR ve yalnızca paket onayından
+-- doğar. İkisi birbirine dönüştürülmez.
+
+-- Sürümlü katalog. Eski hak edişler kendi sürümünün fiyatıyla kalır;
+-- katalog değişikliği geçmişi yeniden fiyatlandırmaz.
+CREATE TABLE IF NOT EXISTS point_catalog_versions (
+  id             TEXT PRIMARY KEY,
+  label          TEXT NOT NULL,
+  effective_from TEXT NOT NULL,
+  note           TEXT,
+  created_by     TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- `unit_units` ADET BAŞINA iç birim; paket tutarı required_count × unit_units.
+CREATE TABLE IF NOT EXISTS point_catalog_items (
+  catalog_version_id TEXT NOT NULL REFERENCES point_catalog_versions(id) ON DELETE CASCADE,
+  profile            TEXT NOT NULL,
+  item_key           TEXT NOT NULL,
+  label              TEXT NOT NULL,
+  scope              TEXT NOT NULL CHECK (scope IN ('brand','person')),
+  required_count     INTEGER NOT NULL CHECK (required_count > 0),
+  unit_units         INTEGER NOT NULL CHECK (unit_units > 0),
+  sort_order         INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (catalog_version_id, profile, item_key)
+);
+
+-- Kişi → profil eşlemesi ve yürürlük dönemi. Departman ya da isimden profil
+-- TAHMİN EDİLMEZ; yönetici açıkça atar.
+CREATE TABLE IF NOT EXISTS person_point_profiles (
+  person_id      TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  profile        TEXT NOT NULL,
+  effective_from TEXT NOT NULL,
+  effective_to   TEXT,
+  assigned_by    TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (person_id, effective_from)
+);
+
+-- Puan paketi: hak edişin birimi. Bütün zorunlu işleri teslim edilip ekipçe
+-- onaylanmadan puan DOĞMAZ; eksik paketin puanı 0'dır.
+-- `scope_key` tekilleştirme anahtarı: marka kapsamında
+-- "<profile>|<brand_id>|<plan_month>|<item_key>", kişi kapsamında
+-- "<profile>|person:<person_id>|<plan_month>|<item_key>".
+CREATE TABLE IF NOT EXISTS point_packages (
+  id                 TEXT PRIMARY KEY,
+  scope_key          TEXT NOT NULL UNIQUE,
+  profile            TEXT NOT NULL,
+  scope              TEXT NOT NULL CHECK (scope IN ('brand','person')),
+  brand_id           TEXT REFERENCES brands(id) ON DELETE RESTRICT,
+  person_id          TEXT NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
+  plan_month         TEXT NOT NULL,
+  item_key           TEXT NOT NULL,
+  catalog_version_id TEXT NOT NULL REFERENCES point_catalog_versions(id) ON DELETE RESTRICT,
+  required_count     INTEGER NOT NULL CHECK (required_count > 0),
+  -- Paket fiyatının ANLIK GÖRÜNTÜSÜ: katalog sonradan değişse de bu paket
+  -- kendi fiyatıyla kalır.
+  amount_units       INTEGER NOT NULL CHECK (amount_units > 0),
+  status             TEXT NOT NULL DEFAULT 'Acik' CHECK (status IN ('Acik','Tamamlandi','Iptal')),
+  scope_change_note  TEXT,
+  created_by         TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_point_packages_person_month
+  ON point_packages(person_id, plan_month);
+
+-- Paketin SABİT üyelik listesi. Sonradan görev silmek/taşımak eksik paketi
+-- kendiliğinden tamamlanmış saydırmaz: üyelik burada durur.
+CREATE TABLE IF NOT EXISTS point_package_members (
+  package_id TEXT NOT NULL REFERENCES point_packages(id) ON DELETE CASCADE,
+  task_id    TEXT NOT NULL REFERENCES tasks(id) ON DELETE RESTRICT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (package_id, task_id)
+);
+CREATE INDEX IF NOT EXISTS idx_point_package_members_task ON point_package_members(task_id);
+
+-- Tam sayı birimli hareketler. Yanlış puan SİLİNMEZ; gerekçeli ters kayıt
+-- yazılır (`reverses_id`). Aynı paket hakkı için benzersiz anahtar:
+-- `entry_key` sayesinde tekrar onay/eşzamanlı istek çift yazamaz.
+CREATE TABLE IF NOT EXISTS point_ledger (
+  id           TEXT PRIMARY KEY,
+  entry_key    TEXT UNIQUE,
+  person_id    TEXT NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
+  period       TEXT NOT NULL,
+  source_type  TEXT NOT NULL CHECK (source_type IN ('package','extra','manager','correction')),
+  source_id    TEXT,
+  item_key     TEXT,
+  amount_units INTEGER NOT NULL,
+  reason       TEXT,
+  reverses_id  TEXT REFERENCES point_ledger(id) ON DELETE SET NULL,
+  created_by   TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_point_ledger_person_period ON point_ledger(person_id, period);
+CREATE INDEX IF NOT EXISTS idx_point_ledger_source ON point_ledger(source_type, source_id);

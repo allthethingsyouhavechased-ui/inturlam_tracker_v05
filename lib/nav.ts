@@ -41,6 +41,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // planını gösteriyor.
       { href: "/calendar", label: "Takvim", icon: "calendar" },
       { href: "/reports", label: "Raporlar", icon: "reports" },
+      { href: "/reports/puan", label: "Puanlar", icon: "reports" },
       { href: "/requests", label: "Talepler", icon: "inbox" },
       { href: "/activity", label: "Aktivite", icon: "activity" },
     ],
@@ -56,7 +57,9 @@ export function visibleNavGroups(
     ...group,
     items: group.items.filter(
       (item) =>
-        (canViewReports || item.href !== "/reports")
+        // Rapor bölümünün TAMAMI (alt rotalar dahil, ör. /reports/puan)
+        // yönetici yetkisine bağlı — proxy.ts'teki isReportPath ile aynı kural.
+        (canViewReports || !(item.href === "/reports" || item.href.startsWith("/reports/")))
         && (canViewRequests || item.href !== "/requests"),
     ),
   }));

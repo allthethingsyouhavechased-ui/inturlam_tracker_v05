@@ -20,7 +20,10 @@ describe("visibleNavGroups", () => {
     const withoutHrefs = allHrefs(withoutReports);
     assert.ok(withHrefs.includes("/reports"));
     assert.ok(!withoutHrefs.includes("/reports"));
-    assert.equal(withoutHrefs.length, withHrefs.length - 1);
+    // Alt rotalar da (ör. /reports/puan) aynı yetkiye bağlı; nav'da sızmamalı.
+    assert.ok(withHrefs.includes("/reports/puan"));
+    assert.ok(!withoutHrefs.some((href) => href.startsWith("/reports")));
+    assert.equal(withoutHrefs.length, withHrefs.length - 2);
     assert.equal(withoutReports.length, withReports.length);
   });
 
@@ -53,12 +56,12 @@ describe("NAV_GROUPS bilgi mimarisi", () => {
     assert.equal(hrefs.indexOf("/calendar"), hrefs.indexOf("/team") + 1);
   });
 
-  it("Talepler organizasyonda Raporlar'ın hemen altındadır", () => {
+  it("Puanlar ve Talepler organizasyonda Raporlar'ın hemen altındadır", () => {
     const organizasyon = NAV_GROUPS.find((group) => group.id === "organizasyon");
     assert.ok(organizasyon);
     assert.deepEqual(
       organizasyon.items.map((item) => item.href),
-      ["/team", "/calendar", "/reports", "/requests", "/activity"],
+      ["/team", "/calendar", "/reports", "/reports/puan", "/requests", "/activity"],
     );
   });
 

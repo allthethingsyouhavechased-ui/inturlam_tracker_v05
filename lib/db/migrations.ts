@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 // Bu dosya Next/alias yükleyicisi olmadan `node db/*.mts` komutlarından da
 // yükleniyor; bu nedenle runtime importu mutlaka göreli ve açık uzantılı olmalı.
 import { brandAccentHueForIndex } from "../brandAccent.ts";
+import { POINT_CATALOG_ITEMS, POINT_CATALOG_VERSION } from "../points/catalog.ts";
 
 // Şema göçleri. Eskiden bu 22 fonksiyon `lib/db/client.ts` içinde yaşıyordu ve
 // HER `getDb()` açılışında baştan sona çalışıyordu; sıra örtüktü, guard'lar
@@ -1089,6 +1090,41 @@ function migrateClientRequestReviewersIfNeeded(db: DatabaseSync): void {
      SELECT id FROM people WHERE id = ?`,
   );
   for (const personId of LEGACY_REQUEST_REVIEWER_IDS) insert.run(personId);
+}
+
+/**
+ * Puan kataloğu v1. Göç DEĞİL, uzlaştırma: YALNIZCA hiç sürüm yoksa yazar.
+ * İkinci çalıştırma hiçbir şeyi değiştirmez — yönetici bir kalemi düzeltmişse
+ * geri getirmemeli (seedTaskTemplatesIfNeeded ile aynı gerekçe).
+ */
+export function seedPointCatalogIfNeeded(db: DatabaseSync): void {
+  const table = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='point_catalog_versions'`)
+    .get();
+  if (!table) return;
+  const existing = db
+    .prepare("SELECT COUNT(*) AS n FROM point_catalog_versions")
+    .get() as { n: number };
+  if (existing.n > 0) return;
+  db.prepare(
+    `INSERT INTO point_catalog_versions (id, label, effective_from, note)
+     VALUES (?, ?, date('now'), ?)`,
+  ).run(
+    POINT_CATALOG_VERSION,
+    "Puan kataloğu v1",
+    "intracker-puanlama-patch-v1 + 15.09.2026 kararı: puan yalnız tamamlanan paketten doğar.",
+  );
+  const insert = db.prepare(
+    `INSERT INTO point_catalog_items
+       (catalog_version_id, profile, item_key, label, scope, required_count, unit_units, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  POINT_CATALOG_ITEMS.forEach((item, index) => {
+    insert.run(
+      POINT_CATALOG_VERSION, item.profile, item.key, item.label,
+      item.scope, item.requiredCount, item.unitUnits, index,
+    );
+  });
 }
 
 // SIRA BURADA BAĞLAYICI. Kimlikler kayıtlı olduğu için ASLA değiştirilmemeli:
