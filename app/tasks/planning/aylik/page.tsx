@@ -4,8 +4,9 @@ import MonthlyPlanList from "@/components/points/MonthlyPlanList";
 import PageHeader from "@/components/ui/PageHeader";
 import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
+import { notFound } from "next/navigation";
 import { monthParamISO, monthParamToDate } from "@/lib/date";
-import { requireManager } from "@/lib/identity";
+import { requirePageSession } from "@/lib/identity";
 import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listMonthlyTaskPlans } from "@/lib/repositories/monthlyPlans";
@@ -19,7 +20,13 @@ export default async function MonthlyPlanningPage({
 }) {
   // Paketler YALNIZCA yönetici önizlemesiyle açılır; patch kurulunca kimseye
   // otomatik kota görevi üretilmez.
-  await requireManager();
+  //
+  // Kapı `requireManager()` DEĞİL: o fırlattığında Next akış sınırını hataya
+  // düşürüyor ve yönetici olmayan kullanıcı sonsuza kadar "Yükleniyor…"
+  // ekranında kalıyordu. Evin deseni (app/team/manage) notFound() — kullanıcı
+  // "böyle bir sayfa yok" görüyor, Server Action'lar yetkiyi ayrıca doğruluyor.
+  const me = await requirePageSession();
+  if (me.is_manager !== 1) notFound();
   const { month: monthParam } = await searchParams;
   const month = monthParamISO(monthParamToDate(monthParam));
   const brands = listBrandsAlphabetically();

@@ -169,24 +169,17 @@ export default async function TaskPage({
           </ActionForm>
         }
         delivery={
-          <TaskDeliveryPanel
-            canDecide={me.is_manager === 1}
-            key="delivery"
-            taskId={task.id}
-            taskStatus={task.status}
-            customerShared={customerShared}
-            planned={task.due_date !== null}
-            archived={task.archived_at !== null}
-            deliveries={deliveries}
-          />
-        }
-        revision={
-          <div key="revision" className="space-y-5">
-            <TaskRevisionPanel
+          // Müşteri onayı TESLİM sekmesinde: onay, teslimin devamı. Revize
+          // sekmesinde dururken kimse orada aramıyordu.
+          <div key="delivery" className="space-y-5">
+            <TaskDeliveryPanel
+              canDecide={me.is_manager === 1}
               taskId={task.id}
-              status={task.status}
+              taskStatus={task.status}
+              customerShared={customerShared}
+              planned={task.due_date !== null}
               archived={task.archived_at !== null}
-              rounds={revisionRounds}
+              deliveries={deliveries}
             />
             <TaskCustomerApprovalPanel
               taskId={task.id}
@@ -199,6 +192,15 @@ export default async function TaskPage({
               latestDeliveryApproved={deliveries[0]?.status === "Onaylandi"}
             />
           </div>
+        }
+        revision={
+          <TaskRevisionPanel
+            key="revision"
+            taskId={task.id}
+            status={task.status}
+            archived={task.archived_at !== null}
+            rounds={revisionRounds}
+          />
         }
         comments={
           <div key="comments" className="space-y-5">

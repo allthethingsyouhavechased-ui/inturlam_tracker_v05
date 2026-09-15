@@ -31,6 +31,21 @@ export interface PersonPointSummary {
   total_units: number;
 }
 
+/** Bir dönemin TÜM hareketleri, kişi adıyla — düzeltme ekranı buradan seçtiriyor. */
+export function listLedgerForPeriod(period: string): (PointLedgerRow & { person_name: string })[] {
+  return plainList<PointLedgerRow & { person_name: string }>(
+    getDb()
+      .prepare(
+        `SELECT l.*, p.name AS person_name
+           FROM point_ledger l
+           JOIN people p ON p.id = l.person_id
+          WHERE l.period = ?
+          ORDER BY l.created_at DESC, l.id`,
+      )
+      .all(period),
+  );
+}
+
 export function listLedgerForPerson(personId: string, period: string): PointLedgerRow[] {
   return plainList<PointLedgerRow>(
     getDb()

@@ -3,12 +3,13 @@ import MonthNavigator from "@/components/MonthNavigator";
 import PageHeader from "@/components/ui/PageHeader";
 import { buttonClass } from "@/components/ui/Button";
 import Icon from "@/components/ui/Icon";
+import PointAdminPanel from "@/components/points/PointAdminPanel";
 import PointPackageBoard from "@/components/points/PointPackageBoard";
 import { requireReportAccess } from "@/lib/identity";
 import { monthParamISO, monthParamToDate } from "@/lib/date";
 import { MONTHLY_TARGET_UNITS, POINT_PROFILE_LABEL } from "@/lib/points/catalog";
 import { formatUnitsAsPoints, unitsToPoints } from "@/lib/points/units";
-import { listPersonPointSummaries } from "@/lib/repositories/pointLedger";
+import { listLedgerForPeriod, listPersonPointSummaries } from "@/lib/repositories/pointLedger";
 import { listPointPackagesForMonth } from "@/lib/repositories/pointPackages";
 import { listPersonPointProfiles } from "@/lib/repositories/pointCatalog";
 import { listActivePeople } from "@/lib/repositories/people";
@@ -25,7 +26,7 @@ export default async function EarnedPointsPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
-  await requireReportAccess();
+  const me = await requireReportAccess();
   const { month: monthParam } = await searchParams;
   const month = monthParamISO(monthParamToDate(monthParam));
 
@@ -37,6 +38,7 @@ export default async function EarnedPointsPage({
       .filter((row) => row.effective_from <= `${month}-01` && (row.effective_to === null || row.effective_to >= `${month}-01`))
       .map((row) => [row.person_id, row.profile]),
   );
+  const ledger = listLedgerForPeriod(month);
   const activeIds = new Set(people.map((person) => person.id));
   // Pasife alınmış kişi de geçmiş hak edişiyle listede kalır; aktif olmayan
   // ve hiç puanı olmayan satırlar gizlenir.
@@ -129,6 +131,17 @@ export default async function EarnedPointsPage({
       </section>
 
       <PointPackageBoard month={month} packages={packages} />
+
+      {/* Profil ataması olmadan kimse paket alamaz; ek puan ve düzeltme de
+          yalnızca buradan giriliyor. Server Action'lar yetkiyi ayrıca doğruluyor. */}
+      {me.is_manager === 1 && (
+        <PointAdminPanel
+          people={people.map((person) => ({ id: person.id, name: person.name }))}
+          profiles={Object.fromEntries(profiles)}
+          month={month}
+          ledger={ledger}
+        />
+      )}
 
       <p className="text-xs leading-5 text-muted">
         Bu ekran <strong>kazanılmış puanı</strong> gösterir; görev ağırlığı ve durum katsayısıyla
