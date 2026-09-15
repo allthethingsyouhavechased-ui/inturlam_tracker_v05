@@ -52,6 +52,11 @@ export default async function EarnedPointsPage({
         actions={
           <>
             <MonthNavigator month={month} basePath="/reports/puan" />
+            {/* Ekran ve Excel AYNI sorgudan besleniyor. */}
+            <a href={`/reports/puan/export?month=${month}`} className={buttonClass({ variant: "secondary" })}>
+              <Icon name="archive" className="size-4" />
+              Excel indir
+            </a>
             <Link href="/reports" className={buttonClass({ variant: "secondary" })}>
               <Icon name="reports" className="size-4" />
               Rapor merkezi

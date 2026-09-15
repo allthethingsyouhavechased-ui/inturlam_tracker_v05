@@ -7,6 +7,7 @@ const TABS = [
   { href: "/social/takip", label: "Takip" },
   { href: "/social/varlik", label: "Varlık" },
   { href: "/social/takvim", label: "Paylaşım takvimi" },
+  { href: "/social/rapor", label: "Stok raporu" },
 ] as const;
 
 export default function SocialTabs() {

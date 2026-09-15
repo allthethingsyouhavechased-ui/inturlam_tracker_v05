@@ -53,12 +53,14 @@ export async function setBrandAssetCountAction(
   kind: ContentKind,
   value: number,
 ): Promise<void> {
-  await requireSession();
+  const actor = await requireSession();
   if (!isContentKind(kind)) throw new Error("Geçersiz içerik türü.");
   const brand = getBrand(brandId);
   if (!brand) throw new Error("Marka bulunamadı.");
 
-  setBrandAssetCount(brandId, kind, clampCount(value));
+  // Kim değiştirdi bilgisi geçmişe yazılıyor; stok canlı bir sayaç olduğu için
+  // "kim ne zaman düşürdü" sorusunun tek cevabı bu kayıt.
+  setBrandAssetCount(brandId, kind, clampCount(value), actor.id);
   revalidatePath("/", "layout");
 }
 

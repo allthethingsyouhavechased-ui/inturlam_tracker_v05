@@ -971,3 +971,18 @@ CREATE TABLE IF NOT EXISTS monthly_task_plan_runs (
   UNIQUE (plan_id, plan_month)
 );
 CREATE INDEX IF NOT EXISTS idx_plan_runs_plan ON monthly_task_plan_runs(plan_id, created_at DESC);
+
+-- Stok değişikliği geçmişi: eski/yeni miktar, kim ve ne zaman. Stok CANLI bir
+-- sayaçtır (aylık üretim ya da Instagram yayın sayısı DEĞİL); geçmiş ayın
+-- stoğu bugünkü stoktan TÜRETİLEMEZ, bu yüzden değişim kaydı ayrı tutulur.
+CREATE TABLE IF NOT EXISTS brand_asset_count_changes (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  brand_id      TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  kind          TEXT NOT NULL,
+  previous_count INTEGER,
+  ready_count   INTEGER NOT NULL,
+  actor_id      TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_asset_count_changes_brand
+  ON brand_asset_count_changes(brand_id, kind, id DESC);

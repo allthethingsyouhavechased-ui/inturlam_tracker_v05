@@ -50,20 +50,77 @@ export function listBrandAssetCounts(): BrandAssetCount[] {
   );
 }
 
+/**
+ * Canlı stok sayacını yazar ve DEĞİŞTİYSE geçmişe bir satır ekler
+ * (eski/yeni miktar, kim, ne zaman). Aynı değeri tekrar kaydetmek geçmişe
+ * satır yazmaz — "değişiklik geçmişi" gürültüyle dolmasın.
+ */
 export function setBrandAssetCount(
   brandId: string,
   kind: ContentKind,
   readyCount: number,
+  actorId: string | null = null,
 ): void {
-  getDb()
-    .prepare(
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const current = db
+      .prepare("SELECT ready_count FROM brand_asset_counts WHERE brand_id = ? AND kind = ?")
+      .get(brandId, kind) as { ready_count: number } | undefined;
+    db.prepare(
       `INSERT INTO brand_asset_counts (brand_id, kind, ready_count)
        VALUES (?, ?, ?)
        ON CONFLICT(brand_id, kind) DO UPDATE SET
          ready_count = excluded.ready_count,
          updated_at = datetime('now')`,
-    )
-    .run(brandId, kind, readyCount);
+    ).run(brandId, kind, readyCount);
+    if (current?.ready_count !== readyCount) {
+      db.prepare(
+        `INSERT INTO brand_asset_count_changes
+           (brand_id, kind, previous_count, ready_count, actor_id)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run(brandId, kind, current?.ready_count ?? null, readyCount, actorId);
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export interface BrandAssetCountChange {
+  id: number;
+  brand_id: string;
+  kind: string;
+  previous_count: number | null;
+  ready_count: number;
+  actor_id: string | null;
+  actor_name: string | null;
+  created_at: string;
+}
+
+export function listBrandAssetCountChanges(brandId?: string, limit = 50): BrandAssetCountChange[] {
+  const db = getDb();
+  const sql = `SELECT c.*, p.name AS actor_name
+                 FROM brand_asset_count_changes c
+                 LEFT JOIN people p ON p.id = c.actor_id
+                ${brandId ? "WHERE c.brand_id = ?" : ""}
+                ORDER BY c.id DESC LIMIT ?`;
+  return plainList<BrandAssetCountChange>(
+    brandId ? db.prepare(sql).all(brandId, limit) : db.prepare(sql).all(limit),
+  );
+}
+
+/** Son stok güncellemesi damgası — rapordaki "son güncelleme" sütunu. */
+export function lastAssetUpdateByBrand(): Map<string, string> {
+  const rows = plainList<{ brand_id: string; updated_at: string }>(
+    getDb()
+      .prepare(
+        `SELECT brand_id, MAX(updated_at) AS updated_at FROM brand_asset_counts GROUP BY brand_id`,
+      )
+      .all(),
+  );
+  return new Map(rows.map((row) => [row.brand_id, row.updated_at]));
 }
 
 // ————— Aylık teslim kapanışı (canlı stoktan bağımsız) —————
