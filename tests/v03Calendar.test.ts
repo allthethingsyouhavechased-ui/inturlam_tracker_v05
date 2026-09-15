@@ -262,13 +262,18 @@ describe("v03 etkinlik takvimi", () => {
   it("beş dakikalık görev scheduled kaynağını ve gizli runner'ı kullanır", () => {
     const syncSource = fs.readFileSync(path.join(process.cwd(), "db/sync-calendar.mts"), "utf8");
     const installerSource = fs.readFileSync(path.join(process.cwd(), "scripts/install-calendar-sync-task.ps1"), "utf8");
+    const hiddenLauncherSource = fs.readFileSync(path.join(process.cwd(), "scripts/run-calendar-sync-hidden.vbs"), "utf8");
     const runnerSource = fs.readFileSync(path.join(process.cwd(), "scripts/run-calendar-sync.ps1"), "utf8");
     assert.match(syncSource, /--scheduled/);
     assert.match(syncSource, /runCalendarSync\(source\)/);
     assert.match(installerSource, /\.env\.local/);
     assert.match(installerSource, /GOOGLE_CALENDAR_ID/);
-    assert.match(installerSource, /run-calendar-sync\.ps1/);
+    assert.match(installerSource, /wscript\.exe/);
+    assert.match(installerSource, /run-calendar-sync-hidden\.vbs/);
     assert.match(installerSource, /New-TimeSpan -Minutes 5/);
+    assert.doesNotMatch(installerSource, /New-ScheduledTaskAction -Execute \$powerShellPath/);
+    assert.match(hiddenLauncherSource, /run-calendar-sync\.ps1/);
+    assert.match(hiddenLauncherSource, /objShell\.Run\(command, 0, True\)/);
     assert.match(runnerSource, /calendar:sync -- --scheduled/);
   });
 

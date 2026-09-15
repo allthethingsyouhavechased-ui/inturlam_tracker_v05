@@ -16,10 +16,12 @@ if ($envText -match "REPLACE_ME|test-calendar-id@|tracker-calendar@example-proje
   throw ".env.local örnek değerler içeriyor; gerçek test takvimi bilgilerini ekleyin."
 }
 
-$powerShellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
-$runnerPath = Join-Path $resolvedRepo "scripts\run-calendar-sync.ps1"
-$runnerArgs = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$runnerPath`" -RepoPath `"$resolvedRepo`""
-$action = New-ScheduledTaskAction -Execute $powerShellPath -Argument $runnerArgs -WorkingDirectory $resolvedRepo
+$wscriptPath = Join-Path $env:SystemRoot "System32\wscript.exe"
+$launcherPath = Join-Path $resolvedRepo "scripts\run-calendar-sync-hidden.vbs"
+if (-not (Test-Path -LiteralPath $launcherPath -PathType Leaf)) {
+  throw "Penceresiz takvim senkron başlatıcısı bulunamadı: $launcherPath"
+}
+$action = New-ScheduledTaskAction -Execute $wscriptPath -Argument "`"$launcherPath`"" -WorkingDirectory $resolvedRepo
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew
 $task = Register-ScheduledTask -TaskName "Inturlam Tracker v05 Calendar Sync" -Action $action -Trigger $trigger -Settings $settings -Description "İNTURLAM v05 Google Calendar çift yönlü senkron (5 dakikada bir)" -Force
