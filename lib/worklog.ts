@@ -111,6 +111,16 @@ export function formatMinutes(minutes: number): string {
  */
 export const STALE_SESSION_HOURS = 16;
 
+/**
+ * Toplam mola uyarı eşiği. Tek tek molalar değil, GÜNÜN TOPLAM molası sayılır:
+ * üç kez 25 dakika mola veren de bu eşiği aşar.
+ */
+export const BREAK_ALERT_MINUTES = 60;
+
+export function breakLimitExceeded(totalBreakMinutes: number): boolean {
+  return totalBreakMinutes > BREAK_ALERT_MINUTES;
+}
+
 export function isStaleOpenSession(startedAt: string, now: number): boolean {
   return now - parseStamp(startedAt) > STALE_SESSION_HOURS * 60 * MS_PER_MINUTE;
 }

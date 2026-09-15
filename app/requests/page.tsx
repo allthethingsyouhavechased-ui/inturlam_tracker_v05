@@ -74,12 +74,19 @@ export default async function ClientRequestsPage({
         }
       />
 
-      {!showArchive && <section className="mb-6 grid grid-cols-2 border-y border-border-subtle sm:grid-cols-4" aria-label="Talep özeti">
+      {/* Beş durum TEK SATIRDA: sabit `sm:grid-cols-4` beşinciyi alt satıra
+          atıp özeti iki kademeli gösteriyordu. Sütun sayısı artık durum
+          sayısından türüyor, yeni bir durum eklenirse de tek satır kalır. */}
+      {!showArchive && <section
+        style={{ "--status-count": CLIENT_REQUEST_STATUSES.length } as React.CSSProperties}
+        className="mb-6 grid grid-cols-2 border-y border-border-subtle sm:[grid-template-columns:repeat(var(--status-count),minmax(0,1fr))]"
+        aria-label="Talep özeti"
+      >
         {CLIENT_REQUEST_STATUSES.map((status, index) => (
           <Link
             key={status}
             href={selectedStatus === status ? "/requests" : `/requests?status=${status}`}
-            className={`group px-3 py-3.5 transition-colors hover:bg-surface-hover sm:px-4 ${index > 0 ? "border-l border-border-subtle" : ""} ${selectedStatus === status ? "bg-surface-subtle" : ""}`}
+            className={`group px-3 py-3.5 transition-colors hover:bg-surface-hover sm:px-4 ${index % 2 === 1 ? "border-l border-border-subtle" : ""} ${index > 0 ? "sm:border-l sm:border-border-subtle" : "sm:border-l-0"} ${selectedStatus === status ? "bg-surface-subtle" : ""}`}
           >
             <span className="flex items-center gap-2 text-[11px] font-semibold text-muted">
               <span className={`size-1.5 rounded-full ${CLIENT_REQUEST_STATUS_DOT[status]}`} />

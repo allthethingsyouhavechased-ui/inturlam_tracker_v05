@@ -1127,6 +1127,18 @@ export function seedPointCatalogIfNeeded(db: DatabaseSync): void {
   });
 }
 
+// Mola uyarısı damgası. Eski kayıtlarda NULL kalır: geçmişe dönük uyarı
+// ÜRETİLMEZ, yalnız bundan sonraki uzun molalar bildirilir.
+function migrateWorkSessionBreakAlertIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='work_sessions'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(work_sessions)`).all() as { name: string }[];
+  if (columns.some((column) => column.name === "break_alert_at")) return;
+  db.exec(`ALTER TABLE work_sessions ADD COLUMN break_alert_at TEXT`);
+}
+
 // SIRA BURADA BAĞLAYICI. Kimlikler kayıtlı olduğu için ASLA değiştirilmemeli:
 // bir kimliği yeniden adlandırmak o göçü üretimde bir kez daha çalıştırır.
 // Yeni göç her zaman SONA eklenir.
@@ -1164,6 +1176,7 @@ const MIGRATIONS: readonly { id: string; run: (db: DatabaseSync) => void }[] = [
   { id: "028-brand-customer-approval-default", run: migrateBrandCustomerApprovalDefaultIfNeeded },
   { id: "029-client-request-flow", run: migrateClientRequestFlowIfNeeded },
   { id: "030-client-request-reviewers", run: migrateClientRequestReviewersIfNeeded },
+  { id: "031-work-session-break-alert", run: migrateWorkSessionBreakAlertIfNeeded },
 ];
 
 /** Yalnızca test/teşhis için: kayıtlı göç kimlikleri, uygulanma sırasıyla. */

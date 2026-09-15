@@ -8,7 +8,11 @@ import os from "node:os";
 import path from "node:path";
 import { after, beforeEach, describe, it } from "node:test";
 
+import fsSync from "node:fs";
+import pathSync from "node:path";
 import {
+  BREAK_ALERT_MINUTES,
+  breakLimitExceeded,
   formatMinutes,
   isStaleOpenSession,
   istanbulDayOf,
@@ -243,5 +247,75 @@ describe("ekip özeti", () => {
       summary.map((row) => [row.person_id, row.net_minutes]).sort(),
       [["ada", 0], ["mgr", 0]],
     );
+  });
+});
+
+describe("uzun mola uyarısı", () => {
+  it("eşik TOPLAM molaya bakıyor, tek tek molalara değil", () => {
+    assert.equal(BREAK_ALERT_MINUTES, 60);
+    assert.equal(breakLimitExceeded(60), false, "tam eşik henüz aşılmış sayılmaz");
+    assert.equal(breakLimitExceeded(61), true);
+    // Üç kez 25 dakika = 75 dakika: tek mola kısa olsa da toplam eşiği aşar.
+    assert.equal(breakLimitExceeded(25 * 3), true);
+  });
+
+  it("toplam mola eşiği aşılınca kişiye BİR KEZ bildirim yazılıyor", () => {
+    const db = getDb();
+    const sessionId = startWorkSession("ada");
+    // 70 dakikalık kapanmış mola: eşik aşıldı.
+    db.prepare(
+      `INSERT INTO work_breaks (id, session_id, started_at, ended_at)
+       VALUES ('b1', ?, '2026-09-15T06:00:00Z', '2026-09-15T07:10:00Z')`,
+    ).run(sessionId);
+
+    const view = getOpenWorkSession("ada", ms("2026-09-15T08:00:00Z"))!;
+    assert.equal(view.break_limit_exceeded, true);
+    const first = db.prepare("SELECT COUNT(*) c FROM notifications WHERE recipient_id = 'ada'").get() as { c: number };
+    assert.equal(first.c, 1, "eşik aşılınca bildirim yazılmalı");
+
+    // İkinci okuma yeni bildirim ÜRETMEZ (damga).
+    getOpenWorkSession("ada", ms("2026-09-15T09:00:00Z"));
+    const second = db.prepare("SELECT COUNT(*) c FROM notifications WHERE recipient_id = 'ada'").get() as { c: number };
+    assert.equal(second.c, 1, "damga ikinci bildirimi engellemeli");
+  });
+
+  it("eşik aşılmadıkça bildirim yazılmıyor", () => {
+    const db = getDb();
+    const sessionId = startWorkSession("ada");
+    db.prepare(
+      `INSERT INTO work_breaks (id, session_id, started_at, ended_at)
+       VALUES ('b1', ?, '2026-09-15T06:00:00Z', '2026-09-15T06:30:00Z')`,
+    ).run(sessionId);
+    const view = getOpenWorkSession("ada", ms("2026-09-15T08:00:00Z"))!;
+    assert.equal(view.break_limit_exceeded, false);
+    assert.equal((db.prepare("SELECT COUNT(*) c FROM notifications").get() as { c: number }).c, 0);
+  });
+
+  it("kapanmış günde uyarı üretilmiyor", () => {
+    const db = getDb();
+    const sessionId = startWorkSession("ada");
+    db.prepare(
+      `INSERT INTO work_breaks (id, session_id, started_at, ended_at)
+       VALUES ('b1', ?, '2026-09-15T06:00:00Z', '2026-09-15T07:10:00Z')`,
+    ).run(sessionId);
+    endWorkSession("ada");
+    assert.equal(getOpenWorkSession("ada"), undefined);
+    assert.equal((db.prepare("SELECT COUNT(*) c FROM notifications").get() as { c: number }).c, 0);
+  });
+});
+
+describe("mesai görünürlüğü", () => {
+  const page = fsSync.readFileSync(pathSync.join(process.cwd(), "app/mesai/page.tsx"), "utf8");
+
+  it("kişi YALNIZCA kendi kayıtlarını okuyor", () => {
+    assert.match(page, /getOpenWorkSession\(me\.id/);
+    assert.match(page, /listWorkSessions\(me\.id/);
+    // Başka bir kişinin id'siyle okuma yok.
+    assert.doesNotMatch(page, /listWorkSessions\((?!me\.id)/);
+  });
+
+  it("ekip özeti ve düzeltme kuyruğu yalnız yöneticide", () => {
+    assert.match(page, /me\.is_manager === 1 \? listTeamWorkSummary/);
+    assert.match(page, /me\.is_manager === 1 \? listWorkCorrections/);
   });
 });

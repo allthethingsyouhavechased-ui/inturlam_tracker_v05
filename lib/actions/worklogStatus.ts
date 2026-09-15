@@ -11,6 +11,8 @@ export interface WorkStatusSnapshot {
   breakMinutes: number;
   startedAt: string | null;
   stale: boolean;
+  /** Günün TOPLAM molası eşiği aştı mı (tek tek molalar değil). */
+  breakLimitExceeded: boolean;
 }
 
 /**
@@ -30,5 +32,6 @@ export async function loadWorkStatusAction(): Promise<WorkStatusSnapshot> {
     breakMinutes: open?.break_minutes ?? 0,
     startedAt: open?.started_at ?? null,
     stale: open?.stale ?? false,
+    breakLimitExceeded: open?.break_limit_exceeded ?? false,
   };
 }

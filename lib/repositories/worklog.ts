@@ -1,5 +1,9 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
+import { createNotification } from "@/lib/repositories/notifications";
 import {
+  BREAK_ALERT_MINUTES,
+  breakLimitExceeded,
+  formatMinutes,
   intervalMinutes,
   isStaleOpenSession,
   netMinutes,
@@ -15,6 +19,7 @@ export interface WorkSessionRow {
   started_at: string;
   ended_at: string | null;
   note: string | null;
+  break_alert_at: string | null;
 }
 
 export interface WorkBreakRow {
@@ -31,6 +36,8 @@ export interface WorkSessionView extends WorkSessionRow {
   /** Gece yarısını aşan mesai iki güne bölünmüş hâliyle. */
   day_slices: { day: string; minutes: number }[];
   stale: boolean;
+  /** Toplam mola eşiği aşıldı mı — üst çubuk bunu uyarı olarak gösteriyor. */
+  break_limit_exceeded: boolean;
 }
 
 function toInterval(row: { started_at: string; ended_at: string | null }): Interval {
@@ -59,8 +66,43 @@ function hydrate(sessions: WorkSessionRow[], now: number): WorkSessionView[] {
       break_minutes: intervals.reduce((sum, item) => sum + intervalMinutes(item, now), 0),
       day_slices: splitByIstanbulDay(toInterval(session), intervals, now),
       stale: session.ended_at === null && isStaleOpenSession(session.started_at, now),
+      break_limit_exceeded: breakLimitExceeded(
+        intervals.reduce((sum, item) => sum + intervalMinutes(item, now), 0),
+      ),
     };
   });
+}
+
+/**
+ * Toplam mola eşiği aşıldıysa kişiye BİR KEZ bildirim yazar ve damgalar.
+ * Damga olmadan her okuma yeni bir bildirim üretirdi. Bildirim hatası mesai
+ * okumasını bozmamalı — en iyi çaba (guestTaskCommunications ile aynı gerekçe).
+ */
+function notifyBreakLimitIfNeeded(session: WorkSessionView): void {
+  if (session.ended_at !== null) return;
+  if (!session.break_limit_exceeded || session.break_alert_at) return;
+  try {
+    const db = getDb();
+    const person = db
+      .prepare("SELECT name FROM people WHERE id = ?")
+      .get(session.person_id) as { name: string } | undefined;
+    const result = db
+      .prepare("UPDATE work_sessions SET break_alert_at = datetime('now') WHERE id = ? AND break_alert_at IS NULL")
+      .run(session.id);
+    // Eşzamanlı iki okuma varsa yalnızca damgayı YAZAN bildirim üretir.
+    if (Number(result.changes) !== 1) return;
+    createNotification({
+      recipientId: session.person_id,
+      recipientName: person?.name ?? null,
+      actorId: null,
+      actorName: "Mesai takibi",
+      taskId: null,
+      brandId: null,
+      summary: `Bugünkü toplam molan ${formatMinutes(session.break_minutes)} oldu ve ${BREAK_ALERT_MINUTES} dakikayı aştı.`,
+    });
+  } catch {
+    // Bildirim yazılamadıysa mesai kaydı etkilenmez.
+  }
 }
 
 export function getOpenWorkSession(personId: string, now = Date.now()): WorkSessionView | undefined {
@@ -69,7 +111,10 @@ export function getOpenWorkSession(personId: string, now = Date.now()): WorkSess
       .prepare("SELECT * FROM work_sessions WHERE person_id = ? AND ended_at IS NULL")
       .get(personId),
   );
-  return session ? hydrate([session], now)[0] : undefined;
+  if (!session) return undefined;
+  const view = hydrate([session], now)[0];
+  notifyBreakLimitIfNeeded(view);
+  return view;
 }
 
 export function listWorkSessions(personId: string, limit = 30, now = Date.now()): WorkSessionView[] {

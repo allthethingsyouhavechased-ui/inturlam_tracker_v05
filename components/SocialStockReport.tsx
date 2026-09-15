@@ -37,6 +37,12 @@ export default function SocialStockReport({
     return true;
   });
   const totals = stockTotals(filtered);
+  const brandOptions = useMemo(
+    () => [...rows].sort((left, right) =>
+      left.brand_name.localeCompare(right.brand_name, "tr", { sensitivity: "base" }),
+    ),
+    [rows],
+  );
 
   const exportQuery = new URLSearchParams();
   if (brandId) exportQuery.set("brand", brandId);
@@ -54,7 +60,9 @@ export default function SocialStockReport({
             className="min-h-9 rounded-[9px] border border-border-default bg-surface px-2 text-sm"
           >
             <option value="">Tümü</option>
-            {rows.map((row) => <option key={row.brand_id} value={row.brand_id}>{row.brand_name}</option>)}
+            {/* Açılır liste ALFABETİK: tablo `sort_order`'a göre geliyor ve o
+                sıra listede aranan markayı bulmayı zorlaştırıyordu. */}
+            {brandOptions.map((row) => <option key={row.brand_id} value={row.brand_id}>{row.brand_name}</option>)}
           </select>
         </label>
         <label className="grid gap-1.5 text-xs font-medium text-secondary">

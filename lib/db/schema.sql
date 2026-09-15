@@ -1001,6 +1001,9 @@ CREATE TABLE IF NOT EXISTS work_sessions (
   started_at TEXT NOT NULL,
   ended_at   TEXT,
   note       TEXT,
+  -- Toplam mola BREAK_ALERT_MINUTES'i aştığında bildirim BİR KEZ gider;
+  -- damga olmadan her okumada yeni bildirim üretilirdi.
+  break_alert_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
