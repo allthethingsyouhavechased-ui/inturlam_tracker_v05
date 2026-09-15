@@ -20,6 +20,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/", label: "Bugün", icon: "home" },
       { href: "/panom", label: "Panom", icon: "board" },
       { href: "/tasks", label: "Görevler", icon: "tasks" },
+      { href: "/mesai", label: "Mesai", icon: "clock" },
     ],
   },
   {

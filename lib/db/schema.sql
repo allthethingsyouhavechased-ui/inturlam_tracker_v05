@@ -986,3 +986,54 @@ CREATE TABLE IF NOT EXISTS brand_asset_count_changes (
 );
 CREATE INDEX IF NOT EXISTS idx_asset_count_changes_brand
   ON brand_asset_count_changes(brand_id, kind, id DESC);
+
+-- ————— Günlük mesai —————
+-- Kişisel günlük kayıt ve yönetici özeti. BORDRO, MAAŞ veya otomatik
+-- performans puanı DEĞİLDİR; mesai süresi puana çevrilmez.
+-- Zamanlar UTC saklanır, İstanbul saatiyle gösterilir (lib/worklog.ts).
+CREATE TABLE IF NOT EXISTS work_sessions (
+  id         TEXT PRIMARY KEY,
+  person_id  TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  started_at TEXT NOT NULL,
+  ended_at   TEXT,
+  note       TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+-- Kişi başına TEK açık çalışma: çift tıklama ya da ikinci sekme ikinci kayıt
+-- açamaz. Kısmi UNIQUE indeks, kapanmış kayıtları serbest bırakır.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_work_sessions_open
+  ON work_sessions(person_id) WHERE ended_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_work_sessions_person ON work_sessions(person_id, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS work_breaks (
+  id         TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES work_sessions(id) ON DELETE CASCADE,
+  started_at TEXT NOT NULL,
+  ended_at   TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+-- Oturum başına TEK açık mola (aynı gerekçe).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_work_breaks_open
+  ON work_breaks(session_id) WHERE ended_at IS NULL;
+
+-- Unutulmuş/yanlış kayıt için GEREKÇELİ düzeltme isteği. Saat otomatik
+-- UYDURULMAZ: kullanıcı önerir, yönetici onaylar ve ESKİ değerler korunur.
+CREATE TABLE IF NOT EXISTS work_session_corrections (
+  id                 TEXT PRIMARY KEY,
+  session_id         TEXT NOT NULL REFERENCES work_sessions(id) ON DELETE CASCADE,
+  requested_by       TEXT NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
+  reason             TEXT NOT NULL,
+  proposed_started_at TEXT,
+  proposed_ended_at   TEXT,
+  previous_started_at TEXT,
+  previous_ended_at   TEXT,
+  status             TEXT NOT NULL DEFAULT 'Beklemede'
+                     CHECK (status IN ('Beklemede','Onaylandi','Reddedildi')),
+  decided_by         TEXT REFERENCES people(id) ON DELETE SET NULL,
+  decision_note      TEXT,
+  decided_at         TEXT,
+  created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_work_corrections_status
+  ON work_session_corrections(status, created_at DESC);
