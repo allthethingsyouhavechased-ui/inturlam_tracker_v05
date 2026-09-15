@@ -51,6 +51,32 @@ tamamlandığı için v03 devraldı ve 3001 tamamen bırakıldı.
 - **Raporlama:** Dönem, kişi, departman ve marka detaylarıyla birlikte teslimlerin ilk-onay
   oranı ve revize nedenleri izlenir; CSV, Excel ve yazdırma çıktıları yönetici kapsamındadır.
 
+## v06 puanlama patch’i (15.09.2026)
+
+- **Ekip ve müşteri onayı ayrı aşamalar:** Beklemede → Devam Ediyor → İncelemede (Ekip)
+  → Onaylandı (Ekip) → İncelemede (Müşteri) → Onaylandı (Müşteri) → Yayınlandı. Revize
+  kararı işi ayrı “Revizede” sütununa taşır. Müşteri onayı bir KAYITTIR: teslim sürümü,
+  onayı veren müşteri, kanal ve kaydeden ekip üyesi tutulur; yeni teslim eski onayı
+  geçersiz kılar. Gereklilik marka varsayılanından göreve açılışta kopyalanır.
+- **Kazanılmış puan (`/reports/puan`):** Puan yalnızca bütünü teslim edilip ekipçe
+  onaylanmış PAKETLERDEN doğar; kısmi puan yoktur ve hak ediş, paketi tamamlayan son
+  ekip onayının İstanbul takvim ayına yazılır. Bütün hesap tam sayı iç birimle yapılır
+  (1 puan = 20 birim). Görev ağırlığı ve durum katsayısıyla hesaplanan operasyonel
+  ilerleme AYRI kalır ve ekranlarda “eski hesaplama” etiketiyle gösterilir.
+- **Aylık paket ve otomasyon (`/tasks/planning/aylik`):** Katalog kalemine bağlı,
+  önizlemede satır satır düzenlenebilen toplu görev üretimi; isteğe bağlı aylık plan ve
+  `npm run plans:run` ile sunucu turu. 7/14/21/ayın sonu yalnızca tarih önerisidir.
+- **Günlük mesai (`/mesai`):** Başla / mola / günü bitir akışı, sunucu zamanı esaslı net
+  süre ve gerekçeli düzeltme onayı. Bordro, maaş ve otomatik performans puanı kapsam dışı.
+- **Stok/hedef raporu (`/social/rapor`):** Marka ve tür bazında eksik/fazla, oran ve XLSX
+  dökümü. Toplam eksik marka eksiklerinin toplamıdır; başka markanın fazlasıyla kapanmaz.
+- **Talep akışı:** Müşteri portalı artık doğrudan görev açmaz, önce talep kaydı oluşur.
+  “Bilgi/Revize bekleniyor” durumu, zorunlu karar gerekçesi ve “tekrar değerlendirmeye
+  gönder” eklendi; değerlendirme yetkisi yönetilebilir tabloya taşındı.
+- **Açık kalan ürün kararları:** Hedef oranlama, otomatik geç teslim/kalite kesintisi,
+  yönetici puanına ikinci onay, çekimlerin sıralamaya etkisi ve AI’ye çekim/toplantı
+  erişimi BİLEREK uygulanmadı — katalog değerleri korunuyor.
+
 ## Teknoloji ve runtime verisi
 
 - Next.js 16 App Router, React 19, TypeScript ve Tailwind CSS 4
