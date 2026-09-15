@@ -40,6 +40,38 @@ export function listBrandPersonAssignments(brandId: string): BrandPersonAssignme
   );
 }
 
+/**
+ * TEK bir kişi–marka ilişkisini açar/kapatır. `replaceBrandPersonAssignments`
+ * bir markanın TÜM listesini değiştirdiği için ekip kartından çağrılamaz:
+ * oradan yapılan düzenleme aynı markanın diğer sorumlularını silerdi.
+ * Dönüş: satır gerçekten değiştiyse true.
+ */
+export function setPersonBrandAssignment(
+  personId: string,
+  brandId: string,
+  assigned: boolean,
+  assignedBy: string,
+): boolean {
+  const db = getDb();
+  if (!assigned) {
+    const result = db
+      .prepare("DELETE FROM person_brand_assignments WHERE person_id = ? AND brand_id = ?")
+      .run(personId, brandId);
+    return Number(result.changes) > 0;
+  }
+  // Pasif kişiye veya arşivli markaya ilişki yazılmaz; koşul SQL'de kalıyor ki
+  // eşzamanlı bir pasife alma işlemiyle yarışmasın.
+  const result = db
+    .prepare(
+      `INSERT OR IGNORE INTO person_brand_assignments (person_id, brand_id, assigned_by)
+       SELECT p.id, b.id, ?
+         FROM people p JOIN brands b ON b.id = ?
+        WHERE p.id = ? AND p.active = 1 AND b.archived = 0`,
+    )
+    .run(assignedBy, brandId, personId);
+  return Number(result.changes) > 0;
+}
+
 export function replaceBrandPersonAssignments(
   brandId: string,
   personIds: string[],

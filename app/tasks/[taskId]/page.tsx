@@ -119,12 +119,15 @@ export default async function TaskPage({
 
       <TaskDetailTabs
         details={
-          <ActionForm key="details" action={updateTaskDetailsAction} successMessage="Görev ayrıntıları kaydedildi." className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
+          <ActionForm key="details" action={updateTaskDetailsAction} warnOnUnsavedChanges successMessage="Görev ayrıntıları kaydedildi." className="space-y-4 rounded-xl border border-border-default bg-surface p-4 sm:p-5">
             <div className="border-b border-border-subtle pb-4">
               <h2 className="text-base font-semibold text-foreground">Görev ayrıntıları</h2>
               <p className="mt-1 text-xs text-muted">Brief, teslim tarihi ve ekip bildirimini tek yerde güncelle.</p>
             </div>
             <input type="hidden" name="taskId" value={task.id} />
+            {/* Eşzamanlı düzenlemede diğerinin kaydını sessizce ezmemek için: bu
+                damga değişmişse action kaydetmeyip güncel hâli gösteriyor. */}
+            <input type="hidden" name="expectedUpdatedAt" value={task.updated_at} />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_13rem]">
               <label className="grid gap-1.5 text-xs font-medium text-secondary">
                 Görev başlığı

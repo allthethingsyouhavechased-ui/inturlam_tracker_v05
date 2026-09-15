@@ -11,6 +11,7 @@ import {
   listPersonTaskPreviews,
   listPersonTaskWorkSummaries,
 } from "@/lib/repositories/activeWork";
+import { listAllPersonBrandAssignments } from "@/lib/repositories/brandAssignments";
 import { listBrandsAlphabetically } from "@/lib/repositories/brands";
 import { listActivePeople } from "@/lib/repositories/people";
 
@@ -23,6 +24,8 @@ export default async function TeamPage() {
   const selections = listActiveWorkSelections();
   const taskSummaries = listPersonTaskWorkSummaries(todayISO());
   const taskPreviews = listPersonTaskPreviews();
+  // Kalıcı marka sorumlulukları marka sayfasıyla AYNI tablodan okunuyor.
+  const assignments = listAllPersonBrandAssignments();
   const canManageAccounts = currentPerson.is_manager === 1;
 
   return (
@@ -58,6 +61,8 @@ export default async function TeamPage() {
         taskSummaries={taskSummaries}
         taskPreviews={taskPreviews}
         currentPersonId={currentPerson.id}
+        assignments={assignments}
+        canManageAssignments={canManageAccounts}
       />
     </div>
   );

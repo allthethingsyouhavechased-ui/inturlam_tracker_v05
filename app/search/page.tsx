@@ -1,5 +1,7 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import PersonAvatar from "@/components/PersonAvatar";
+import { departmentLabel } from "@/lib/departments";
 import { requirePageSession } from "@/lib/identity";
 import {
   CONTENT_TYPE_LABEL,
@@ -23,9 +25,15 @@ export default async function SearchPage({
   await requirePageSession();
   const { q } = await searchParams;
   const query = (q ?? "").trim();
-  const results = query ? searchAll(query) : { brands: [], content: [], tasks: [], ideas: [] };
-  const totalCount = results.brands.length + results.content.length + results.tasks.length + results.ideas.length;
+  const results = searchAll(query);
+  const totalCount =
+    results.brands.length +
+    results.content.length +
+    results.tasks.length +
+    results.people.length +
+    results.ideas.length;
   const clusterLabels = clusterLabelMap();
+  const taskSearchHref = `/tasks?q=${encodeURIComponent(query)}`;
 
   return (
     <div className="space-y-6">
@@ -46,7 +54,7 @@ export default async function SearchPage({
       {results.brands.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Markalar ({results.brands.length})
+            Markalar ({results.totals.brands})
           </h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {results.brands.map((brand) => (
@@ -68,10 +76,45 @@ export default async function SearchPage({
         </section>
       )}
 
+      {results.people.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Kişiler ({results.totals.people})
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {results.people.map((person) => (
+              <div
+                key={person.id}
+                className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border-default bg-surface px-4 py-3"
+              >
+                <PersonAvatar name={person.name} avatarPath={person.avatar_path} size="md" />
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/team/${person.id}`}
+                    className="block truncate font-medium hover:text-brand-600 dark:hover:text-brand-400"
+                  >
+                    {person.name}
+                  </Link>
+                  <p className="truncate text-xs text-muted">
+                    {person.title ?? departmentLabel(person.department)}
+                  </p>
+                </div>
+                <Link
+                  href={`/tasks?assignee=${encodeURIComponent(person.id)}`}
+                  className="shrink-0 rounded-full bg-surface-muted px-2 py-1 text-[11px] font-medium text-secondary hover:bg-surface-hover"
+                >
+                  {person.open_task_count} açık iş
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {results.content.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            İçerikler ({results.content.length})
+            İçerikler ({results.totals.content})
           </h2>
           <ul className="grid gap-2">
             {results.content.map((item) => (
@@ -91,8 +134,16 @@ export default async function SearchPage({
 
       {results.tasks.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Görevler ({results.tasks.length})
+          <h2 className="flex flex-wrap items-baseline gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <span>Görevler ({results.totals.tasks})</span>
+            {results.totals.tasks > results.tasks.length && (
+              <Link
+                href={taskSearchHref}
+                className="font-medium normal-case tracking-normal text-brand-700 underline decoration-dotted underline-offset-2 hover:decoration-solid dark:text-brand-300"
+              >
+                tüm {results.totals.tasks} sonucu gör
+              </Link>
+            )}
           </h2>
           <ul className="grid gap-2">
             {results.tasks.map((task) => (
@@ -125,7 +176,7 @@ export default async function SearchPage({
       {results.ideas.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Fikirler ({results.ideas.length})
+            Fikirler ({results.totals.ideas})
           </h2>
           <ul className="grid gap-2">
             {results.ideas.map((idea) => (

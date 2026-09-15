@@ -2,9 +2,30 @@
 // ve sabitleri. `"use client"` DEĞİL — hem Server Action'lar hem Client
 // Component'ler okuyor; bir "use client" dosyasından sunucuya import edilen
 // sabit gerçek değer değil bir istemci-referansı proxy'si olur.
-import type { ContentKind } from "@/lib/types";
+import type { ContentKind, ContentType } from "@/lib/types";
 
 export const CONTENT_KINDS: ContentKind[] = ["Post", "Story", "Reels"];
+
+// Görev türü (ContentType, teknik değeri "Reel") ile stok kategorisi
+// (ContentKind, "Reels") AÇIK eşleniyor. İkisi ayrı kavram olduğu için otomatik
+// bir isim eşleşmesine güvenmek yanlış: "Reel" ile "Reels" string olarak
+// tutmuyor, diğer türlerin (Foto, Kampanya…) stok karşılığı ise hiç yok.
+export const CONTENT_TYPE_TO_KIND: Readonly<Partial<Record<ContentType, ContentKind>>> = {
+  Reel: "Reels",
+  Post: "Post",
+  Story: "Story",
+};
+
+export function contentKindForType(type: ContentType): ContentKind | null {
+  return CONTENT_TYPE_TO_KIND[type] ?? null;
+}
+
+/** Stok kategorisinin görev türü karşılığı — yalnız üçünün karşılığı var. */
+export const KIND_TO_CONTENT_TYPE: Readonly<Record<ContentKind, ContentType>> = {
+  Post: "Post",
+  Story: "Story",
+  Reels: "Reel",
+};
 
 export const CONTENT_KIND_LABEL: Record<ContentKind, string> = {
   Post: "Post",

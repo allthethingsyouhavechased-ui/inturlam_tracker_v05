@@ -110,20 +110,57 @@ describe("ekip iş yükü özeti", () => {
     seedTask("t4", "Beklemede", "2026-08-19", { archived: true });
     seedTask("t5", "Beklemede", null, { origin: "guest" });
 
+    // open_count yalnız açık işleri sayar; all_count yayınlananı da katar,
+    // arşiv ikisinin de dışında kalır ve ayrı sayılır. Planlanmamış guest
+    // talebi (t5) hiçbirine girmez.
     assert.deepEqual(listPersonTaskWorkSummaries("2026-08-27"), [
-      { person_id: "p1", open_count: 2, overdue_count: 1 },
-      { person_id: "p2", open_count: 0, overdue_count: 0 },
+      { person_id: "p1", open_count: 2, overdue_count: 1, all_count: 3, archived_count: 1 },
+      { person_id: "p2", open_count: 0, overdue_count: 0, all_count: 0, archived_count: 0 },
     ]);
   });
 
-  it("kişi başına en yakın iki açık görevin dar önizlemesini döndürüyor", () => {
+  it("görevi olmayan kişi için sayaçları sıfırda tutuyor (LEFT JOIN boş satırı)", () => {
+    assert.deepEqual(listPersonTaskWorkSummaries("2026-08-27"), [
+      { person_id: "p1", open_count: 0, overdue_count: 0, all_count: 0, archived_count: 0 },
+      { person_id: "p2", open_count: 0, overdue_count: 0, all_count: 0, archived_count: 0 },
+    ]);
+  });
+
+  it("kişi başına açık görevleri teslim tarihine göre sıralı önizliyor", () => {
     seedTask("t3", "Beklemede", "2026-08-30");
     seedTask("t1", "Beklemede", "2026-08-20");
     seedTask("t2", "Beklemede", "2026-08-28");
 
     assert.deepEqual(
       listPersonTaskPreviews().map((task) => task.task_id),
-      ["t1", "t2"],
+      ["t1", "t2", "t3"],
     );
+  });
+
+  it("yayınlanan iş listeye giriyor ama açık işlerin önüne geçmiyor", () => {
+    seedTask("t1", "Beklemede", "2026-08-20");
+    seedTask("t2", "Yayinlandi", "2026-08-10");
+    seedTask("t3", "Beklemede", "2026-08-28");
+
+    // Sınır geniş: "Tümü" kapsamı yayınlananı da gösteriyor, en sonda.
+    const wide = listPersonTaskPreviews(8);
+    assert.deepEqual(wide.map((task) => task.task_id), ["t1", "t3", "t2"]);
+    assert.deepEqual(wide.map((task) => task.is_open), [1, 1, 0]);
+  });
+
+  it("dar sınırda yayınlanan iş açık işin yerini almıyor", () => {
+    seedTask("t1", "Beklemede", "2026-08-20");
+    seedTask("t2", "Yayinlandi", "2026-08-10");
+    seedTask("t3", "Beklemede", "2026-08-28");
+    seedTask("t4", "Beklemede", "2026-08-29");
+
+    // Sınır 2 iken iki AÇIK iş geliyor; yayınlanan iş slot çalmıyor.
+    const narrow = listPersonTaskPreviews(2);
+    assert.deepEqual(narrow.map((task) => task.task_id), ["t1", "t3"]);
+  });
+
+  it("arşivdeki işi önizlemeye hiç almıyor", () => {
+    seedTask("t1", "Beklemede", "2026-08-20", { archived: true });
+    assert.deepEqual(listPersonTaskPreviews(), []);
   });
 });

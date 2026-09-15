@@ -17,7 +17,9 @@ import type {
   PersonTaskPreview,
   PersonTaskWorkSummary,
 } from "@/lib/repositories/activeWork";
-import type { Brand, Person, PersonActiveWork } from "@/lib/types";
+import type { Brand, Person, PersonActiveWork, PersonBrandAssignment } from "@/lib/types";
+import { setPersonBrandAssignmentAction } from "@/lib/actions/people";
+import { TASK_STATUS_LABEL, TASK_STATUS_DOT } from "@/lib/constants";
 
 function formatUpdatedAt(value: string): string {
   const isoValue = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
@@ -63,6 +65,8 @@ export default function ActiveWorkBoard({
   taskSummaries,
   taskPreviews,
   currentPersonId,
+  assignments,
+  canManageAssignments = false,
 }: {
   people: Person[];
   brands: Brand[];
@@ -70,6 +74,10 @@ export default function ActiveWorkBoard({
   taskSummaries: PersonTaskWorkSummary[];
   taskPreviews: PersonTaskPreview[];
   currentPersonId: string | null;
+  /** Kalıcı marka sorumlulukları (person_brand_assignments) — "şu an çalışılan
+      marka" ile aynı şey DEĞİL; kartta ayrı satırda gösteriliyor. */
+  assignments: PersonBrandAssignment[];
+  canManageAssignments?: boolean;
 }) {
   const router = useRouter();
   const currentSelection = selections.find(
@@ -244,6 +252,8 @@ export default function ActiveWorkBoard({
             selectedBrandId={selectedBrandId}
             pending={pending}
             changeBrand={changeBrand}
+            assignments={assignments}
+            canManageAssignments={canManageAssignments}
           />
         ))}
         {visibleWorkstreams.length === 0 && (
@@ -267,6 +277,8 @@ function WorkstreamSection({
   selectedBrandId,
   pending,
   changeBrand,
+  assignments,
+  canManageAssignments,
 }: {
   workstream: DepartmentRow<Person>;
   tone: { dot: string; badge: string };
@@ -278,6 +290,8 @@ function WorkstreamSection({
   selectedBrandId: string;
   pending: boolean;
   changeBrand: (nextBrandId: string) => void;
+  assignments: PersonBrandAssignment[];
+  canManageAssignments: boolean;
 }) {
   return (
     <section
@@ -315,7 +329,7 @@ function WorkstreamSection({
             const selectedBrand = brands.find((brand) => brand.id === brandId);
             const taskSummary = taskSummaries.find(
               (summary) => summary.person_id === person.id,
-            ) ?? { person_id: person.id, open_count: 0, overdue_count: 0 };
+            ) ?? { person_id: person.id, open_count: 0, overdue_count: 0, all_count: 0, archived_count: 0 };
             const personTasks = taskPreviews.filter(
               (task) => task.person_id === person.id,
             );
@@ -415,38 +429,216 @@ function WorkstreamSection({
                     </p>
                   )}
 
-                <div className="mt-3 space-y-1">
-                  {personTasks.slice(0, 2).map((task) => (
-                    <Link
-                      key={task.task_id}
-                      href={`/tasks/${task.task_id}`}
-                      data-brand-accent
-                      style={brandAccentStyle(task.brand_accent_hue)}
-                      className="brand-stripe flex min-h-9 items-center gap-2 rounded-r-[8px] border border-border-subtle bg-surface px-2.5 text-[11px] text-secondary hover:border-border-strong hover:text-foreground"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{task.title}</span>
-                        <span className="block truncate text-[10px] text-muted">{task.brand_name}</span>
-                      </span>
-                    </Link>
-                  ))}
+                <PersonBrandResponsibilities
+                  personId={person.id}
+                  personName={person.name}
+                  brands={brands}
+                  assignments={assignments.filter((item) => item.person_id === person.id)}
+                  canManage={canManageAssignments}
+                />
 
-                  {taskSummary.open_count === 0 && (
-                    <div className="rounded-[9px] border border-dashed border-border-subtle px-3 py-2 text-center text-[11px] text-muted">
-                      Açık görev yok.
-                    </div>
-                  )}
-
-                  {taskSummary.open_count > personTasks.length && (
-                    <p className="rounded-lg bg-surface-muted px-3 py-1.5 text-center text-[11px] font-medium text-secondary">
-                      +{taskSummary.open_count - personTasks.length} görev daha
-                    </p>
-                  )}
-                </div>
+                <PersonTaskList
+                  personId={person.id}
+                  tasks={personTasks}
+                  summary={taskSummary}
+                />
               </article>
             );
           })}
       </div>
     </section>
+  );
+}
+
+// "Sorumlu olduğu markalar": KALICI atama (person_brand_assignments). Kartın
+// üstündeki "Şu anda çalıştığım marka" ile karıştırılmasın diye ayrı başlıkta
+// ve ayrı görsel dilde duruyor. Kaynak marka sayfasındakiyle AYNI tablo —
+// ikinci bir atama sistemi kurulmadı.
+function PersonBrandResponsibilities({
+  personId,
+  personName,
+  brands,
+  assignments,
+  canManage,
+}: {
+  personId: string;
+  personName: string;
+  brands: Brand[];
+  assignments: PersonBrandAssignment[];
+  canManage: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const assignedIds = new Set(assignments.map((item) => item.brand_id));
+
+  function toggle(brandId: string, assigned: boolean) {
+    setError(null);
+    startTransition(async () => {
+      // Yalnız BU kişinin ilişkisi yazılır; aynı markanın diğer sorumluları
+      // ve eski görevlerin sorumlusu değişmez.
+      const result = await setPersonBrandAssignmentAction(personId, brandId, assigned);
+      if (!result.ok) { setError(result.error); return; }
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="mt-3 rounded-[9px] border border-border-subtle bg-surface px-2.5 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+          Sorumlu olduğu markalar
+        </p>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setEditing((value) => !value)}
+            aria-expanded={editing}
+            className="touch-target text-[10px] font-semibold text-brand-600 hover:underline dark:text-brand-300"
+          >
+            {editing ? "Bitir" : "Düzenle"}
+          </button>
+        )}
+      </div>
+
+      {assignments.length === 0 ? (
+        <p className="mt-1 text-[11px] text-muted">Kalıcı marka sorumluluğu tanımlı değil.</p>
+      ) : (
+        <ul className="mt-1.5 flex flex-wrap gap-1">
+          {assignments.map((item) => (
+            <li key={item.brand_id}>
+              <Link
+                href={`/brands/${item.brand_id}`}
+                className="inline-flex rounded-md bg-surface-muted px-2 py-1 text-[10px] font-medium text-secondary hover:bg-surface-hover"
+              >
+                {item.brand_name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {editing && (
+        <fieldset disabled={pending} className="mt-2 max-h-40 overflow-y-auto rounded-[8px] border border-border-subtle p-1.5">
+          <legend className="sr-only">{personName} için marka sorumlulukları</legend>
+          {brands.map((brand) => (
+            <label key={brand.id} className="flex min-h-9 items-center gap-2 px-1 text-[11px] text-secondary">
+              <input
+                type="checkbox"
+                checked={assignedIds.has(brand.id)}
+                onChange={(event) => toggle(brand.id, event.target.checked)}
+                className="size-3.5"
+              />
+              <span className="truncate">{brand.name}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {error && <p role="alert" className="mt-1 text-[10px] text-danger">{error}</p>}
+    </div>
+  );
+}
+
+// Kartın görev listesi. Varsayılan "Açık"; "Tümü" yayınlananları da katar.
+// "+N görev daha" artık klavyeyle kullanılabilir gerçek bir düğme ve gösterdiği
+// sayı GERÇEKTEN gizli kalan kayıt sayısı — önizleme sınırı da hesaba katılıyor.
+function PersonTaskList({
+  personId,
+  tasks,
+  summary,
+}: {
+  personId: string;
+  tasks: PersonTaskPreview[];
+  summary: PersonTaskWorkSummary;
+}) {
+  const [scope, setScope] = useState<"open" | "all">("open");
+  const [expanded, setExpanded] = useState(false);
+
+  const scoped = scope === "open" ? tasks.filter((task) => task.is_open === 1) : tasks;
+  const total = scope === "open" ? summary.open_count : summary.all_count;
+  const visible = expanded ? scoped : scoped.slice(0, 2);
+  const hidden = Math.max(0, total - visible.length);
+  // Açık kapsamda liste "açık görevler" odağıyla, Tümü'de odaksız açılıyor —
+  // odak değeri lib/taskFocus.ts'teki kümeden, uydurma bir değer değil.
+  const listHref = scope === "open"
+    ? `/tasks?assignee=${encodeURIComponent(personId)}&focus=open`
+    : `/tasks?assignee=${encodeURIComponent(personId)}`;
+
+  return (
+    <div className="mt-3 space-y-1">
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <div role="group" aria-label="Görev kapsamı" className="flex gap-1">
+          {(["open", "all"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => { setScope(value); setExpanded(false); }}
+              aria-pressed={scope === value}
+              className={`touch-target rounded-md px-2 text-[10px] font-semibold ${
+                scope === value ? "bg-brand-600 text-white" : "text-secondary hover:bg-surface-hover"
+              }`}
+            >
+              {value === "open" ? `Açık · ${summary.open_count}` : `Tümü · ${summary.all_count}`}
+            </button>
+          ))}
+        </div>
+        {summary.archived_count > 0 && (
+          <Link
+            href="/tasks/archive"
+            className="text-[10px] font-medium text-muted hover:text-secondary hover:underline"
+          >
+            Arşiv · {summary.archived_count}
+          </Link>
+        )}
+      </div>
+
+      {visible.map((task) => (
+        <Link
+          key={task.task_id}
+          href={`/tasks/${task.task_id}`}
+          data-brand-accent
+          style={brandAccentStyle(task.brand_accent_hue)}
+          className="brand-stripe flex min-h-9 items-center gap-2 rounded-r-[8px] border border-border-subtle bg-surface px-2.5 text-[11px] text-secondary hover:border-border-strong hover:text-foreground"
+        >
+          <span className="min-w-0 flex-1 py-1">
+            <span className="block truncate font-medium">{task.title}</span>
+            <span className="flex items-center gap-1.5 truncate text-[10px] text-muted">
+              <span className={`size-1.5 shrink-0 rounded-full ${TASK_STATUS_DOT[task.status]}`} />
+              <span className="truncate">
+                {task.brand_name} · {TASK_STATUS_LABEL[task.status]}
+                {task.due_date ? ` · ${task.due_date}` : ""}
+              </span>
+            </span>
+          </span>
+        </Link>
+      ))}
+
+      {total === 0 && (
+        <div className="rounded-[9px] border border-dashed border-border-subtle px-3 py-2 text-center text-[11px] text-muted">
+          {scope === "open" ? "Açık görev yok." : "Görev yok."}
+        </div>
+      )}
+
+      {hidden > 0 && (
+        expanded || visible.length >= scoped.length ? (
+          <Link
+            href={listHref}
+            className="block rounded-lg bg-surface-muted px-3 py-1.5 text-center text-[11px] font-medium text-secondary hover:bg-surface-hover"
+          >
+            Kalan {hidden} görevi listede aç
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            aria-expanded={false}
+            className="ui-press block w-full rounded-lg bg-surface-muted px-3 py-1.5 text-center text-[11px] font-medium text-secondary hover:bg-surface-hover"
+          >
+            +{hidden} görev daha
+          </button>
+        )
+      )}
+    </div>
   );
 }

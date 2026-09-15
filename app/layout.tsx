@@ -3,6 +3,7 @@ import { Archivo, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import TaskOriginTracker from "@/components/TaskOriginTracker";
 import UndoBar from "@/components/UndoBar";
 import Sidebar from "@/components/Sidebar";
 import { SidebarProvider } from "@/components/SidebarContext";
@@ -65,6 +66,9 @@ export default async function RootLayout({
           <SidebarProvider>
             {/* Yalnızca ekip kabuğunda: guest portalında gidilecek bölüm yok. */}
             <KeyboardShortcuts />
+            {/* Görev bağlantısına tıklandığında kaynağı (Panom, ekip, marka…) yazar;
+                görev detayındaki "← dön" bağlantısı oraya döner. */}
+            <TaskOriginTracker />
             {/* Bekleyen yıkıcı işlemin geri alma çubuğu — hangi ekranda silme
                 yapıldığından bağımsız, uygulamada tek örnek. */}
             <UndoBar />

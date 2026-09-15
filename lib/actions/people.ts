@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { ExpectedActionError, runAction, type ActionResult } from "@/lib/actionResult";
 import { redirect } from "next/navigation";
 import { clearLoginBlockForGuest, clearLoginBlockForPerson } from "@/lib/auth/loginGate";
 import { hashPassword, validatePassword } from "@/lib/auth/password";
@@ -28,6 +29,7 @@ import { setGuestAccountActive, upsertGuestAccount } from "@/lib/repositories/ac
 import { getBrand } from "@/lib/repositories/brands";
 import {
   replaceBrandPersonAssignments,
+  setPersonBrandAssignment,
 } from "@/lib/repositories/brandAssignments";
 import { deleteUploadedFile, validateImageFiles, withSavedImageFiles } from "@/lib/uploads";
 import type { Person } from "@/lib/types";
@@ -180,6 +182,33 @@ export async function saveBrandPersonAssignmentsAction(formData: FormData) {
   revalidatePath("/panom/markalar");
   revalidatePath("/team/manage");
   revalidatePath(`/brands/${brandId}`);
+}
+
+/**
+ * Ekip kartından TEK bir kişi–marka ilişkisi ekler/kaldırır. Marka bazlı toplu
+ * kaydetme (`saveBrandPersonAssignmentsAction`) buradan çağrılmaz: o, markanın
+ * bütün sorumlu listesini değiştirdiği için başkalarının ilişkisini silerdi.
+ * Eski görevlerin sorumlusuna da dokunulmaz — bu kalıcı atama, görev ataması değil.
+ */
+export async function setPersonBrandAssignmentAction(
+  personId: string,
+  brandId: string,
+  assigned: boolean,
+): Promise<ActionResult> {
+  const actor = await requireSession();
+  return runAction("people.setBrandAssignment", async () => {
+    assertAccountManager(actor);
+    if (!personId.trim() || !brandId.trim()) {
+      throw new ExpectedActionError("Kişi ve marka seçilmeli.");
+    }
+    if (!getBrand(brandId)) throw new ExpectedActionError("Marka bulunamadı.", "notFound");
+    const changed = setPersonBrandAssignment(personId, brandId, assigned, actor.id);
+    if (!changed && assigned) {
+      throw new ExpectedActionError("İlişki yazılamadı: kişi pasif ya da marka arşivlenmiş olabilir.");
+    }
+    revalidatePath("/", "layout");
+    return { ok: true as const };
+  });
 }
 
 export async function saveGuestAccountAction(formData: FormData) {

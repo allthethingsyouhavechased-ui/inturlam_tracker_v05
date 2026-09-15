@@ -1,21 +1,34 @@
 import { getDb, plainList } from "@/lib/db/client";
 import { plannedTaskCondition } from "@/lib/taskPlanning";
-import type { PersonActiveWork } from "@/lib/types";
+import type { PersonActiveWork, TaskStatus } from "@/lib/types";
 
 export interface PersonTaskWorkSummary {
   person_id: string;
   open_count: number;
   overdue_count: number;
+  /** Açık + yayınlanmış (arşivlenmemiş) işlerin toplamı — kartın "Tümü" filtresi. */
+  all_count: number;
+  /** Arşivdeki işler; yalnızca isteğe bağlı olarak gösterilir. */
+  archived_count: number;
 }
 
 export interface PersonTaskPreview {
   person_id: string;
   task_id: string;
   title: string;
+  status: TaskStatus;
+  brand_id: string;
   brand_name: string;
   brand_accent_hue: number;
   due_date: string | null;
+  is_open: number;
 }
+
+/**
+ * Kartta açılır listede gösterilen en fazla satır sayısı. Bunun ÜSTÜ "tüm
+ * görevler" bağlantısına gider — kartta sonsuz liste büyütmüyoruz.
+ */
+export const PERSON_TASK_PREVIEW_LIMIT = 8;
 
 export function listActiveWorkSelections(): PersonActiveWork[] {
   return plainList<PersonActiveWork>(
@@ -42,16 +55,21 @@ export function listPersonTaskWorkSummaries(
   return plainList<PersonTaskWorkSummary>(
     getDb()
       .prepare(
+        // LEFT JOIN artık arşivi ve yayınlananları da getiriyor; her sayaç
+        // kendi koşulunu CASE ile uyguluyor. `t.id IS NOT NULL` şart:
+        // görevi olmayan kişi için üretilen boş satır aksi hâlde 1 sayılırdı
+        // (CLAUDE.md'deki "LEFT JOIN + tüm zamanlar" tuzağının aynısı).
         `SELECT p.id AS person_id,
-                COUNT(t.id) AS open_count,
+                COALESCE(SUM(CASE WHEN t.id IS NOT NULL AND t.archived_at IS NULL AND t.status != 'Yayinlandi' THEN 1 ELSE 0 END), 0) AS open_count,
                 COALESCE(SUM(
-                  CASE WHEN t.due_date IS NOT NULL AND t.due_date < ? THEN 1 ELSE 0 END
-                ), 0) AS overdue_count
+                  CASE WHEN t.id IS NOT NULL AND t.archived_at IS NULL AND t.status != 'Yayinlandi'
+                        AND t.due_date IS NOT NULL AND t.due_date < ? THEN 1 ELSE 0 END
+                ), 0) AS overdue_count,
+                COALESCE(SUM(CASE WHEN t.id IS NOT NULL AND t.archived_at IS NULL THEN 1 ELSE 0 END), 0) AS all_count,
+                COALESCE(SUM(CASE WHEN t.id IS NOT NULL AND t.archived_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS archived_count
            FROM people p
            LEFT JOIN tasks t
              ON t.assignee_id = p.id
-            AND t.status != 'Yayinlandi'
-            AND t.archived_at IS NULL
             AND ${plannedTaskCondition("t")}
           WHERE p.active = 1
           GROUP BY p.id
@@ -61,8 +79,15 @@ export function listPersonTaskWorkSummaries(
   );
 }
 
-/** En yakın iki açık işi kişi başına dar bir önizleme olarak döndürür. */
-export function listPersonTaskPreviews(): PersonTaskPreview[] {
+/**
+ * Kişi başına görev önizlemesi. Kart varsayılan olarak AÇIK işleri gösteriyor,
+ * "Tümü" filtresi yayınlananları da katıyor — bu yüzden sorgu iki sıralama
+ * taşıyor: tüm satırlar arasındaki sıra (`rank_all`) ve yalnız açık satırlar
+ * arasındaki sıra (`rank_open`). İkisinden biri sınırın altındaysa satır gelir,
+ * böylece "Tümü"ye geçmek açık işleri listeden düşürmez.
+ * Arşiv BİLEREK dışarıda: kart iş yükünü gösteriyor, arşiv ayrı ekranda.
+ */
+export function listPersonTaskPreviews(limit = PERSON_TASK_PREVIEW_LIMIT): PersonTaskPreview[] {
   return plainList<PersonTaskPreview>(
     getDb()
       .prepare(
@@ -70,11 +95,24 @@ export function listPersonTaskPreviews(): PersonTaskPreview[] {
            SELECT t.assignee_id AS person_id,
                   t.id AS task_id,
                   t.title,
+                  t.status,
+                  b.id AS brand_id,
                   b.name AS brand_name,
                   b.accent_hue AS brand_accent_hue,
                   t.due_date,
+                  CASE WHEN t.status != 'Yayinlandi' THEN 1 ELSE 0 END AS is_open,
                   ROW_NUMBER() OVER (
                     PARTITION BY t.assignee_id
+                    ORDER BY (t.status = 'Yayinlandi'), (t.due_date IS NULL), t.due_date,
+                      CASE t.priority
+                        WHEN 'Acil' THEN 0 WHEN 'Yuksek' THEN 1
+                        WHEN 'Normal' THEN 2 ELSE 3
+                      END,
+                      t.created_at,
+                      t.id
+                  ) AS rank_all,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY t.assignee_id, CASE WHEN t.status != 'Yayinlandi' THEN 1 ELSE 0 END
                     ORDER BY (t.due_date IS NULL), t.due_date,
                       CASE t.priority
                         WHEN 'Acil' THEN 0 WHEN 'Yuksek' THEN 1
@@ -82,21 +120,20 @@ export function listPersonTaskPreviews(): PersonTaskPreview[] {
                       END,
                       t.created_at,
                       t.id
-                  ) AS task_rank
+                  ) AS rank_in_scope
              FROM tasks t
              JOIN people p ON p.id = t.assignee_id AND p.active = 1
              JOIN content_items ci ON ci.id = t.content_item_id
              JOIN brands b ON b.id = ci.brand_id
-            WHERE t.status != 'Yayinlandi'
-              AND t.archived_at IS NULL
+            WHERE t.archived_at IS NULL
               AND ${plannedTaskCondition("t")}
          )
-         SELECT person_id, task_id, title, brand_name, brand_accent_hue, due_date
+         SELECT person_id, task_id, title, status, brand_id, brand_name, brand_accent_hue, due_date, is_open
            FROM ranked_tasks
-          WHERE task_rank <= 2
-          ORDER BY person_id, task_rank`,
+          WHERE rank_all <= ? OR (is_open = 1 AND rank_in_scope <= ?)
+          ORDER BY person_id, rank_all`,
       )
-      .all(),
+      .all(limit, limit),
   );
 }
 

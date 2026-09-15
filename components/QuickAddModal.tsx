@@ -28,6 +28,19 @@ const NO_OPTIONS: QuickAddOptions = { brands: [], contents: [], people: [] };
 
 const inputClass = controlClass();
 
+// Aynı adlı çalışmalar (her ay açılan "Aylık Reels" gibi) listede
+// BİRLEŞTİRİLMEZ; ay/tarih ekiyle ayırt edilir.
+function contentOptionLabel(content: { title: string; target_date: string | null; created_at: string }): string {
+  const stamp = content.target_date ?? content.created_at.slice(0, 10);
+  if (!/^\d{4}-\d{2}/.test(stamp)) return content.title;
+  const date = new Date(`${stamp.slice(0, 10)}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return content.title;
+  const suffix = content.target_date
+    ? new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "short", year: "numeric" }).format(date)
+    : new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric" }).format(date);
+  return `${content.title} · ${suffix}`;
+}
+
 // Modal `document.body`'ye portal ediliyor; `initialOpen` ile AÇIK başlayınca
 // (takvimden gelen "+" kısayolu) bu sunucu render'ında `document is not
 // defined` hatası veriyordu — React sayfayı sessizce istemci render'ına
@@ -334,12 +347,14 @@ export default function QuickAddModal({
                   }}
                   className={inputClass}
                 >
+                  {/* Varsayılan yol yeni çalışma açmak; var olana bağlamak
+                      gelişmiş seçenek olarak listenin altında kalıyor. */}
+                  <option value={NEW_CONTENT}>+ Yeni çalışma oluştur</option>
                   {contentsForBrand.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.title}
+                      {contentOptionLabel(c)}
                     </option>
                   ))}
-                  <option value={NEW_CONTENT}>+ Yeni çalışma oluştur</option>
                 </select>
               {fieldError("contentItemId")}
               </label>

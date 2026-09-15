@@ -31,8 +31,11 @@ export const CONTENT_TYPES: ContentType[] = [
   "Diger",
 ];
 
+// Ekip "Reels" diyor; teknik değer ("Reel") DEĞİŞMEDİ — veritabanındaki CHECK,
+// eski kayıtlar ve `type_override` aynı kaldı, yalnız arayüz etiketi güncellendi.
+// Sosyal plandaki ContentKind "Reels" ile eşleşmesi lib/socialPlan.ts'te açık.
 export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
-  Reel: "Reel",
+  Reel: "Reels",
   Post: "Post",
   Story: "Story",
   Foto: "Foto",

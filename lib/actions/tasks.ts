@@ -1,6 +1,12 @@
 "use server";
 
 import { TaskTransitionError } from "@/lib/taskLifecycle";
+import {
+  ExpectedActionError,
+  runAction,
+  runAfterCommit,
+  type ActionResult,
+} from "@/lib/actionResult";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordActivity } from "@/lib/activity";
@@ -250,52 +256,84 @@ export async function setPersonalTaskTargetAction(
   revalidatePath("/", "layout");
 }
 
-export async function updateTaskDetailsAction(formData: FormData) {
+// Doğrulama hataları FIRLATILMIYOR, dönüş değeriyle taşınıyor: üretimde
+// fırlatılan hata React #441'e indirgeniyor ve Türkçe mesaj kullanıcıya hiç
+// ulaşmıyordu (bkz. lib/actionResult.ts). Kaydetme, etkinlik/bildirim
+// aşamalarından da AYRI: bildirim patlarsa kayıt yine de duruyor.
+export async function updateTaskDetailsAction(formData: FormData): Promise<ActionResult> {
   const actor = await requireSession();
-  const id = String(formData.get("taskId") ?? "").trim();
-  const title = String(formData.get("title") ?? "").trim();
-  if (!id) throw new Error("Görev bulunamadı.");
-  if (!title) throw new Error("Görev başlığı zorunlu.");
-  if (title.length > 200) throw new Error("Görev başlığı en fazla 200 karakter olabilir.");
-  const notes = cleanText(formData.get("notes"));
-  if ((notes?.length ?? 0) > 5000) throw new Error("Görev notu en fazla 5000 karakter olabilir.");
-  const notifyMessage = cleanText(formData.get("notifyMessage"));
-  if ((notifyMessage?.length ?? 0) > 1000) throw new Error("Bildirim notu en fazla 1000 karakter olabilir.");
-  const task = getTask(id);
-  if (!task) throw new Error("Görev bulunamadı.");
-  const contentType = String(formData.get("contentType") ?? "") as ContentType;
-  if (!CONTENT_TYPES.includes(contentType)) throw new Error("Geçerli bir görev türü seçin.");
+  return runAction("task.updateDetails", async () => {
+    const id = String(formData.get("taskId") ?? "").trim();
+    const title = String(formData.get("title") ?? "").trim();
+    if (!id) throw new ExpectedActionError("Görev bulunamadı.", "notFound");
+    if (!title) throw new ExpectedActionError("Görev başlığı zorunlu.");
+    if (title.length > 200) throw new ExpectedActionError("Görev başlığı en fazla 200 karakter olabilir.");
+    const notes = cleanText(formData.get("notes"));
+    if ((notes?.length ?? 0) > 5000) throw new ExpectedActionError("Görev notu en fazla 5000 karakter olabilir.");
+    const notifyMessage = cleanText(formData.get("notifyMessage"));
+    if ((notifyMessage?.length ?? 0) > 1000) throw new ExpectedActionError("Bildirim notu en fazla 1000 karakter olabilir.");
+    const task = getTask(id);
+    if (!task) throw new ExpectedActionError("Görev bulunamadı.", "notFound");
+    const contentType = String(formData.get("contentType") ?? "") as ContentType;
+    if (!CONTENT_TYPES.includes(contentType)) throw new ExpectedActionError("Geçerli bir görev türü seçin.");
 
-  const images = extractImageFiles(formData);
-  validateImageFiles(images);
+    const images = extractImageFiles(formData);
+    try { validateImageFiles(images); }
+    catch (error) { throw new ExpectedActionError(error instanceof Error ? error.message : "Görseller kabul edilmedi."); }
 
-  const dueDate = requiredDate(formData.get("dueDate"));
-  await withSavedImageFiles(images, "tasks", (saved) =>
-    updateTaskDetails({ id, title, contentType, dueDate, notes }, saved),
-  );
+    let dueDate: string;
+    try { dueDate = requiredDate(formData.get("dueDate")); }
+    catch (error) { throw new ExpectedActionError(error instanceof Error ? error.message : "Teslim tarihi geçersiz."); }
 
-  if (task.origin === "guest" && !task.due_date) {
-    await announceGuestTaskPlanned({ actor, taskId: id, taskTitle: title, brandId: task.brand_id });
-  } else {
-    await recordActivity({
-      action: "task.details",
-      entityType: "task",
-      entityId: id,
-      brandId: task.brand_id,
-      summary: `“${title}” görev detaylarını güncelledi`,
+    // Eşzamanlı düzenleme: form açıldığı andaki damga taşınır. Damga değiştiyse
+    // araya başka birinin kaydı girmiştir; sessizce ezmek yerine kullanıcıya
+    // güncel değerleri gösterip kararı ona bırakıyoruz.
+    const expectedUpdatedAt = cleanText(formData.get("expectedUpdatedAt"));
+    if (expectedUpdatedAt && task.updated_at !== expectedUpdatedAt) {
+      return {
+        ok: false as const,
+        code: "conflict" as const,
+        error: "Bu görevi sen formu açtıktan sonra başka biri güncelledi. Aşağıdaki güncel hâli gör, sonra kendi değişikliğini tekrar uygula.",
+        current: {
+          title: task.title,
+          contentType: task.content_type,
+          dueDate: task.due_date,
+          notes: task.notes,
+          updatedAt: task.updated_at,
+        },
+      };
+    }
+
+    await withSavedImageFiles(images, "tasks", (saved) =>
+      updateTaskDetails({ id, title, contentType, dueDate, notes }, saved),
+    );
+
+    // Buradan sonrası yan etki: patlarsa kayıt geri alınmaz, yalnızca loglanır.
+    await runAfterCommit("task.updateDetails", async () => {
+      if (task.origin === "guest" && !task.due_date) {
+        await announceGuestTaskPlanned({ actor, taskId: id, taskTitle: title, brandId: task.brand_id });
+      } else {
+        await recordActivity({
+          action: "task.details",
+          entityType: "task",
+          entityId: id,
+          brandId: task.brand_id,
+          summary: `“${title}” görev detaylarını güncelledi`,
+        });
+      }
+      notifyTaskUpdate({
+        actor,
+        taskId: id,
+        taskTitle: title,
+        brandId: task.brand_id,
+        assigneeId: task.assignee_id,
+        message: notifyMessage,
+      });
     });
-  }
 
-  notifyTaskUpdate({
-    actor,
-    taskId: id,
-    taskTitle: title,
-    brandId: task.brand_id,
-    assigneeId: task.assignee_id,
-    message: notifyMessage,
+    revalidatePath("/", "layout");
+    return { ok: true as const, message: "Görev ayrıntıları kaydedildi." };
   });
-
-  revalidatePath("/", "layout");
 }
 
 export async function setTaskDifficultyAction(

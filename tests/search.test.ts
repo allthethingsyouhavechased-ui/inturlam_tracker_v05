@@ -31,6 +31,9 @@ before(() => {
       (id, scope_type, brand_id, brand_name_snapshot, category, title, body, tags_text, created_by_name)
      VALUES (?,?,?,?,?,?,?,?,?)`,
   ).run("i1", "brand", "b1", "Şantiye Market", "Icerik", "Sessiz ürün videosu", "Ürün seslerinden ritim", "ilham, kurgu", "Ayşe");
+  db.prepare("INSERT INTO people (id, name, department) VALUES (?,?,?)").run("ekin", "Ekin Yıldız", "video");
+  db.prepare("INSERT INTO people (id, name, department) VALUES (?,?,?)").run("ekinsu", "Ekinsu Demir", "design");
+  db.prepare("UPDATE tasks SET assignee_id = 'ekin' WHERE id = 't1'").run();
 });
 
 after(() => {
@@ -68,8 +71,28 @@ describe("searchAll — Türkçe büyük/küçük harf", () => {
     assert.equal(searchAll("şantiye").ideas.length, 1);
   });
 
+  it("sorumlu adı görevleri buluyor ve kişi sonucu üretiyor", () => {
+    // Önceki sorgu assignee_name'i SEÇİYOR ama eşleşmeye katmıyordu: "Ekin"
+    // araması Ekin'in işlerini hiç bulmuyordu.
+    const result = searchAll("ekin");
+    assert.equal(result.tasks.length, 1);
+    assert.equal(result.tasks[0].id, "t1");
+    // Benzer adlar ayrı satır kalır, tek kişiye katlanmaz.
+    assert.deepEqual(result.people.map((person) => person.id), ["ekin", "ekinsu"]);
+    assert.equal(result.people[0].open_task_count, 1);
+    assert.equal(result.people[1].open_task_count, 0);
+  });
+
+  it("önizleme sınırından bağımsız gerçek eşleşme sayısını taşıyor", () => {
+    const result = searchAll("çekim");
+    assert.equal(result.totals.tasks, result.tasks.length);
+  });
+
   it("boş sorguda hiçbir şey döndürmüyor", () => {
     const r = searchAll("   ");
-    assert.deepEqual(r, { brands: [], content: [], tasks: [], ideas: [] });
+    assert.deepEqual(r, {
+      brands: [], content: [], tasks: [], people: [], ideas: [],
+      totals: { brands: 0, content: 0, tasks: 0, people: 0, ideas: 0 },
+    });
   });
 });

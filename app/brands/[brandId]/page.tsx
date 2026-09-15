@@ -244,7 +244,7 @@ export default async function BrandPage({
       <QuickAddModal
         options={{
           brands: [{ id: brand.id, name: brand.name }],
-          contents: items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title, type: item.type })),
+          contents: items.map((item) => ({ id: item.id, brand_id: brand.id, title: item.title, type: item.type, target_date: item.target_date, created_at: item.created_at })),
           people,
         }}
         defaultAssigneeId={me.id}

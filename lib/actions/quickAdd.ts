@@ -16,6 +16,9 @@ export interface QuickAddContentOption {
   brand_id: string;
   title: string;
   type: ContentType;
+  /** Aynı adlı çalışmaları ayırt etmek için; hedef tarih yoksa açılış tarihi. */
+  target_date: string | null;
+  created_at: string;
 }
 
 export interface QuickAddOptions {
@@ -37,6 +40,8 @@ export async function loadQuickAddOptionsAction(): Promise<QuickAddOptions> {
       brand_id: content.brand_id,
       title: content.title,
       type: content.type,
+      target_date: content.target_date,
+      created_at: content.created_at,
     })),
     people: listActivePeople(),
   };

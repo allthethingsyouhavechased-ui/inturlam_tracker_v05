@@ -58,6 +58,10 @@ export interface ContentSummary {
   title: string;
   type: ContentType;
   status: ContentStatus;
+  // Aynı adlı iki çalışma (ör. her ay açılan "Aylık Reels") listede
+  // ayırt edilebilsin diye taşınıyor — kayıtlar BİRLEŞTİRİLMİYOR.
+  target_date: string | null;
+  created_at: string;
 }
 
 // Sidebar için: tüm markaların içeriklerini TEK sorguda getirir (19 marka için
@@ -66,7 +70,7 @@ export function listAllContentSummaries(): ContentSummary[] {
   return plainList<ContentSummary>(
     getDb()
       .prepare(
-        `SELECT ci.id, ci.brand_id, ci.title, ci.type, ci.status FROM content_items ci
+        `SELECT ci.id, ci.brand_id, ci.title, ci.type, ci.status, ci.target_date, ci.created_at FROM content_items ci
           WHERE ci.archived = 0 AND ${visibleContentCondition("ci")}
           ORDER BY ci.created_at DESC`,
       )
