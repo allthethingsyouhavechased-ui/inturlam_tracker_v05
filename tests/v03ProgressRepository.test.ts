@@ -35,8 +35,11 @@ describe("v03 ilerleme aylık kapsamı", () => {
     assert.equal(getPortfolioMonthlyProgress("2026-08").percent, 70);
     const portfolio = listBrandMonthlyProgress("2026-08");
     assert.deepEqual(portfolio.map((row) => [row.brand_id, row.progress.percent]), [["b1", 70], ["b2", null]]);
+    // Sayaç TASK_STATUSES'tan türetiliyor: yeni bir durum eklendiğinde anahtarı
+    // eksik kalmıyor (eksik anahtar `counts[status] += 1` ile NaN üretirdi).
     assert.deepEqual(listMonthlyTaskStatusCounts("2026-08"), {
-      Beklemede: 0, DevamEdiyor: 1, Incelemede: 0, Onaylandi: 0, Yayinlandi: 1,
+      Beklemede: 0, DevamEdiyor: 1, Incelemede: 0, Revizede: 0, Onaylandi: 0,
+      MusteriIncelemede: 0, MusteriOnayladi: 0, Yayinlandi: 1,
     });
   });
 });

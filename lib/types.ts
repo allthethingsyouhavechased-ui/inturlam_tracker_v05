@@ -20,12 +20,43 @@ export type ContentType =
   | "KurumsalKimlik"
   | "Diger";
 export type ContentStatus = "Planlandi" | "Uretimde" | "Tamamlandi" | "IptalEdildi";
+// Ekip aşamalarının TEKNİK değerleri korundu ("Incelemede"/"Onaylandi" =
+// EKİP incelemesi/onayı); müşteri aşamaları ve revize ayrı değerler olarak
+// eklendi. Eski kayıtlar olduğu gibi geçerli kalıyor.
 export type TaskStatus =
   | "Beklemede"
   | "DevamEdiyor"
   | "Incelemede"
   | "Onaylandi"
+  | "Revizede"
+  | "MusteriIncelemede"
+  | "MusteriOnayladi"
   | "Yayinlandi";
+
+/** Müşteri onayının nasıl alındığı — kayıtta kanal ve kişi tutulur. */
+export type CustomerApprovalChannel =
+  | "Toplanti"
+  | "Telefon"
+  | "WhatsApp"
+  | "Eposta"
+  | "Portal"
+  | "Diger";
+
+export interface TaskCustomerApproval {
+  id: string;
+  task_id: string;
+  delivery_id: string | null;
+  delivery_version: number | null;
+  customer_name: string;
+  channel: CustomerApprovalChannel;
+  reference_url: string | null;
+  note: string | null;
+  recorded_by_id: string | null;
+  recorded_by_name: string;
+  approved_at: string;
+  invalidated_at: string | null;
+  created_at: string;
+}
 
 export type TaskPriority = "Dusuk" | "Normal" | "Yuksek" | "Acil";
 export type TaskDifficulty = "Kolay" | "Orta" | "Zor" | "Ozel";
@@ -80,9 +111,11 @@ export interface IdeaWithContext extends Idea {
   brand_name: string | null;
 }
 
+// 'Beklemede' TEKNİK değeri korunuyor; arayüzde "Yeni" yazıyor.
 export type ClientRequestStatus =
   | "Beklemede"
   | "Incelemede"
+  | "BilgiBekleniyor"
   | "Onaylandi"
   | "Reddedildi";
 
@@ -100,11 +133,20 @@ export interface ClientRequest {
   priority: TaskPriority;
   assignee_id: string | null;
   due_date: string | null;
-  created_by_id: string;
+  // Ekip talebinde kişi id'si; müşteri portalından gelen talepte null
+  // (orada sahip guest HESABIDIR — created_by_account_id).
+  created_by_id: string | null;
+  created_by_account_id: string | null;
+  origin: "team" | "guest";
   reviewed_by_id: string | null;
   converted_task_id: string | null;
   reviewed_at: string | null;
   archived_at: string | null;
+  // Müşterinin istediği tarih; ekibin verdiği iç teslim tarihi `due_date`.
+  requested_date: string | null;
+  decision_reason: string | null;
+  resubmitted_at: string | null;
+  resubmit_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -149,6 +191,10 @@ export interface Brand {
   stats_updated_at: string | null;
   monthly_shoot_allowance: number | null;
   annual_shoot_allowance: number | null;
+  // Bu markada açılan YENİ görevlerin müşteri onayı varsayılanı. Görev
+  // açılırken tasks.customer_approval_required'a kopyalanır; sonradan
+  // değişmesi açılmış görevleri etkilemez.
+  customer_approval_default: number;
   // NOT: `brands` tablosunda ayrıca `median_reel_views`, `cover_test_verdict`,
   // `cover_test_note` ve `first_action` sütunları da var. Eski marka denetimi
   // verisi; arayüzden kaldırıldılar ve artık okunmuyorlar, bu yüzden bilerek
@@ -259,6 +305,13 @@ export interface Task {
   // "Yayınlandı" görevler ARCHIVE_AFTER_DAYS gün sonra damgalanır — bkz.
   // lib/taskArchive.ts. Kayıt silinmez, arşivden çıkarmak tek tıktır.
   archived_at: string | null;
+  // Müşteri onayı GEREKLİ Mİ: marka varsayılanından görev açılırken kopyalanır,
+  // markanın ayarı sonradan değişse de bu görev etkilenmez. İstisna gerekçesi
+  // ve kimin verdiği ayrı alanlarda.
+  customer_approval_required: number;
+  customer_approval_exception_note: string | null;
+  customer_approval_exception_by: string | null;
+  customer_approval_exception_at: string | null;
   created_at: string;
   updated_at: string;
 }

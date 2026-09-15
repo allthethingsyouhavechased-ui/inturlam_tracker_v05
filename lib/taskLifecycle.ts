@@ -52,6 +52,23 @@ export function createTaskSuccessor(taskId: string): string {
   } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 
+/** Son teslim sürümü için geçerli (iptal edilmemiş) müşteri onayı var mı. */
+export function hasValidCustomerApproval(db: DatabaseSync, taskId: string): boolean {
+  const latest = db
+    .prepare("SELECT id FROM task_deliveries WHERE task_id = ? ORDER BY version_number DESC LIMIT 1")
+    .get(taskId) as { id: string } | undefined;
+  // Hiç teslim yoksa onay da bir sürüme bağlanamaz; sürümsüz onay kabul edilir.
+  const row = latest
+    ? db.prepare(
+        `SELECT 1 FROM task_customer_approvals
+          WHERE task_id = ? AND invalidated_at IS NULL AND delivery_id = ?`,
+      ).get(taskId, latest.id)
+    : db.prepare(
+        "SELECT 1 FROM task_customer_approvals WHERE task_id = ? AND invalidated_at IS NULL",
+      ).get(taskId);
+  return Boolean(row);
+}
+
 export function assertTaskTransition(db: DatabaseSync, task: Pick<Task, "id" | "origin" | "due_date">, status: TaskStatus, actorId: string | null, validatedDeliveryDecision = false): void {
   if (status !== "Beklemede" && task.origin === "guest" && !task.due_date) {
     throw new TaskTransitionError("Guest görevi ilerletilmeden önce iç teslim tarihi atanmalı.");
@@ -60,7 +77,17 @@ export function assertTaskTransition(db: DatabaseSync, task: Pick<Task, "id" | "
   if (pending && status !== "Incelemede") {
     throw new TaskTransitionError("Bekleyen teslim için önce teslim kartından karar verilmeli.");
   }
-  if (status !== "Onaylandi" && status !== "Yayinlandi") return;
+  // "Revizede" yalnızca gerçekten açık bir revize turu varken geçerli bir
+  // durumdur; aksi hâlde pano sürüklemesi işi anlamsız bir kovaya taşırdı.
+  if (status === "Revizede") {
+    if (!db.prepare("SELECT 1 FROM task_revision_rounds WHERE task_id = ? AND completed_at IS NULL").get(task.id)) {
+      throw new TaskTransitionError("Revizede durumu için açık bir revize turu gerekli; teslim kartından revize isteyin.");
+    }
+    return;
+  }
+  const needsTeamApproval = status === "Onaylandi" || status === "MusteriIncelemede"
+    || status === "MusteriOnayladi" || status === "Yayinlandi";
+  if (!needsTeamApproval) return;
   if (db.prepare("SELECT 1 FROM task_revision_rounds WHERE task_id = ? AND completed_at IS NULL").get(task.id)) {
     throw new TaskTransitionError("Görev onaylanmadan veya yayınlanmadan önce aktif revize turu tamamlanmalı.");
   }
@@ -69,7 +96,25 @@ export function assertTaskTransition(db: DatabaseSync, task: Pick<Task, "id" | "
     throw new TaskTransitionError("Görevin son teslim sürümü onaylanmadan görev onaylanamaz veya yayınlanamaz.");
   }
   if (status === "Onaylandi" && !validatedDeliveryDecision && !db.prepare("SELECT 1 FROM people WHERE id = ? AND active = 1 AND is_manager = 1").get(actorId)) {
-    throw new TaskTransitionError("Görev onayını yalnızca yöneticiler verebilir.");
+    throw new TaskTransitionError("Ekip teslim onayını yalnızca yöneticiler verebilir.");
+  }
+
+  const flags = db
+    .prepare("SELECT customer_approval_required FROM tasks WHERE id = ?")
+    .get(task.id) as { customer_approval_required: number } | undefined;
+  const customerRequired = flags?.customer_approval_required === 1;
+
+  // Müşteri aşamaları yalnızca o görev için müşteri onayı gerekiyorsa anlamlı.
+  if ((status === "MusteriIncelemede" || status === "MusteriOnayladi") && !customerRequired) {
+    throw new TaskTransitionError("Bu görevde müşteri onayı gerekmiyor; ekip onayından sonra doğrudan yayınlanabilir.");
+  }
+  // "Onaylandı (Müşteri)" bir KAYDA dayanır: onayı kim verdi, hangi kanaldan,
+  // hangi teslim sürümü için. Kayıt yoksa durum elle işaretlenemez.
+  if (status === "MusteriOnayladi" && !hasValidCustomerApproval(db, task.id)) {
+    throw new TaskTransitionError("Önce müşteri onayını kaydedin: onayı veren kişi, kanal ve teslim sürümü gerekli.");
+  }
+  if (status === "Yayinlandi" && customerRequired && !hasValidCustomerApproval(db, task.id)) {
+    throw new TaskTransitionError("Bu görev müşteri onayı olmadan yayınlanamaz.");
   }
 }
 

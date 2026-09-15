@@ -26,6 +26,7 @@ const {
   updateClientRequestReview,
 } = await import("@/lib/repositories/clientRequests");
 const { canReviewClientRequests } = await import("@/lib/requestAccess");
+const { setRequestReviewer } = await import("@/lib/repositories/requestReviewers");
 const { listAllTasks } = await import("@/lib/repositories/tasks");
 
 function resetDb(): void {
@@ -53,6 +54,11 @@ function seedBase(): void {
   insertPerson.run("cansu", "Cansu", "social", 0);
   insertPerson.run("defne", "Defne", "social", 0);
   insertPerson.run("melis", "Melis", "social", 0);
+  // Yönetici olmayan ama talep değerlendirme yetkisi verilmiş kişiler.
+  // (Canlıda bu satırları migration 030 eski sabit listeden taşıyor.)
+  const grantReviewer = db.prepare("INSERT INTO client_request_reviewers (person_id) VALUES (?)");
+  grantReviewer.run("cansu");
+  grantReviewer.run("defne");
 }
 
 function createFixture(createdById = "cansu"): string {
@@ -78,10 +84,13 @@ beforeEach(() => {
 after(resetDb);
 
 describe("müşteri talebi erişimi", () => {
-  it("yalnızca tanımlı beş kişiye talep değerlendirme erişimi verir", () => {
-    assert.equal(canReviewClientRequests({ id: "yunus" }), true);
-    assert.equal(canReviewClientRequests({ id: "sila" }), true);
-    assert.equal(canReviewClientRequests({ id: "erhan" }), true);
+  // Yetki artık sabit liste değil, yönetilebilir tablo (client_request_reviewers).
+  // Sıla, Defne ve Cansu'nun mevcut hakları migration 030 ile taşındı;
+  // yöneticiler tabloda olmasa da değerlendirebiliyor.
+  it("yöneticilere ve yetki verilmiş kişilere erişim veriyor", () => {
+    assert.equal(canReviewClientRequests({ id: "yunus", is_manager: 1 }), true);
+    assert.equal(canReviewClientRequests({ id: "sila", is_manager: 1 }), true);
+    assert.equal(canReviewClientRequests({ id: "erhan", is_manager: 1 }), true);
     assert.equal(canReviewClientRequests({ id: "cansu", department: "social" }), true);
     assert.equal(canReviewClientRequests({ id: "defne", department: "social" }), true);
     assert.equal(canReviewClientRequests({ id: "ozgur", department: "management" }), false);
@@ -90,7 +99,17 @@ describe("müşteri talebi erişimi", () => {
     assert.equal(canReviewClientRequests(null), false);
   });
 
-  it("yetkili beşliye bütün kuyruğu döndürür", () => {
+  it("yönetici yetkiyi verip geri alabiliyor, başkasınınki etkilenmiyor", () => {
+    assert.equal(canReviewClientRequests({ id: "melis" }), false);
+    assert.equal(setRequestReviewer("melis", true, "yunus"), true);
+    assert.equal(canReviewClientRequests({ id: "melis" }), true);
+    assert.equal(canReviewClientRequests({ id: "cansu" }), true, "diğerinin hakkı korunmalı");
+    assert.equal(setRequestReviewer("melis", false, "yunus"), true);
+    assert.equal(canReviewClientRequests({ id: "melis" }), false);
+    assert.equal(canReviewClientRequests({ id: "cansu" }), true);
+  });
+
+  it("yetkili listeye bütün kuyruğu döndürür", () => {
     createFixture("cansu");
     createFixture("ekin");
     const socialCanReview = canReviewClientRequests({ id: "cansu", department: "social" });

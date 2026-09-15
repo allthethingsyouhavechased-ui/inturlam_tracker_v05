@@ -175,7 +175,9 @@ describe("brands migration zinciri", () => {
     // bilinçli olarak doğrulanmış olur.
     assert.deepEqual(
       { ...(stored as Record<string, unknown>) },
-      { ...brand, accent_hue: brandAccentHueForIndex(1), stats_updated_at: null, monthly_shoot_allowance: null, annual_shoot_allowance: null },
+      // `customer_approval_default` göç 028 ile geldi; MEVCUT markalarda 0
+      // kalıyor — sessizce bütün portföye müşteri onayı zorunluluğu gelmesin.
+      { ...brand, accent_hue: brandAccentHueForIndex(1), stats_updated_at: null, monthly_shoot_allowance: null, annual_shoot_allowance: null, customer_approval_default: 0 },
     );
 
     assert.equal(

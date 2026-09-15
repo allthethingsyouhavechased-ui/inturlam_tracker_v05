@@ -1,4 +1,5 @@
 import { getDb, plainList, plainOne } from "@/lib/db/client";
+import { TASK_STATUSES } from "@/lib/constants";
 import { calculateMonthlyProgress, TASK_STATUS_COEFFICIENT } from "@/lib/progress";
 import type { MonthlyProgress, TaskStatus } from "@/lib/types";
 import { assertMonthPeriod } from "@/lib/periodValidation";
@@ -88,13 +89,12 @@ export function getPortfolioMonthlyProgress(month: string): MonthlyProgress {
 }
 
 export function listMonthlyTaskStatusCounts(month: string): Record<TaskStatus, number> {
-  const counts: Record<TaskStatus, number> = {
-    Beklemede: 0,
-    DevamEdiyor: 0,
-    Incelemede: 0,
-    Onaylandi: 0,
-    Yayinlandi: 0,
-  };
+  // Sabit liste yerine TASK_STATUSES'tan türetiliyor: yeni bir durum eklenince
+  // burada sessizce eksik kalmasın (eksik anahtar `counts[status] += 1` ile
+  // NaN üretirdi).
+  const counts = Object.fromEntries(
+    TASK_STATUSES.map((status) => [status, 0]),
+  ) as Record<TaskStatus, number>;
   for (const task of listProgressTasks(validMonth(month))) counts[task.status] += 1;
   return counts;
 }

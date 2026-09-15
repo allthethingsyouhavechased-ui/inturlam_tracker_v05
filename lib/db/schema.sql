@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   id              TEXT PRIMARY KEY,
   content_item_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
   title           TEXT NOT NULL,
-  status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Onaylandi','Yayinlandi')),
+  status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Revizede','Onaylandi','MusteriIncelemede','MusteriOnayladi','Yayinlandi')),
   priority        TEXT NOT NULL DEFAULT 'Normal' CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
   -- NULL yalnızca migration öncesi görevler ve henüz ekipçe planlanmamış guest
   -- talepleri içindir. Yeni ekip görevleri uygulama katmanında seçim ister.
@@ -232,8 +232,46 @@ CREATE TABLE IF NOT EXISTS tasks (
   -- (ya da elle arşivlenen) görev buradan damgalanıp panodan çekilir — yanlışlıkla
   -- yayınlandı işaretlenen iş kaybolmuş gibi görünmesin (lib/taskArchive.ts).
   archived_at     TEXT,
+  -- Müşteri onayı GEREKLİ Mİ: marka varsayılanından görev AÇILIRKEN kopyalanır.
+  -- Markanın ayarı sonradan değişirse açılmış görevler etkilenmez; yetkili kişi
+  -- görev özelinde gerekçeli istisna verebilir (aşağıdaki iki sütun).
+  customer_approval_required INTEGER NOT NULL DEFAULT 0 CHECK (customer_approval_required IN (0,1)),
+  customer_approval_exception_note TEXT,
+  customer_approval_exception_by   TEXT REFERENCES people(id) ON DELETE SET NULL,
+  customer_approval_exception_at   TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Müşteri onayının KAYDI. Onayı müşteri portalı değil, yetkili ekip üyesi
+-- dışarıdan gelen bilgiye dayanarak giriyor: hangi teslim sürümü, kimin
+-- onayladığı, hangi kanaldan, ne zaman ve kimin kaydettiği tutuluyor.
+-- Yeni bir teslim sürümü eskisinin onayını geçersiz kılar (invalidated_at).
+CREATE TABLE IF NOT EXISTS task_customer_approvals (
+  id               TEXT PRIMARY KEY,
+  task_id          TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  delivery_id      TEXT REFERENCES task_deliveries(id) ON DELETE SET NULL,
+  delivery_version INTEGER,
+  customer_name    TEXT NOT NULL,
+  channel          TEXT NOT NULL DEFAULT 'Diger'
+                   CHECK (channel IN ('Toplanti','Telefon','WhatsApp','Eposta','Portal','Diger')),
+  reference_url    TEXT,
+  note             TEXT,
+  recorded_by_id   TEXT REFERENCES people(id) ON DELETE SET NULL,
+  recorded_by_name TEXT NOT NULL,
+  approved_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  invalidated_at   TEXT,
+  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_customer_approvals_task
+  ON task_customer_approvals(task_id, invalidated_at, approved_at DESC);
+
+-- Talep değerlendirme yetkisi. Sabit kişi listesi yerine yönetilebilir tablo;
+-- mevcut beş kişi migration ile buraya taşınıyor, yönetici ekleyip çıkarabiliyor.
+CREATE TABLE IF NOT EXISTS client_request_reviewers (
+  person_id   TEXT PRIMARY KEY REFERENCES people(id) ON DELETE CASCADE,
+  granted_by  TEXT REFERENCES people(id) ON DELETE SET NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Müşteriden gelen iş, gerçek göreve dönüşmeden önce bu kuyrukta değerlendirilir.
@@ -249,17 +287,31 @@ CREATE TABLE IF NOT EXISTS client_requests (
   reference_url     TEXT,
   department        TEXT NOT NULL,
   content_type      TEXT NOT NULL DEFAULT 'Diger',
+  -- 'Beklemede' TEKNİK değeri korunuyor; arayüzde "Yeni" yazıyor.
+  -- 'BilgiBekleniyor' = bilgi/revize bekleniyor (müşteri veya ekip yanıtı).
   status            TEXT NOT NULL DEFAULT 'Beklemede'
-                    CHECK (status IN ('Beklemede','Incelemede','Onaylandi','Reddedildi')),
+                    CHECK (status IN ('Beklemede','Incelemede','BilgiBekleniyor','Onaylandi','Reddedildi')),
   priority          TEXT NOT NULL DEFAULT 'Normal'
                     CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
   assignee_id       TEXT REFERENCES people(id) ON DELETE SET NULL,
   due_date          TEXT,
-  created_by_id     TEXT NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
+  -- Ekip üyesinin açtığı talepte dolu. Müşteri portalından gelen talepte NULL:
+  -- orada sahip bir EKİP kişisi değil, guest hesabıdır (created_by_account_id).
+  created_by_id     TEXT REFERENCES people(id) ON DELETE RESTRICT,
+  created_by_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  origin            TEXT NOT NULL DEFAULT 'team' CHECK (origin IN ('team','guest')),
   reviewed_by_id    TEXT REFERENCES people(id) ON DELETE SET NULL,
   converted_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
   reviewed_at       TEXT,
   archived_at       TEXT,
+  -- Müşterinin İSTEDİĞİ tarih ile ekibin verdiği İÇ teslim tarihi ayrı:
+  -- `due_date` iç teslim, bu alan talebin kendi tarih beklentisi.
+  requested_date    TEXT,
+  -- Red/bilgi isteğinde zorunlu gerekçe; "tekrar değerlendirmeye gönder"
+  -- akışında eski metin ve karar geçmişi korunur.
+  decision_reason   TEXT,
+  resubmitted_at    TEXT,
+  resubmit_count    INTEGER NOT NULL DEFAULT 0,
   created_at        TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );

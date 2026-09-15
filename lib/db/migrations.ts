@@ -902,6 +902,195 @@ function migrateIdeasLinkedTaskIfNeeded(db: DatabaseSync): void {
   db.exec(`ALTER TABLE ideas ADD COLUMN linked_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL`);
 }
 
+
+// Görev akışına müşteri aşamaları ve "Revizede" eklendi. SQLite CHECK'i yerinde
+// değiştiremediği için tablo veri kaybetmeden yeniden kuruluyor; ESKİ tablo
+// yeniden ADLANDIRILMIYOR (CLAUDE.md'deki FK tuzağı), yenisi geçici adla
+// kurulup eski DROP ediliyor ve foreign_key_check ile bütünlük doğrulanıyor.
+// Aynı geçişte müşteri onayı sütunları da ekleniyor; eski görevlerde varsayılan
+// 0 (geriye dönük müşteri onayı ÜRETİLMİYOR).
+function migrateTaskCustomerApprovalStatusesIfNeeded(db: DatabaseSync): void {
+  const row = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'`)
+    .get() as { sql: string } | undefined;
+  if (!row || row.sql.includes("'MusteriIncelemede'")) return;
+
+  db.exec("PRAGMA foreign_keys = OFF");
+  try {
+    db.exec("BEGIN");
+    db.exec(`
+      CREATE TABLE tasks_new_customer_approval_migration (
+        id              TEXT PRIMARY KEY,
+        content_item_id TEXT NOT NULL REFERENCES content_items(id) ON DELETE CASCADE,
+        title           TEXT NOT NULL,
+        status          TEXT NOT NULL DEFAULT 'Beklemede' CHECK (status IN ('Beklemede','DevamEdiyor','Incelemede','Revizede','Onaylandi','MusteriIncelemede','MusteriOnayladi','Yayinlandi')),
+        priority        TEXT NOT NULL DEFAULT 'Normal' CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
+        difficulty      TEXT CHECK (difficulty IN ('Kolay','Orta','Zor','Ozel')),
+        type_override   TEXT CHECK (type_override IN ('Reel','Post','Story','Foto','Kampanya','Video','Carousel','KurumsalKimlik','Diger')),
+        assignee_id     TEXT REFERENCES people(id) ON DELETE SET NULL,
+        due_date        TEXT,
+        notes           TEXT,
+        weight_points   INTEGER NOT NULL DEFAULT 1 CHECK (weight_points BETWEEN 1 AND 100),
+        origin          TEXT NOT NULL DEFAULT 'team' CHECK (origin IN ('team','guest')),
+        requested_date  TEXT,
+        guest_brief     TEXT,
+        created_by_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+        repeat_days     INTEGER,
+        completed_at    TEXT,
+        completed_by    TEXT REFERENCES people(id) ON DELETE SET NULL,
+        archived_at     TEXT,
+        customer_approval_required INTEGER NOT NULL DEFAULT 0 CHECK (customer_approval_required IN (0,1)),
+        customer_approval_exception_note TEXT,
+        customer_approval_exception_by   TEXT REFERENCES people(id) ON DELETE SET NULL,
+        customer_approval_exception_at   TEXT,
+        created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    db.exec(`
+      INSERT INTO tasks_new_customer_approval_migration
+        (id, content_item_id, title, status, priority, difficulty, type_override,
+         assignee_id, due_date, notes, weight_points, origin, requested_date,
+         guest_brief, created_by_account_id, repeat_days, completed_at,
+         completed_by, archived_at, created_at, updated_at)
+      SELECT
+         id, content_item_id, title, status, priority, difficulty, type_override,
+         assignee_id, due_date, notes, weight_points, origin, requested_date,
+         guest_brief, created_by_account_id, repeat_days, completed_at,
+         completed_by, archived_at, created_at, updated_at
+      FROM tasks
+    `);
+    db.exec(`DROP TABLE tasks`);
+    db.exec(`ALTER TABLE tasks_new_customer_approval_migration RENAME TO tasks`);
+    // Indeks adları schema.sql'dekiyle BİREBİR aynı olmalı; farklı adla
+    // kurulursa schema.sql ikinci uygulamada aynı indeksi bir kez daha yaratır.
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_content_item ON tasks(content_item_id)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_difficulty ON tasks(difficulty)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_completed_at ON tasks(completed_at)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at)`);
+    if (db.prepare("PRAGMA foreign_key_check").all().length > 0) {
+      throw new Error("Görev durumu göçü foreign key bütünlüğünü bozdu.");
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  } finally {
+    db.exec("PRAGMA foreign_keys = ON");
+  }
+}
+
+// Marka varsayılanı: YENİ markalarda müşteri onayı açık. Mevcut markalar
+// geçişte 0 kalıyor — sessizce bütün portföye onay zorunluluğu getirilmiyor;
+// ekip marka ayarlarını geçiş sırasında gözden geçirecek.
+function migrateBrandCustomerApprovalDefaultIfNeeded(db: DatabaseSync): void {
+  const exists = db
+    .prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='brands'`)
+    .get();
+  if (!exists) return;
+  const columns = db.prepare(`PRAGMA table_info(brands)`).all() as { name: string }[];
+  if (columns.some((column) => column.name === "customer_approval_default")) return;
+  db.exec(
+    `ALTER TABLE brands ADD COLUMN customer_approval_default INTEGER NOT NULL DEFAULT 0
+       CHECK (customer_approval_default IN (0,1))`,
+  );
+}
+
+// Talep akışı: "Bilgi/Revize bekleniyor" durumu, talebin kendi istenen tarihi,
+// zorunlu karar gerekçesi ve yeniden gönderim sayacı. CHECK değiştiği için
+// tablo yeniden kuruluyor (aynı desen, foreign_key_check ile doğrulanıyor).
+function migrateClientRequestFlowIfNeeded(db: DatabaseSync): void {
+  const row = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='client_requests'`)
+    .get() as { sql: string } | undefined;
+  if (!row || row.sql.includes("'BilgiBekleniyor'")) return;
+
+  db.exec("PRAGMA foreign_keys = OFF");
+  try {
+    db.exec("BEGIN");
+    db.exec(`
+      CREATE TABLE client_requests_new_flow_migration (
+        id                TEXT PRIMARY KEY,
+        brand_id          TEXT NOT NULL REFERENCES brands(id) ON DELETE RESTRICT,
+        title             TEXT NOT NULL,
+        description       TEXT NOT NULL,
+        requested_by_name TEXT,
+        source            TEXT,
+        reference_url     TEXT,
+        department        TEXT NOT NULL,
+        content_type      TEXT NOT NULL DEFAULT 'Diger',
+        status            TEXT NOT NULL DEFAULT 'Beklemede'
+                          CHECK (status IN ('Beklemede','Incelemede','BilgiBekleniyor','Onaylandi','Reddedildi')),
+        priority          TEXT NOT NULL DEFAULT 'Normal'
+                          CHECK (priority IN ('Dusuk','Normal','Yuksek','Acil')),
+        assignee_id       TEXT REFERENCES people(id) ON DELETE SET NULL,
+        due_date          TEXT,
+        created_by_id     TEXT REFERENCES people(id) ON DELETE RESTRICT,
+        created_by_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+        origin            TEXT NOT NULL DEFAULT 'team' CHECK (origin IN ('team','guest')),
+        reviewed_by_id    TEXT REFERENCES people(id) ON DELETE SET NULL,
+        converted_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+        reviewed_at       TEXT,
+        archived_at       TEXT,
+        requested_date    TEXT,
+        decision_reason   TEXT,
+        resubmitted_at    TEXT,
+        resubmit_count    INTEGER NOT NULL DEFAULT 0,
+        created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    db.exec(`
+      INSERT INTO client_requests_new_flow_migration
+        (id, brand_id, title, description, requested_by_name, source, reference_url,
+         department, content_type, status, priority, assignee_id, due_date,
+         created_by_id, reviewed_by_id, converted_task_id, reviewed_at, archived_at,
+         created_at, updated_at)
+      SELECT
+         id, brand_id, title, description, requested_by_name, source, reference_url,
+         department, content_type, status, priority, assignee_id, due_date,
+         created_by_id, reviewed_by_id, converted_task_id, reviewed_at, archived_at,
+         created_at, updated_at
+      FROM client_requests
+    `);
+    db.exec(`DROP TABLE client_requests`);
+    db.exec(`ALTER TABLE client_requests_new_flow_migration RENAME TO client_requests`);
+    if (db.prepare("PRAGMA foreign_key_check").all().length > 0) {
+      throw new Error("Talep akışı göçü foreign key bütünlüğünü bozdu.");
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  } finally {
+    db.exec("PRAGMA foreign_keys = ON");
+  }
+}
+
+// Talep değerlendirme yetkisi sabit kişi listesindeydi (lib/requestAccess.ts).
+// Mevcut beş kişinin hakkı KORUNARAK yönetilebilir tabloya taşınıyor; tabloda
+// kayıt varsa bu göç hiçbir şey yapmaz (kullanıcı sildiyse geri getirmesin).
+const LEGACY_REQUEST_REVIEWER_IDS = ["yunus", "erhan", "sila", "defne", "cansu"] as const;
+
+function migrateClientRequestReviewersIfNeeded(db: DatabaseSync): void {
+  db.exec(`CREATE TABLE IF NOT EXISTS client_request_reviewers (
+    person_id   TEXT PRIMARY KEY REFERENCES people(id) ON DELETE CASCADE,
+    granted_by  TEXT REFERENCES people(id) ON DELETE SET NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  const existing = db
+    .prepare("SELECT COUNT(*) AS n FROM client_request_reviewers")
+    .get() as { n: number };
+  if (existing.n > 0) return;
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO client_request_reviewers (person_id)
+     SELECT id FROM people WHERE id = ?`,
+  );
+  for (const personId of LEGACY_REQUEST_REVIEWER_IDS) insert.run(personId);
+}
+
 // SIRA BURADA BAĞLAYICI. Kimlikler kayıtlı olduğu için ASLA değiştirilmemeli:
 // bir kimliği yeniden adlandırmak o göçü üretimde bir kez daha çalıştırır.
 // Yeni göç her zaman SONA eklenir.
@@ -935,6 +1124,10 @@ const MIGRATIONS: readonly { id: string; run: (db: DatabaseSync) => void }[] = [
   { id: "024-brands-accent-hue", run: migrateBrandAccentHueIfNeeded },
   { id: "025-calendar-event-palette", run: migrateCalendarEventPaletteIfNeeded },
   { id: "026-ideas-linked-task", run: migrateIdeasLinkedTaskIfNeeded },
+  { id: "027-task-customer-approval", run: migrateTaskCustomerApprovalStatusesIfNeeded },
+  { id: "028-brand-customer-approval-default", run: migrateBrandCustomerApprovalDefaultIfNeeded },
+  { id: "029-client-request-flow", run: migrateClientRequestFlowIfNeeded },
+  { id: "030-client-request-reviewers", run: migrateClientRequestReviewersIfNeeded },
 ];
 
 /** Yalnızca test/teşhis için: kayıtlı göç kimlikleri, uygulanma sırasıyla. */

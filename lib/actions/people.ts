@@ -27,6 +27,7 @@ import { deleteAuthSessionsForPerson } from "@/lib/repositories/authSessions";
 import { deleteAuthSessionsForAccount } from "@/lib/repositories/authSessions";
 import { setGuestAccountActive, upsertGuestAccount } from "@/lib/repositories/accounts";
 import { getBrand } from "@/lib/repositories/brands";
+import { setRequestReviewer } from "@/lib/repositories/requestReviewers";
 import {
   replaceBrandPersonAssignments,
   setPersonBrandAssignment,
@@ -207,6 +208,30 @@ export async function setPersonBrandAssignmentAction(
       throw new ExpectedActionError("İlişki yazılamadı: kişi pasif ya da marka arşivlenmiş olabilir.");
     }
     revalidatePath("/", "layout");
+    return { ok: true as const };
+  });
+}
+
+/**
+ * Talep değerlendirme yetkisini verir/kaldırır. Yetkiyi yalnızca yöneticiler
+ * dağıtabilir; yöneticilerin kendisi bu tabloda olmadan da değerlendirebilir
+ * (bkz. lib/requestAccess.ts), bu yüzden onlara yazmaya gerek yok.
+ */
+export async function setRequestReviewerAction(
+  personId: string,
+  granted: boolean,
+): Promise<ActionResult> {
+  const actor = await requireSession();
+  return runAction("people.setRequestReviewer", async () => {
+    assertAccountManager(actor);
+    const person = getPerson(personId);
+    if (!person) throw new ExpectedActionError("Kişi bulunamadı.", "notFound");
+    if (granted && person.active !== 1) {
+      throw new ExpectedActionError("Pasif hesaba yetki verilemez.");
+    }
+    setRequestReviewer(personId, granted, actor.id);
+    revalidatePath("/", "layout");
+    revalidatePath("/team/manage");
     return { ok: true as const };
   });
 }

@@ -19,6 +19,7 @@ import TaskSharingPanel from "@/components/TaskSharingPanel";
 import { isTaskShared } from "@/lib/taskSharing";
 import TaskRepeatSelect from "@/components/TaskRepeatSelect";
 import TaskRevisionPanel from "@/components/TaskRevisionPanel";
+import TaskCustomerApprovalPanel from "@/components/TaskCustomerApprovalPanel";
 import TaskStatusSelect from "@/components/TaskStatusSelect";
 import TaskWeightSelect from "@/components/TaskWeightSelect";
 import PageHeader from "@/components/ui/PageHeader";
@@ -33,6 +34,7 @@ import { listActivityForEntity } from "@/lib/repositories/activity";
 import { listCommentsByTask } from "@/lib/repositories/comments";
 import { getClientRequestByTask } from "@/lib/repositories/clientRequests";
 import { listTaskDeliveries } from "@/lib/repositories/deliveries";
+import { listTaskCustomerApprovals } from "@/lib/repositories/customerApprovals";
 import { listActivePeople } from "@/lib/repositories/people";
 import { listAttachmentsByTask } from "@/lib/repositories/taskAttachments";
 import { getTask, listTaskRevisions } from "@/lib/repositories/tasks";
@@ -67,6 +69,10 @@ export default async function TaskPage({
   const sourceRequest = canReviewClientRequests(me)
     ? getClientRequestByTask(taskId)
     : undefined;
+  const customerApprovals = listTaskCustomerApprovals(taskId);
+  // Müşteri onayını yönetici VEYA ayrıca yetkilendirilmiş değerlendirici
+  // kaydeder; Server Action aynı kuralı yeniden doğruluyor.
+  const canRecordCustomerApproval = me.is_manager === 1 || canReviewClientRequests(me);
   // Görevi açmak, bu görevle ilgili okunmamış bildirimleri (görev güncelleme
   // + @mention) okundu yapar — Panom'daki "🔔 Güncellendi" rozeti bu sayede
   // tekrar görülünce kaybolur. sweepArchivablePublishedTasks() ile aynı
@@ -175,13 +181,24 @@ export default async function TaskPage({
           />
         }
         revision={
-          <TaskRevisionPanel
-            key="revision"
-            taskId={task.id}
-            status={task.status}
-            archived={task.archived_at !== null}
-            rounds={revisionRounds}
-          />
+          <div key="revision" className="space-y-5">
+            <TaskRevisionPanel
+              taskId={task.id}
+              status={task.status}
+              archived={task.archived_at !== null}
+              rounds={revisionRounds}
+            />
+            <TaskCustomerApprovalPanel
+              taskId={task.id}
+              taskStatus={task.status}
+              required={task.customer_approval_required === 1}
+              exceptionNote={task.customer_approval_exception_note}
+              approvals={customerApprovals}
+              canRecord={canRecordCustomerApproval}
+              latestDeliveryVersion={deliveries[0]?.version_number ?? null}
+              latestDeliveryApproved={deliveries[0]?.status === "Onaylandi"}
+            />
+          </div>
         }
         comments={
           <div key="comments" className="space-y-5">

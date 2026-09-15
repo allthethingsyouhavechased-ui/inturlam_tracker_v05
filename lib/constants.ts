@@ -67,19 +67,31 @@ export const CONTENT_STATUS_BADGE: Record<ContentStatus, string> = {
   IptalEdildi: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
 };
 
+// Akış sırası: Beklemede → Devam Ediyor → İncelemede (Ekip) → Onaylandı (Ekip)
+// → İncelemede (Müşteri) → Onaylandı (Müşteri) → Yayınlandı. "Revizede" bu
+// hattın dışında, kendi sütununda duran bir bekleme durumu.
 export const TASK_STATUSES: TaskStatus[] = [
   "Beklemede",
   "DevamEdiyor",
   "Incelemede",
+  "Revizede",
   "Onaylandi",
+  "MusteriIncelemede",
+  "MusteriOnayladi",
   "Yayinlandi",
 ];
+
+/** Müşteri onayı gerekmeyen işlerde ekip onayından sonra doğrudan yayına gidilir. */
+export const CUSTOMER_TASK_STATUSES: TaskStatus[] = ["MusteriIncelemede", "MusteriOnayladi"];
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   Beklemede: "Beklemede",
   DevamEdiyor: "Devam Ediyor",
-  Incelemede: "İncelemede",
-  Onaylandi: "Onaylandı",
+  Incelemede: "İncelemede (Ekip)",
+  Revizede: "Revizede",
+  Onaylandi: "Onaylandı (Ekip)",
+  MusteriIncelemede: "İncelemede (Müşteri)",
+  MusteriOnayladi: "Onaylandı (Müşteri)",
   Yayinlandi: "Yayınlandı",
 };
 
@@ -90,8 +102,14 @@ export const TASK_STATUS_BADGE: Record<TaskStatus, string> = {
     "bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-300 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800",
   Incelemede:
     "bg-violet-100 text-violet-800 ring-1 ring-inset ring-violet-300 dark:bg-violet-950 dark:text-violet-200 dark:ring-violet-800",
+  Revizede:
+    "bg-rose-100 text-rose-800 ring-1 ring-inset ring-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800",
   Onaylandi:
     "bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800",
+  MusteriIncelemede:
+    "bg-cyan-100 text-cyan-900 ring-1 ring-inset ring-cyan-300 dark:bg-cyan-950 dark:text-cyan-200 dark:ring-cyan-800",
+  MusteriOnayladi:
+    "bg-teal-100 text-teal-900 ring-1 ring-inset ring-teal-300 dark:bg-teal-950 dark:text-teal-200 dark:ring-teal-800",
   Yayinlandi:
     "bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800",
 };
@@ -104,7 +122,10 @@ export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
   Beklemede: "bg-zinc-400",
   DevamEdiyor: "bg-sky-600",
   Incelemede: "bg-violet-600",
+  Revizede: "bg-rose-600",
   Onaylandi: "bg-emerald-600",
+  MusteriIncelemede: "bg-cyan-600",
+  MusteriOnayladi: "bg-teal-600",
   Yayinlandi: "bg-amber-500",
 };
 
@@ -117,7 +138,10 @@ export const TASK_STATUS_TEXT: Record<TaskStatus, string> = {
   Beklemede: "text-zinc-400",
   DevamEdiyor: "text-sky-600",
   Incelemede: "text-violet-600",
+  Revizede: "text-rose-600",
   Onaylandi: "text-emerald-600",
+  MusteriIncelemede: "text-cyan-600",
+  MusteriOnayladi: "text-teal-600",
   Yayinlandi: "text-amber-500",
 };
 
@@ -129,7 +153,10 @@ export const TASK_STATUS_BORDER_TOP: Record<TaskStatus, string> = {
   Beklemede: "border-t-zinc-400",
   DevamEdiyor: "border-t-sky-600",
   Incelemede: "border-t-violet-600",
+  Revizede: "border-t-rose-600",
   Onaylandi: "border-t-emerald-600",
+  MusteriIncelemede: "border-t-cyan-600",
+  MusteriOnayladi: "border-t-teal-600",
   Yayinlandi: "border-t-amber-500",
 };
 
@@ -139,7 +166,10 @@ export const TASK_STATUS_PROGRESS: Record<TaskStatus, string> = {
   Beklemede: "bg-zinc-400 dark:bg-zinc-500",
   DevamEdiyor: "bg-sky-600",
   Incelemede: "bg-violet-600",
+  Revizede: "bg-rose-600",
   Onaylandi: "bg-emerald-600",
+  MusteriIncelemede: "bg-cyan-600",
+  MusteriOnayladi: "bg-teal-600",
   Yayinlandi: "bg-amber-500",
 };
 

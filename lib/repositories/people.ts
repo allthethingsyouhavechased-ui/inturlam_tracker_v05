@@ -74,6 +74,26 @@ export function listSocialAlertRecipients(): Person[] {
   );
 }
 
+/**
+ * Yeni bir müşteri talebinden haberdar edilecek kişiler: yöneticiler VE talep
+ * değerlendirme yetkisi ayrıca verilmiş kişiler. Tek sorgu (OR) — ikisinde
+ * birden olan kimse iki bildirim almasın (listSocialAlertRecipients ile aynı
+ * gerekçe).
+ */
+export function listClientRequestNotificationRecipients(): Person[] {
+  return plainList<Person>(
+    getDb()
+      .prepare(
+        `SELECT ${PUBLIC_PERSON_COLUMNS} FROM people
+          WHERE active = 1
+            AND (is_manager = 1
+                 OR id IN (SELECT person_id FROM client_request_reviewers))
+          ORDER BY name`,
+      )
+      .all(),
+  );
+}
+
 export function getPerson(id: string): Person | undefined {
   return plainOne<Person>(
     getDb().prepare(`SELECT ${PUBLIC_PERSON_COLUMNS} FROM people WHERE id = ?`).get(id),

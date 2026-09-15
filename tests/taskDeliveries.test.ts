@@ -114,7 +114,9 @@ describe("versiyonlu görev teslimi", () => {
       revisionTargetMinutes: 240,
     });
 
-    assert.equal(getTask(taskId)?.status, "DevamEdiyor");
+    // Revize kararı işi kendi sütununa taşır; "Devam Ediyor" kovasında normal
+    // üretimle karışmasın diye ayrı bir durum.
+    assert.equal(getTask(taskId)?.status, "Revizede");
     assert.equal(listTaskRevisions(taskId)[0]?.completed_at, null);
     const second = submit(taskId);
     assert.equal(second.version_number, 2);

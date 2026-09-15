@@ -132,6 +132,10 @@ export async function updateBrandAction(formData: FormData) {
   const annualUsageChanged = usageYear !== null
     && getBrandShootUsage(id, usageYear) !== annualShootUsed;
 
+  // Marka VARSAYILANI: yalnızca bundan sonra açılacak görevleri etkiler.
+  // Geçmiş görevlerin kuralı açılışta kopyalandığı için değişmez.
+  const customerApprovalDefault = formData.get("customerApprovalDefault") === "1";
+
   const responsibilitySelectionPresent = formData.get("responsibilitySelectionPresent") === "1";
   const responsiblePersonIds = formData.getAll("responsiblePersonId").map(String).filter(Boolean);
   const currentResponsiblePersonIds = listBrandPersonAssignments(id).map((item) => item.person_id);
@@ -147,6 +151,7 @@ export async function updateBrandAction(formData: FormData) {
     tier,
     monthlyShootAllowance,
     annualShootAllowance,
+    customerApprovalDefault,
     today: todayISO(),
     logoPath,
   });
@@ -162,7 +167,8 @@ export async function updateBrandAction(formData: FormData) {
     current.key_finding !== keyFinding ||
     current.tier !== tier ||
     current.monthly_shoot_allowance !== monthlyShootAllowance ||
-    current.annual_shoot_allowance !== annualShootAllowance;
+    current.annual_shoot_allowance !== annualShootAllowance ||
+    (current.customer_approval_default === 1) !== customerApprovalDefault;
   const assignmentsChanged = responsibilitySelectionPresent
     && !sameIds(responsiblePersonIds, currentResponsiblePersonIds);
   const usageChanged = monthlyUsageChanged || annualUsageChanged;

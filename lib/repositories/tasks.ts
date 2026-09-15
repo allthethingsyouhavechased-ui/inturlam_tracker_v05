@@ -342,9 +342,19 @@ export function createTask(input: {
     input.weightPoints ?? DIFFICULTY_DEFAULT_WEIGHT[input.difficulty ?? "Orta"],
   );
   const id = crypto.randomUUID();
+  // Müşteri onayı gerekliliği MARKA VARSAYILANINDAN kopyalanıyor (alt sorgu);
+  // markanın ayarı sonradan değişirse bu görev etkilenmez. Yetkili kişi görev
+  // özelinde gerekçeli istisna verebilir (setTaskCustomerApprovalRequirement).
   getDb()
     .prepare(
-      "INSERT INTO tasks (id, content_item_id, title, type_override, assignee_id, due_date, difficulty, priority, weight_points) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      `INSERT INTO tasks
+         (id, content_item_id, title, type_override, assignee_id, due_date,
+          difficulty, priority, weight_points, customer_approval_required)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((
+         SELECT b.customer_approval_default FROM content_items ci
+           JOIN brands b ON b.id = ci.brand_id
+          WHERE ci.id = ?
+       ), 0))`,
     )
     .run(
       id,
@@ -356,8 +366,34 @@ export function createTask(input: {
       input.difficulty ?? "Orta",
       input.priority ?? "Normal",
       weightPoints,
+      input.contentItemId,
     );
   return id;
+}
+
+/**
+ * Görev özelinde müşteri onayı gerekliliğini değiştirir. Gerekçe ZORUNLU:
+ * marka varsayılanından sapma, kim ve neden sorusunu cevaplayabilmeli.
+ * Marka ayarını DEĞİŞTİRMEZ — bu tek bir görev için istisnadır.
+ */
+export function setTaskCustomerApprovalRequirement(
+  taskId: string,
+  required: boolean,
+  reason: string,
+  actorId: string,
+): boolean {
+  const result = getDb()
+    .prepare(
+      `UPDATE tasks
+          SET customer_approval_required = ?,
+              customer_approval_exception_note = ?,
+              customer_approval_exception_by = ?,
+              customer_approval_exception_at = datetime('now'),
+              updated_at = datetime('now')
+        WHERE id = ? AND customer_approval_required <> ?`,
+    )
+    .run(required ? 1 : 0, reason, actorId, taskId, required ? 1 : 0);
+  return Number(result.changes) === 1;
 }
 
 export function updateTaskRepeat(id: string, repeatDays: number | null): void {

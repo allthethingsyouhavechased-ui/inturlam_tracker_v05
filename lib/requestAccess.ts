@@ -1,19 +1,19 @@
+import { isRequestReviewer } from "@/lib/repositories/requestReviewers";
 import type { Person } from "@/lib/types";
 
-// Ürün kararı (2026-08): talep değerlendirme alanı rol veya departmana göre
-// açılmaz. Yalnızca aşağıdaki beş sabit hesap kuyruğu görebilir ve yönetebilir.
-export const CLIENT_REQUEST_REVIEWER_IDS = [
-  "yunus",
-  "erhan",
-  "sila",
-  "defne",
-  "cansu",
-] as const;
-
-const REVIEWER_IDS = new Set<string>(CLIENT_REQUEST_REVIEWER_IDS);
-
+// Talep değerlendirme yetkisi artık SABİT kişi listesi değil, yönetilebilir bir
+// tablo (`client_request_reviewers`). Eski beş kişinin hakkı migration 030 ile
+// olduğu gibi taşındı; yönetici arayüzden ekleyip çıkarabiliyor.
+//
+// Yöneticiler tabloya yazılmadan da değerlendirebilir: yetkiyi VEREN rol,
+// kendi göremediği bir kuyruğa yetki dağıtamaz.
 export function canReviewClientRequests(
-  person: (Pick<Person, "id"> & Partial<Pick<Person, "department">>) | null | undefined,
+  person:
+    | (Pick<Person, "id"> & Partial<Pick<Person, "department" | "is_manager">>)
+    | null
+    | undefined,
 ): boolean {
-  return Boolean(person && REVIEWER_IDS.has(person.id));
+  if (!person) return false;
+  if (person.is_manager === 1) return true;
+  return isRequestReviewer(person.id);
 }

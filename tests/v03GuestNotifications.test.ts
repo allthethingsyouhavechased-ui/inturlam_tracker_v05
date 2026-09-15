@@ -13,7 +13,7 @@ const { listNotificationsForRecipient } = await import("@/lib/repositories/notif
 const { listActivityForEntity } = await import("@/lib/repositories/activity");
 const {
   announceGuestComment,
-  announceGuestTaskCreated,
+  announceGuestRequestCreated,
   announceGuestTaskPlanned,
   announceGuestTaskStatus,
   announceTeamSharedReply,
@@ -47,7 +47,7 @@ beforeEach(resetDb);
 after(resetDb);
 
 describe("v03 guest–ekip bildirim zinciri", () => {
-  it("guest talebini yöneticilere; yorumunu yönetici ve görev sahibine bildirir", async () => {
+  it("guest talebini değerlendiricilere; yorumunu yönetici ve görev sahibine bildirir", async () => {
     const { taskId } = seed();
     const base = {
       guestAccountId: "g1",
@@ -57,16 +57,35 @@ describe("v03 guest–ekip bildirim zinciri", () => {
       brandId: "b1",
     };
 
-    await announceGuestTaskCreated(base);
+    // Yeni istek artık üretim görevi değil TALEP açıyor; bildirim de talebe
+    // bağlanıyor ve `task_id` taşımıyor (ortada henüz görev yok).
+    await announceGuestRequestCreated({
+      guestName: "Bir Guest",
+      requestId: "req-1",
+      requestTitle: "Ürün çekimi",
+      brandId: "b1",
+    });
     await announceGuestComment({ ...base, assigneeId: "worker", body: "Moodboard eklendi." });
 
     const manager = listNotificationsForRecipient("manager");
     const worker = listNotificationsForRecipient("worker");
-    assert.equal(manager.filter((item) => item.summary.includes("planlama kuyruğuna")).length, 1);
+    assert.equal(manager.filter((item) => item.summary.includes("değerlendirme kuyruğuna")).length, 1);
     assert.equal(manager.filter((item) => item.summary.includes("yorum ekledi")).length, 1);
     assert.equal(worker.filter((item) => item.summary.includes("yorum ekledi")).length, 1);
     assert.equal(listNotificationsForRecipient("inactive").length, 0);
-    assert.equal(manager.every((item) => item.task_id === taskId), true);
+    assert.equal(
+      manager.find((item) => item.summary.includes("değerlendirme kuyruğuna"))?.task_id,
+      null,
+    );
+    // Talep etkinliği görev akışına değil talep kaydına yazılıyor.
+    assert.deepEqual(
+      listActivityForEntity("request", "req-1").map((item) => item.action),
+      ["guest.request.created"],
+    );
+    assert.equal(
+      listActivityForEntity("task", taskId).some((item) => item.action === "guest.request.created"),
+      false,
+    );
   });
 
   it("ekip yanıtı, ilk planlama ve durum değişikliğini doğru guest hesabına bildirir", async () => {
@@ -96,7 +115,7 @@ describe("v03 guest–ekip bildirim zinciri", () => {
     const taskActions = fs.readFileSync(path.join(process.cwd(), "lib/actions/tasks.ts"), "utf8");
     const bell = fs.readFileSync(path.join(process.cwd(), "components/GuestNotificationBell.tsx"), "utf8");
 
-    for (const name of ["announceGuestTaskCreated", "announceGuestComment", "announceTeamSharedReply"]) {
+    for (const name of ["announceGuestRequestCreated", "announceGuestComment", "announceTeamSharedReply"]) {
       assert.match(guestActions, new RegExp(name));
     }
     for (const name of ["announceGuestTaskPlanned", "announceGuestTaskStatus"]) {

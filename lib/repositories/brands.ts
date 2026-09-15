@@ -46,9 +46,11 @@ export function createBrand(input: {
     db.prepare("SELECT accent_hue FROM brands").all(),
   ).map((row) => row.accent_hue);
   const accentHue = chooseBrandAccentHue(usedHues);
+  // YENİ markalarda müşteri onayı varsayılanı AÇIK. Mevcut markalar migration'da
+  // 0 kaldı (bkz. 028) — portföye sessizce zorunluluk getirilmesin diye.
   db
     .prepare(
-      "INSERT INTO brands (id, name, cluster, sort_order, accent_hue, instagram_handle, logo_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO brands (id, name, cluster, sort_order, accent_hue, instagram_handle, logo_path, customer_approval_default) VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
     )
     .run(id, input.name, input.cluster, (maxOrder ?? 0) + 10, accentHue, input.instagramHandle, input.logoPath ?? null);
   return id;
@@ -72,6 +74,9 @@ export function updateBrand(input: {
   tier: string | null;
   monthlyShootAllowance: number | null;
   annualShootAllowance: number | null;
+  // Bu markada AÇILACAK yeni görevlerin müşteri onayı varsayılanı. Değişiklik
+  // GEÇMİŞ görevleri etkilemez: gereklilik göreve açılışta kopyalanıyor.
+  customerApprovalDefault: boolean;
   today: string;
   logoPath?: string;
 }): void {
@@ -95,6 +100,7 @@ export function updateBrand(input: {
        name = ?, cluster = ?, instagram_handle = ?,
        follower_count = ?, post_count = ?,
        key_finding = ?, tier = ?, stats_updated_at = ?, monthly_shoot_allowance = ?, annual_shoot_allowance = ?,
+       customer_approval_default = ?,
        logo_path = COALESCE(?, logo_path)
      WHERE id = ?`,
   ).run(
@@ -108,6 +114,7 @@ export function updateBrand(input: {
     statsUpdatedAt,
     input.monthlyShootAllowance,
     input.annualShootAllowance,
+    input.customerApprovalDefault ? 1 : 0,
     input.logoPath ?? null,
     input.id,
   );

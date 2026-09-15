@@ -174,6 +174,14 @@ export function createTaskDelivery(
           SET completed_at = datetime('now'), completed_by = ?, updated_at = datetime('now')
         WHERE task_id = ? AND completed_at IS NULL`,
     ).run(input.submittedByPersonId, input.taskId);
+    // Yeni sürüm eski sürümün ONAYLARINI geçersiz kılar: "onaylanmış" bir görev
+    // sessizce başka bir sürümle yayınlanamasın. Kayıt silinmiyor, damgalanıyor.
+    db.prepare(
+      `UPDATE task_customer_approvals SET invalidated_at = datetime('now')
+        WHERE task_id = ? AND invalidated_at IS NULL`,
+    ).run(input.taskId);
+    // Aktif revize kapanır ve iş EKİP incelemesine döner — müşteri aşamasına
+    // değil: yeni sürümü önce ekip görür.
     writeTaskStatus(db, input.taskId, task.status, "Incelemede", input.submittedByPersonId);
     db.exec("COMMIT");
     return listTaskDeliveries(input.taskId).find((delivery) => delivery.id === id)!;
@@ -238,7 +246,9 @@ export function decideTaskDelivery(input: {
       throw new Error("Yayınlanmış veya arşivlenmiş görevde teslim kararı değiştirilemez.");
     }
 
-    const nextStatus: TaskStatus = input.decision === "Onaylandi" ? "Onaylandi" : "DevamEdiyor";
+    // Revize kararı işi kendi sütununa ("Revizede") taşır; eskiden "Devam
+    // Ediyor"a düşüyordu ve panoda normal üretimle aynı kovada görünüyordu.
+    const nextStatus: TaskStatus = input.decision === "Onaylandi" ? "Onaylandi" : "Revizede";
     db.prepare(
       `UPDATE task_deliveries
           SET status = ?, decision_actor_kind = ?, decided_by_account_id = ?,

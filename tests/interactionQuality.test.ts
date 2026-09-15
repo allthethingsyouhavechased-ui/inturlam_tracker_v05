@@ -32,7 +32,8 @@ describe("form geri bildirimi", () => {
       assert.match(page, /<ActionForm/);
       assert.match(page, /<SubmitButton/);
     }
-    assert.match(source("lib/actions/guestTasks.ts"), /return taskId/);
+    // Guest akışı yönlendirme yerine dönüş değeri kullanıyor: ekran aynı
+    // sayfada kalıp geri bildirimi form içinde gösteriyor.
     assert.doesNotMatch(source("lib/actions/guestTasks.ts"), /redirect\(`/);
   });
 

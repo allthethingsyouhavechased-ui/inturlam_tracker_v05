@@ -5,11 +5,14 @@ import { isTaskShared } from "@/lib/taskSharing";
 import { getCurrentActor, requireGuestSession, requireSession } from "@/lib/identity";
 import {
   announceGuestComment,
-  announceGuestTaskCreated,
+  announceGuestRequestCreated,
   announceTeamSharedReply,
 } from "@/lib/guestTaskCommunications";
 import { getTask } from "@/lib/repositories/tasks";
-import { addSharedComment, createGuestTask, deleteGuestOwnedSharedAttachment, getGuestTask, updateGuestTask } from "@/lib/repositories/guestTasks";
+import { addSharedComment, deleteGuestOwnedSharedAttachment, getGuestTask, updateGuestTask } from "@/lib/repositories/guestTasks";
+import { createClientRequest } from "@/lib/repositories/clientRequests";
+import { ExpectedActionError, runAction, runAfterCommit, type ActionResult } from "@/lib/actionResult";
+import { DEFAULT_GUEST_REQUEST_DEPARTMENT } from "@/lib/clientRequests";
 import { deleteUploadedFile, extractImageFiles, validateImageFiles, withSavedImageFiles } from "@/lib/uploads";
 
 function text(formData: FormData, key: string, max: number): string {
@@ -27,25 +30,67 @@ function requestedDate(formData: FormData): string {
   return value;
 }
 
-export async function createGuestTaskAction(formData: FormData) {
+/**
+ * Müşteri portalından gelen yeni istek artık DOĞRUDAN üretim görevi açmıyor:
+ * önce TALEP kaydı oluşuyor ve normal değerlendirme kuyruğuna giriyor
+ * (Yeni → İncelemede → Bilgi/Revize Bekleniyor → Onaylandı | Reddedildi).
+ * Görev yalnızca kabulde, tek bir kayıt olarak açılıyor.
+ *
+ * Eski guest görevleri OLDUĞU GİBİ duruyor; geriye dönük taleple
+ * ilişkilendirilmiyor ve silinmiyor.
+ */
+export async function createGuestRequestAction(formData: FormData): Promise<ActionResult<string>> {
   const actor = await requireGuestSession();
-  const title = text(formData, "title", 200);
-  const brief = text(formData, "brief", 5000);
-  const images = extractImageFiles(formData);
-  validateImageFiles(images);
-  const date = requestedDate(formData);
-  const taskId = await withSavedImageFiles(images, "guest-tasks", (saved) =>
-    createGuestTask({ brandId: actor.brand.id, accountId: actor.account_id, title, brief, requestedDate: date, attachments: saved }),
-  );
-  await announceGuestTaskCreated({
-    guestAccountId: actor.account_id,
-    guestName: `${actor.brand.name} Guest`,
-    taskId,
-    taskTitle: title,
-    brandId: actor.brand.id,
+  return runAction<string>("guest.createRequest", async () => {
+    let title: string;
+    let brief: string;
+    let date: string;
+    try {
+      title = text(formData, "title", 200);
+      brief = text(formData, "brief", 5000);
+      date = requestedDate(formData);
+    } catch (error) {
+      throw new ExpectedActionError(error instanceof Error ? error.message : "Form eksik.");
+    }
+    const images = extractImageFiles(formData);
+    try { validateImageFiles(images); }
+    catch (error) { throw new ExpectedActionError(error instanceof Error ? error.message : "Görseller kabul edilmedi."); }
+
+    const requestId = await withSavedImageFiles(images, "guest-tasks", (saved) =>
+      createClientRequest(
+        {
+          brandId: actor.brand.id,
+          title,
+          description: brief,
+          requestedByName: actor.username,
+          source: "Müşteri portalı",
+          referenceUrl: null,
+          // Hedef departman değerlendirmede belirleniyor; müşteri seçmiyor.
+          department: DEFAULT_GUEST_REQUEST_DEPARTMENT,
+          contentType: "Diger",
+          // İSTENEN tarih müşteriden; İÇ teslim tarihini ekip veriyor.
+          dueDate: null,
+          requestedDate: date,
+          createdById: null,
+          createdByAccountId: actor.account_id,
+          origin: "guest",
+        },
+        saved,
+      ),
+    );
+
+    await runAfterCommit("guest.createRequest", () =>
+      announceGuestRequestCreated({
+        guestName: `${actor.brand.name} Guest`,
+        requestId,
+        requestTitle: title,
+        brandId: actor.brand.id,
+      }),
+    );
+    revalidatePath("/guest", "layout");
+    revalidatePath("/requests", "layout");
+    return { ok: true as const, value: requestId, message: "Talebin değerlendirmeye alındı." };
   });
-  revalidatePath("/guest", "layout");
-  return taskId;
 }
 
 export async function updateGuestTaskAction(formData: FormData) {

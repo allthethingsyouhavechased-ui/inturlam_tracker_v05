@@ -126,14 +126,25 @@ describe("talep değerlendirme ağ geçidi", () => {
     assert.equal(response.status, 403);
   });
 
-  it("izin listesindeki hesabı talep sayfasına geçirir", () => {
+  it("yetkisi verilmiş hesabı talep sayfasına geçirir", () => {
     const db = getDb();
-    db.prepare("INSERT INTO people (id, name) VALUES ('yunus', 'Yunus Emre')").run();
-    const token = createAuthSession("yunus");
+    db.prepare("INSERT INTO people (id, name) VALUES ('cansu', 'Cansu')").run();
+    // Yetki artık sabit id listesinde değil, yönetilebilir tabloda.
+    db.prepare("INSERT INTO client_request_reviewers (person_id) VALUES ('cansu')").run();
+    const token = createAuthSession("cansu");
     const response = proxy(request("/requests", { token }));
 
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("x-middleware-next"), "1");
+  });
+
+  it("yönetici hesabı tabloda olmasa da talep sayfasına geçiyor", () => {
+    const db = getDb();
+    db.prepare("INSERT INTO people (id, name, is_manager) VALUES ('yunus', 'Yunus Emre', 1)").run();
+    const token = createAuthSession("yunus");
+    const response = proxy(request("/requests", { token }));
+
+    assert.equal(response.status, 200);
   });
 });
 

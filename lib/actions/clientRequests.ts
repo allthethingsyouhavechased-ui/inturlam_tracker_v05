@@ -8,6 +8,7 @@ import { normalizeDepartment } from "@/lib/departments";
 import { requireSession } from "@/lib/identity";
 import { notifyTaskUpdate } from "@/lib/notifications";
 import { canReviewClientRequests } from "@/lib/requestAccess";
+import { ExpectedActionError, runAction, runAfterCommit, type ActionResult } from "@/lib/actionResult";
 import {
   addClientRequestComment,
   approveClientRequest,
@@ -16,6 +17,8 @@ import {
   getClientRequest,
   listClientRequestAttachments,
   rejectClientRequest,
+  requestClientRequestInfo,
+  resubmitClientRequest,
   updateClientRequestDetails,
   updateClientRequestReview,
   type ClientRequestReviewInput,
@@ -302,4 +305,72 @@ export async function rejectClientRequestAction(formData: FormData) {
     summary: `“${request.title}” talebini reddetti`,
   });
   revalidatePath("/requests", "layout");
+}
+
+/**
+ * "Bilgi/Revize bekleniyor": talep reddedilmiyor, eksik bilgi isteniyor.
+ * Gerekçe zorunlu; talebi açan taraf ne düzelteceğini görüyor ve
+ * "Tekrar değerlendirmeye gönder" ile kuyruğa geri koyabiliyor.
+ */
+export async function requestClientRequestInfoAction(formData: FormData): Promise<ActionResult> {
+  const reviewer = await requireSession();
+  return runAction("request.requestInfo", async () => {
+    assertReviewer(reviewer);
+    const requestId = String(formData.get("requestId") ?? "").trim();
+    const reason = String(formData.get("reason") ?? "").trim();
+    if (!reason) throw new ExpectedActionError("Bilgi/revize isteği için gerekçe zorunlu.");
+    if (reason.length > 2000) throw new ExpectedActionError("Gerekçe en fazla 2000 karakter olabilir.");
+    const request = getClientRequest(requestId);
+    if (!request) throw new ExpectedActionError("Talep bulunamadı.", "notFound");
+    try {
+      requestClientRequestInfo({ id: requestId, reviewerId: reviewer.id, reason });
+    } catch (error) {
+      throw new ExpectedActionError(error instanceof Error ? error.message : "Bilgi istenemedi.");
+    }
+    await runAfterCommit("request.requestInfo", () =>
+      recordActivity({
+        action: "request.info",
+        entityType: "request",
+        entityId: requestId,
+        brandId: request.brand_id,
+        summary: `“${request.title}” talebi için bilgi/revize istedi`,
+      }),
+    );
+    revalidatePath("/requests", "layout");
+    return { ok: true as const, message: "Bilgi/revize istendi." };
+  });
+}
+
+/**
+ * Talebi yeniden değerlendirmeye gönderir. Eski metin, ekler ve karar geçmişi
+ * KORUNUR. Talebi açan ekip üyesi ya da bir değerlendirici çağırabilir.
+ */
+export async function resubmitClientRequestAction(requestId: string): Promise<ActionResult> {
+  const actor = await requireSession();
+  return runAction("request.resubmit", async () => {
+    const request = getClientRequest(requestId);
+    if (!request) throw new ExpectedActionError("Talep bulunamadı.", "notFound");
+    const isOwner = request.created_by_id === actor.id;
+    if (!isOwner && !canReviewClientRequests(actor)) {
+      throw new ExpectedActionError("Bu talebi yeniden gönderme yetkin yok.", "forbidden");
+    }
+    try {
+      resubmitClientRequest(requestId);
+    } catch (error) {
+      throw new ExpectedActionError(
+        error instanceof Error ? error.message : "Talep yeniden gönderilemedi.",
+      );
+    }
+    await runAfterCommit("request.resubmit", () =>
+      recordActivity({
+        action: "request.resubmit",
+        entityType: "request",
+        entityId: requestId,
+        brandId: request.brand_id,
+        summary: `“${request.title}” talebini tekrar değerlendirmeye gönderdi`,
+      }),
+    );
+    revalidatePath("/requests", "layout");
+    return { ok: true as const, message: "Talep yeniden değerlendirmeye gönderildi." };
+  });
 }

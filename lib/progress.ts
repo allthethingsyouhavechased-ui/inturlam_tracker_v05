@@ -1,10 +1,18 @@
 import type { MonthlyProgress, TaskDifficulty, TaskStatus } from "@/lib/types";
 
+// OPERASYONEL İLERLEME katsayıları — KAZANILMIŞ PUAN DEĞİLDİR. Kazanılmış
+// puan paket onayına bağlı ve bağımsız hesaplanıyor (lib/points/*); bu tablo
+// yalnızca "iş ne kadar ilerledi" göstergesini besler.
+// Revizede, işin İncelemede'ye gelmiş hâlinden geri düştüğü için Devam
+// Ediyor ile İncelemede arasında konumlanıyor.
 export const TASK_STATUS_COEFFICIENT: Readonly<Record<TaskStatus, number>> = {
   Beklemede: 0,
   DevamEdiyor: 0.25,
   Incelemede: 0.6,
+  Revizede: 0.4,
   Onaylandi: 0.9,
+  MusteriIncelemede: 0.93,
+  MusteriOnayladi: 0.97,
   Yayinlandi: 1,
 };
 

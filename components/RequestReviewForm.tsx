@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import {
   approveClientRequestAction,
   rejectClientRequestAction,
+  requestClientRequestInfoAction,
   updateClientRequestReviewAction,
 } from "@/lib/actions/clientRequests";
 import { TASK_DIFFICULTIES, TASK_DIFFICULTY_LABEL, TASK_PRIORITIES, TASK_PRIORITY_LABEL } from "@/lib/constants";
@@ -15,6 +16,8 @@ import Select from "@/components/ui/Select";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Icon from "@/components/ui/Icon";
+import ActionForm from "@/components/ActionForm";
+import SubmitButton from "@/components/SubmitButton";
 
 function ReviewButtons({ assigneeName }: { assigneeName: string | null }) {
   const { pending } = useFormStatus();
@@ -193,6 +196,34 @@ export default function RequestReviewForm({
         </div>
         <ReviewButtons assigneeName={selectedAssigneeName} />
       </form>
+
+      {/* Reddetmeden ÖNCEki ara karar: talep reddedilmiyor, eksik bilgi
+          isteniyor. Gerekçe zorunlu; talebi açan taraf düzeltip "tekrar
+          değerlendirmeye gönder" diyebiliyor ve eski metin korunuyor. */}
+      <details className="group border-t border-border-subtle pt-4">
+        <summary className={buttonClass({ variant: "secondary", className: "w-full list-none [&::-webkit-details-marker]:hidden" })}>
+          Bilgi / revize iste
+        </summary>
+        <ActionForm action={requestClientRequestInfoAction} className="mt-3 space-y-3">
+          <input type="hidden" name="requestId" value={requestId} />
+          <label className="grid gap-1.5 text-xs font-medium text-secondary">
+            Ne eksik?
+            <Textarea
+              name="reason"
+              rows={3}
+              required
+              maxLength={2000}
+              placeholder="Hangi bilgi ya da düzeltme bekleniyor…"
+            />
+          </label>
+          <SubmitButton
+            pendingLabel="Gönderiliyor…"
+            className={buttonClass({ variant: "secondary", className: "w-full" })}
+          >
+            Bilgi iste
+          </SubmitButton>
+        </ActionForm>
+      </details>
 
       {/* Reddetme, onay kadar gerçek bir karar: soluk bir metin bağlantısı
           değil "Onayla ve görevi ata" ile aynı ağırlıkta bir düğme — yalnızca

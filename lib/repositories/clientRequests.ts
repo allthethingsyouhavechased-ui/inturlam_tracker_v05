@@ -49,7 +49,13 @@ export function createClientRequest(input: {
   department: DepartmentId;
   contentType: ContentType;
   dueDate: string | null;
-  createdById: string;
+  /** Müşterinin İSTEDİĞİ tarih; ekibin verdiği iç teslim tarihinden AYRI. */
+  requestedDate?: string | null;
+  /** Ekip talebinde zorunlu; müşteri portalından gelen talepte null. */
+  createdById: string | null;
+  /** Müşteri portalından gelen talepte guest hesabı. */
+  createdByAccountId?: string | null;
+  origin?: "team" | "guest";
 }, attachments: Array<{ filePath: string; originalName: string | null }> = []): string {
   const id = crypto.randomUUID();
   const db = getDb();
@@ -58,8 +64,9 @@ export function createClientRequest(input: {
     db.prepare(
       `INSERT INTO client_requests
          (id, brand_id, title, description, requested_by_name, source,
-          reference_url, department, content_type, due_date, created_by_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          reference_url, department, content_type, due_date, requested_date,
+          created_by_id, created_by_account_id, origin)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -72,7 +79,10 @@ export function createClientRequest(input: {
       input.department,
       input.contentType,
       input.dueDate,
+      input.requestedDate ?? null,
       input.createdById,
+      input.createdByAccountId ?? null,
+      input.origin ?? "team",
     );
     const insertAttachment = db.prepare(
       `INSERT INTO client_request_attachments (id, request_id, file_path, original_name)
@@ -330,7 +340,7 @@ export function updateClientRequestReview(input: ClientRequestReviewInput): void
        SET department = ?, assignee_id = ?, priority = ?, due_date = ?,
            status = 'Incelemede', reviewed_by_id = ?, reviewed_at = datetime('now'),
            updated_at = datetime('now')
-       WHERE id = ? AND status IN ('Beklemede', 'Incelemede')
+       WHERE id = ? AND status IN ('Beklemede', 'Incelemede', 'BilgiBekleniyor')
          AND converted_task_id IS NULL`,
     )
     .run(
@@ -343,6 +353,62 @@ export function updateClientRequestReview(input: ClientRequestReviewInput): void
     );
   if (result.changes !== 1) {
     throw new Error("Bu talep artık değerlendirilemez.");
+  }
+}
+
+/**
+ * "Bilgi/Revize bekleniyor": talep reddedilmedi, eksik bilgi istendi.
+ * Gerekçe ZORUNLU ve hem karar alanına hem yoruma yazılır — talebi açan taraf
+ * (müşteri ya da ekip üyesi) neyi düzelteceğini görebilsin.
+ */
+export function requestClientRequestInfo(input: {
+  id: string;
+  reviewerId: string;
+  reason: string;
+}): void {
+  const reason = input.reason.trim();
+  if (!reason) throw new Error("Bilgi/revize isteği için gerekçe zorunlu.");
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const result = db
+      .prepare(
+        `UPDATE client_requests
+            SET status = 'BilgiBekleniyor', decision_reason = ?, reviewed_by_id = ?,
+                reviewed_at = datetime('now'), updated_at = datetime('now')
+          WHERE id = ? AND status IN ('Beklemede', 'Incelemede', 'BilgiBekleniyor')
+            AND converted_task_id IS NULL`,
+      )
+      .run(reason, input.reviewerId, input.id);
+    if (result.changes !== 1) throw new Error("Bu talep için bilgi istenemez.");
+    db.prepare(
+      `INSERT INTO client_request_comments (id, request_id, author_id, body)
+       VALUES (?, ?, ?, ?)`,
+    ).run(crypto.randomUUID(), input.id, input.reviewerId, reason);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+/**
+ * "Tekrar değerlendirmeye gönder". Eski metin, ekler ve karar geçmişi
+ * KORUNUR; yalnızca durum yeniye döner ve sayaç artar. Onaylanmış (göreve
+ * dönüşmüş) talep buradan geri alınamaz.
+ */
+export function resubmitClientRequest(id: string): void {
+  const result = getDb()
+    .prepare(
+      `UPDATE client_requests
+          SET status = 'Beklemede', resubmitted_at = datetime('now'),
+              resubmit_count = resubmit_count + 1, updated_at = datetime('now')
+        WHERE id = ? AND status IN ('BilgiBekleniyor', 'Reddedildi')
+          AND converted_task_id IS NULL`,
+    )
+    .run(id);
+  if (Number(result.changes) !== 1) {
+    throw new Error("Bu talep yeniden değerlendirmeye gönderilemez.");
   }
 }
 
@@ -389,10 +455,15 @@ export function approveClientRequest(
       input.dueDate,
       input.assigneeId,
     );
+    // Müşteri onayı gerekliliği MARKA VARSAYILANINDAN kopyalanıyor — görev
+    // hangi yoldan açılırsa açılsın (hızlı ekleme, talep onayı, toplu paket)
+    // aynı kural geçerli olsun diye.
     db.prepare(
       `INSERT INTO tasks
-         (id, content_item_id, title, type_override, priority, difficulty, weight_points, assignee_id, due_date, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, content_item_id, title, type_override, priority, difficulty, weight_points, assignee_id, due_date, notes,
+          customer_approval_required)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+         COALESCE((SELECT customer_approval_default FROM brands WHERE id = ?), 0))`,
     ).run(
       taskId,
       contentItemId,
@@ -404,6 +475,7 @@ export function approveClientRequest(
       input.assigneeId,
       input.dueDate,
       taskNotes(request),
+      request.brand_id,
     );
     const insertTaskAttachment = db.prepare(
       `INSERT INTO task_attachments (id, task_id, file_path, original_name)

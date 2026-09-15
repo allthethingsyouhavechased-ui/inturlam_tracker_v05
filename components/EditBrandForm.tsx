@@ -261,6 +261,26 @@ export default function EditBrandForm({
             </label>
           </div>
 
+          <div className="space-y-3 border-t border-border-subtle pt-4">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-secondary">Onay akışı</h3>
+              <p className="mt-1 text-xs text-muted">
+                Bu ayar yalnızca bundan SONRA açılacak görevleri etkiler; hâlihazırda açık görevlerin kuralı
+                açılışta kopyalandığı için değişmez. Tek bir görev için yetkili kişi gerekçeli istisna verebilir.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-secondary">
+              <input
+                type="checkbox"
+                name="customerApprovalDefault"
+                value="1"
+                defaultChecked={brand.customer_approval_default === 1}
+                className="size-4"
+              />
+              Yeni görevlerde müşteri onayı zorunlu olsun
+            </label>
+          </div>
+
           <div className="space-y-4 border-t border-border-subtle pt-4">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-secondary">Çekim hakları</h3>

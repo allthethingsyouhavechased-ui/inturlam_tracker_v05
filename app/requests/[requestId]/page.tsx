@@ -5,6 +5,7 @@ import DeleteClientRequestButton from "@/components/DeleteClientRequestButton";
 import EditClientRequestForm from "@/components/EditClientRequestForm";
 import PersonAvatar from "@/components/PersonAvatar";
 import RequestReviewForm from "@/components/RequestReviewForm";
+import ResubmitClientRequestButton from "@/components/ResubmitClientRequestButton";
 import SubmitButton from "@/components/SubmitButton";
 import Badge from "@/components/ui/Badge";
 import { buttonClass } from "@/components/ui/Button";
@@ -48,7 +49,14 @@ export default async function ClientRequestDetailPage({
   const activity = listActivityForEntity("request", requestId);
   const people = listActivePeople();
   const brands = listBrandsAlphabetically();
-  const isOpen = (request.status === "Beklemede" || request.status === "Incelemede") && !request.archived_at;
+  // "Bilgi/Revize bekleniyor" da AÇIK bir durumdur: değerlendirici düzeltilen
+  // talebi aynı ekrandan onaylayabilmeli.
+  const isOpen = (request.status === "Beklemede" || request.status === "Incelemede"
+    || request.status === "BilgiBekleniyor") && !request.archived_at;
+  // Reddedilen veya bilgi beklenen talep, eski metin ve karar geçmişi
+  // korunarak yeniden değerlendirmeye gönderilebilir.
+  const canResubmit = !request.archived_at && !request.converted_task_id
+    && (request.status === "BilgiBekleniyor" || request.status === "Reddedildi");
   const canEdit = !request.converted_task_id && !request.archived_at;
 
   return (
@@ -186,7 +194,13 @@ export default async function ClientRequestDetailPage({
           <section className="rounded-xl border border-border-default bg-surface p-4">
             <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted">KARAR</h2>
             {isOpen ? (
-              <div className="mt-4">
+              <div className="mt-4 space-y-3">
+                {canResubmit && <ResubmitClientRequestButton requestId={request.id} />}
+                {request.decision_reason && (
+                  <p className="rounded-lg bg-surface-muted px-3 py-2 text-xs text-secondary">
+                    <span className="font-semibold">Son karar gerekçesi:</span> {request.decision_reason}
+                  </p>
+                )}
                 <RequestReviewForm
                   requestId={request.id}
                   department={request.department}
@@ -198,6 +212,9 @@ export default async function ClientRequestDetailPage({
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-xs">
+                {canResubmit && (
+                  <ResubmitClientRequestButton requestId={request.id} />
+                )}
                 <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
                   <span className="text-muted">Durum</span>
                   <Badge tone={CLIENT_REQUEST_STATUS_TONE[request.status]}>{CLIENT_REQUEST_STATUS_LABEL[request.status]}</Badge>

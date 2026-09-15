@@ -3,7 +3,8 @@ import { isTaskShared } from "@/lib/taskSharing";
 import { createNotification } from "@/lib/repositories/notifications";
 import { getActiveGuestAccountForBrand } from "@/lib/repositories/accounts";
 import { listActivePeople } from "@/lib/repositories/people";
-import type { Person } from "@/lib/types";
+import { listClientRequestNotificationRecipients } from "@/lib/repositories/people";
+import type { ActivityEntityType, Person } from "@/lib/types";
 
 interface GuestTaskBase {
   guestAccountId: string;
@@ -26,19 +27,20 @@ function shortMessage(value: string): string {
 }
 
 function recordCommunicationActivity(input: {
-  actorId: string;
+  actorId: string | null;
   actorName: string;
   action: string;
   entityId: string;
   brandId: string;
   summary: string;
+  entityType?: ActivityEntityType;
 }): void {
   try {
     insertActivity({
       actorId: input.actorId,
       actorName: input.actorName,
       action: input.action,
-      entityType: "task",
+      entityType: input.entityType ?? "task",
       entityId: input.entityId,
       brandId: input.brandId,
       summary: input.summary,
@@ -88,14 +90,40 @@ function notifyGuest(input: TeamTaskBase & { summary: string }): void {
   }
 }
 
-export async function announceGuestTaskCreated(input: GuestTaskBase): Promise<void> {
-  const summary = `${input.guestName}, “${input.taskTitle}” talebini planlama kuyruğuna ekledi`;
-  notifyTeam({ ...input, summary });
+/**
+ * Müşteri portalından gelen yeni istek artık üretim görevi değil TALEP açıyor;
+ * bu yüzden bildirim/etkinlik de görev değil talep kaydına bağlanıyor.
+ * Etkinlik kaydında `taskId` YOK: olmayan bir göreve bağlantı vermiyoruz.
+ */
+export async function announceGuestRequestCreated(input: {
+  guestName: string;
+  requestId: string;
+  requestTitle: string;
+  brandId: string;
+}): Promise<void> {
+  const summary = `${input.guestName}, “${input.requestTitle}” talebini değerlendirme kuyruğuna ekledi`;
+  try {
+    const recipients = listClientRequestNotificationRecipients();
+    for (const person of recipients) {
+      createNotification({
+        recipientId: person.id,
+        recipientName: person.name,
+        actorId: null,
+        actorName: input.guestName,
+        taskId: null,
+        brandId: input.brandId,
+        summary,
+      });
+    }
+  } catch {
+    // Bildirim ana guest işlemini bozmayan en iyi çaba yan etkisidir.
+  }
   recordCommunicationActivity({
-    actorId: input.guestAccountId,
+    actorId: null,
     actorName: input.guestName,
-    action: "guest.task.created",
-    entityId: input.taskId,
+    action: "guest.request.created",
+    entityType: "request",
+    entityId: input.requestId,
     brandId: input.brandId,
     summary,
   });
